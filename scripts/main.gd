@@ -22,28 +22,48 @@ const GRID_TOP := 250.0
 const FOOTER_SPACE := 160.0
 
 var game = GameState.new()
-var message := "옆 칸을 눌러 움직이세요. 나무와 광석을 모아 시장에서 팔아요."
+var message := "가고 싶은 쪽 칸을 누르면 한 칸씩 움직여요. 나무와 광석을 모아 시장에서 팔아요."
+# Space hidden by a notch/status bar (top) or home bar (bottom), in canvas pixels.
+var safe_top := 0.0
+var safe_bottom := 0.0
 
 
 func _ready() -> void:
+	resized.connect(_update_safe_area)
+	_update_safe_area()
+
+
+func _update_safe_area() -> void:
+	if OS.has_feature("mobile"):
+		var window := Vector2(DisplayServer.window_get_size())
+		var safe := Rect2(DisplayServer.get_display_safe_area())
+		if window.y > 0:
+			var scale := size.y / window.y
+			safe_top = maxf(safe.position.y, 0.0) * scale
+			safe_bottom = maxf(window.y - safe.end.y, 0.0) * scale
 	queue_redraw()
 
 
 func _layout() -> Dictionary:
-	var cell := floori(min((size.x - 32.0) / GameState.WIDTH, (size.y - GRID_TOP - FOOTER_SPACE) / GameState.HEIGHT))
+	var top := safe_top + GRID_TOP
+	var room := size.y - top - FOOTER_SPACE - safe_bottom
+	var cell := floori(min((size.x - 32.0) / GameState.WIDTH, room / GameState.HEIGHT))
 	cell = maxi(cell, 16)
-	var origin := Vector2((size.x - cell * GameState.WIDTH) / 2.0, GRID_TOP)
+	# Tall phones get spare height: split it above and below the board instead of leaving a gap at the bottom.
+	var spare := maxf(room - cell * GameState.HEIGHT, 0.0)
+	var origin := Vector2((size.x - cell * GameState.WIDTH) / 2.0, top + spare / 2.0)
 	return {"cell": cell, "origin": origin}
 
 
 func _draw() -> void:
 	draw_rect(Rect2(Vector2.ZERO, size), Color("ecf5f5"))
 	var font := ThemeDB.fallback_font
-	_text(font, "WINTER RUSH", Vector2(20, 46), 34, Color("173b4a"))
-	_text(font, "돈 %d   나무 %d   광석 %d   경험치 %d" % [game.coins, game.wood, game.ore, game.xp], Vector2(20, 96), HUD_FONT)
-	_text(font, "레벨 %d   확장 %d/3   마을 체력 %d   턴 %d" % [game.level, game.expansions, game.village_hp, game.turn], Vector2(20, 136), HUD_FONT)
+	var top := safe_top
+	_text(font, "WINTER RUSH", Vector2(20, top + 46), 34, Color("173b4a"))
+	_text(font, "돈 %d   나무 %d   광석 %d   경험치 %d" % [game.coins, game.wood, game.ore, game.xp], Vector2(20, top + 96), HUD_FONT)
+	_text(font, "레벨 %d   확장 %d/3   마을 체력 %d   턴 %d" % [game.level, game.expansions, game.village_hp, game.turn], Vector2(20, top + 136), HUD_FONT)
 	# Long messages wrap onto a second line instead of running off the right edge.
-	draw_multiline_string(font, Vector2(20, 186), message, HORIZONTAL_ALIGNMENT_LEFT, size.x - 40, MESSAGE_FONT, 2, Color("173b4a"))
+	draw_multiline_string(font, Vector2(20, top + 186), message, HORIZONTAL_ALIGNMENT_LEFT, size.x - 40, MESSAGE_FONT, 2, Color("173b4a"))
 	var layout := _layout()
 	var cell: int = layout.cell
 	var origin: Vector2 = layout.origin
@@ -63,9 +83,11 @@ func _draw() -> void:
 			if label != "":
 				draw_string(font, rect.position + Vector2(0, cell * 0.58), label, HORIZONTAL_ALIGNMENT_CENTER, cell - 2, TILE_FONT, Color.WHITE if label != "나" else Color("173b4a"))
 	var footer_y := origin.y + cell * GameState.HEIGHT + 34
-	_text(font, "방향키 / WASD / 옆 칸 터치", Vector2(20, footer_y), FOOTER_FONT)
+	# Phones have no arrow keys or R key, so show tap instructions there.
+	var touch := DisplayServer.is_touchscreen_available()
+	_text(font, "칸을 누르면 그쪽으로 한 칸 이동" if touch else "방향키 / WASD / 칸 누르기", Vector2(20, footer_y), FOOTER_FONT)
 	_text(font, "시장: 판매   성장: 레벨업   확장: 마을 강화", Vector2(20, footer_y + 32), FOOTER_FONT)
-	_text(font, "목표: 확장 3회 + 레벨 3   |   R: 처음부터", Vector2(20, footer_y + 62), FOOTER_FONT)
+	_text(font, "목표: 확장 3회 + 레벨 3" if touch else "목표: 확장 3회 + 레벨 3   |   R: 처음부터", Vector2(20, footer_y + 62), FOOTER_FONT)
 	if game.finished:
 		_text(font, "화면을 눌러 다시 시작", Vector2(20, footer_y + 100), HUD_FONT, Color("bd4249"))
 
@@ -104,7 +126,14 @@ func _tap(position: Vector2) -> void:
 	if relative.x < 0 or relative.y < 0:
 		return
 	var target := Vector2i(floori(relative.x / cell), floori(relative.y / cell))
-	message = game.move_to(target)
+	if target.x >= GameState.WIDTH or target.y >= GameState.HEIGHT:
+		return
+	# Any tile works: step one tile toward it along the longer direction, so taps need no precision.
+	var delta: Vector2i = target - game.player
+	if delta == Vector2i.ZERO:
+		return
+	var step := Vector2i(signi(delta.x), 0) if absi(delta.x) >= absi(delta.y) else Vector2i(0, signi(delta.y))
+	message = game.move_to(game.player + step)
 	queue_redraw()
 
 
