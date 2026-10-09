@@ -7,7 +7,7 @@
 1. `README.md`와 `docs/ROADMAP.md`를 읽고, 한 번에 하나의 작은 기능을 구현합니다.
 2. 게임 규칙은 `scripts/game_state.gd`, 화면과 입력은 `scripts/main.gd`에 둡니다. 서로 섞지 않습니다.
 3. 규칙 변경 시 `tests/run_tests.gd`에 실제 플레이 상황을 검사하는 테스트를 추가합니다.
-4. 저장소 루트에서 `godot --headless --path . --script tests/run_tests.gd`와 `godot --headless --path . --script tests/run_ui_tests.gd`를 실행합니다. 가능하면 화면도 직접 플레이합니다.
+4. 저장소 루트에서 `./tools/check.sh`를 실행합니다. 이 명령은 게임 규칙, 입력, 시작을 검사합니다. 가능하면 화면도 직접 플레이합니다.
 5. 무엇이 달라졌고 어떻게 확인했는지 사용자에게 알려 줍니다.
 
 ## Git 관리
@@ -18,3 +18,5 @@
 - 사용자가 요청하지 않은 대규모 구조 변경이나 외부 유료 서비스 연결은 먼저 필요성을 설명합니다.
 
 현재는 화면에 도형을 그리는 시제품입니다. 출시용 아트, 저장, 접근성, 기기 테스트와 스토어 준비는 아직 남아 있습니다.
+
+두 AI 간 인수인계는 `docs/AI_COLLABORATION.md`를 따릅니다. 한 AI가 구현하면 다른 AI가 커밋을 검토하는 방식으로 작업합니다.

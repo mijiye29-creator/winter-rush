@@ -23,8 +23,7 @@
 
 ```bash
 godot --path .
-godot --headless --path . --script tests/run_tests.gd
-godot --headless --path . --script tests/run_ui_tests.gd
+./tools/check.sh
 ```
 
 첫 버전은 도형과 글자로 만든 시제품입니다. Android/iPhone 설치 파일, 저장 기능, 실제 그림과 소리, 스토어 등록은 다음 단계입니다.
@@ -38,6 +37,8 @@ godot --headless --path . --script tests/run_ui_tests.gd
 - `tests/run_ui_tests.gd`: 터치 입력과 재시작 검사
 - `docs/ROADMAP.md`: 출시까지의 순서
 - `docs/MOBILE_RELEASE.md`: Android/iPhone 빌드 준비
+- `docs/AI_COLLABORATION.md`: Codex와 Claude 작업을 넘기는 방법
+- `tools/check.sh`: 게임 규칙·터치·시작을 한 번에 검사
 - `CLAUDE.md`: Claude와 작업할 때의 규칙
 
 코드를 바꾸면 게임 규칙 검사를 실행하고, 화면도 직접 한 번 플레이해 보세요. 변경 사항은 작은 단위로 Git 커밋에 저장합니다.
