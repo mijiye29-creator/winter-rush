@@ -13,6 +13,14 @@ const COLORS := {
 	"ground": Color("cfdfdf")
 }
 
+# The 720px canvas is drawn at about half size on a phone, so 24px is roughly the 12dp minimum.
+const HUD_FONT := 28
+const MESSAGE_FONT := 26
+const TILE_FONT := 26
+const FOOTER_FONT := 24
+const GRID_TOP := 250.0
+const FOOTER_SPACE := 160.0
+
 var game = GameState.new()
 var message := "옆 칸을 눌러 움직이세요. 나무와 광석을 모아 시장에서 팔아요."
 
@@ -22,9 +30,9 @@ func _ready() -> void:
 
 
 func _layout() -> Dictionary:
-	var cell := floori(min((size.x - 32.0) / GameState.WIDTH, (size.y - 360.0) / GameState.HEIGHT))
+	var cell := floori(min((size.x - 32.0) / GameState.WIDTH, (size.y - GRID_TOP - FOOTER_SPACE) / GameState.HEIGHT))
 	cell = maxi(cell, 16)
-	var origin := Vector2((size.x - cell * GameState.WIDTH) / 2.0, 205.0)
+	var origin := Vector2((size.x - cell * GameState.WIDTH) / 2.0, GRID_TOP)
 	return {"cell": cell, "origin": origin}
 
 
@@ -32,9 +40,10 @@ func _draw() -> void:
 	draw_rect(Rect2(Vector2.ZERO, size), Color("ecf5f5"))
 	var font := ThemeDB.fallback_font
 	_text(font, "WINTER RUSH", Vector2(20, 46), 34, Color("173b4a"))
-	_text(font, "돈 %d   나무 %d   광석 %d   경험치 %d" % [game.coins, game.wood, game.ore, game.xp], Vector2(20, 91), 22)
-	_text(font, "레벨 %d   확장 %d/3   마을 체력 %d   턴 %d" % [game.level, game.expansions, game.village_hp, game.turn], Vector2(20, 125), 22)
-	_text(font, message, Vector2(20, 176), 19, Color("173b4a"))
+	_text(font, "돈 %d   나무 %d   광석 %d   경험치 %d" % [game.coins, game.wood, game.ore, game.xp], Vector2(20, 96), HUD_FONT)
+	_text(font, "레벨 %d   확장 %d/3   마을 체력 %d   턴 %d" % [game.level, game.expansions, game.village_hp, game.turn], Vector2(20, 136), HUD_FONT)
+	# Long messages wrap onto a second line instead of running off the right edge.
+	draw_multiline_string(font, Vector2(20, 186), message, HORIZONTAL_ALIGNMENT_LEFT, size.x - 40, MESSAGE_FONT, 2, Color("173b4a"))
 	var layout := _layout()
 	var cell: int = layout.cell
 	var origin: Vector2 = layout.origin
@@ -52,13 +61,13 @@ func _draw() -> void:
 				draw_rect(rect.grow(-4), Color("f2d96b"))
 				label = "나"
 			if label != "":
-				draw_string(font, rect.position + Vector2(0, cell * 0.58), label, HORIZONTAL_ALIGNMENT_CENTER, cell - 2, 18, Color.WHITE if label != "나" else Color("173b4a"))
-	var footer_y := origin.y + cell * GameState.HEIGHT + 30
-	_text(font, "방향키 / WASD / 옆 칸 터치", Vector2(20, footer_y), 21)
-	_text(font, "시장: 판매   성장: 레벨업   확장: 마을 강화", Vector2(20, footer_y + 32), 18)
-	_text(font, "목표: 확장 3회 + 레벨 3   |   R: 처음부터", Vector2(20, footer_y + 62), 18)
+				draw_string(font, rect.position + Vector2(0, cell * 0.58), label, HORIZONTAL_ALIGNMENT_CENTER, cell - 2, TILE_FONT, Color.WHITE if label != "나" else Color("173b4a"))
+	var footer_y := origin.y + cell * GameState.HEIGHT + 34
+	_text(font, "방향키 / WASD / 옆 칸 터치", Vector2(20, footer_y), FOOTER_FONT)
+	_text(font, "시장: 판매   성장: 레벨업   확장: 마을 강화", Vector2(20, footer_y + 32), FOOTER_FONT)
+	_text(font, "목표: 확장 3회 + 레벨 3   |   R: 처음부터", Vector2(20, footer_y + 62), FOOTER_FONT)
 	if game.finished:
-		_text(font, "화면을 눌러 다시 시작", Vector2(20, footer_y + 100), 23, Color("bd4249"))
+		_text(font, "화면을 눌러 다시 시작", Vector2(20, footer_y + 100), HUD_FONT, Color("bd4249"))
 
 
 func _text(font: Font, value: String, position: Vector2, font_size: int, color := Color("334d56")) -> void:
