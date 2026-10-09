@@ -2,6 +2,8 @@
 
 한겨울 숲속 마을을 키우고 침입자를 막는 모바일 게임의 첫 플레이 버전입니다.
 
+출시 목표는 **Android와 iPhone 모두**입니다. 현재는 두 기기에서 공통으로 사용할 Godot 프로젝트를 개발 중이며, 앱 설치 파일은 아직 만들지 않았습니다. 준비 과정은 [모바일 출시 안내](docs/MOBILE_RELEASE.md)에 정리했습니다.
+
 ## 지금 해볼 수 있는 것
 
 1. 노란색 `나`를 방향키/WASD 또는 바로 옆 칸 터치로 움직입니다.
@@ -22,6 +24,7 @@
 ```bash
 godot --path .
 godot --headless --path . --script tests/run_tests.gd
+godot --headless --path . --script tests/run_ui_tests.gd
 ```
 
 첫 버전은 도형과 글자로 만든 시제품입니다. Android/iPhone 설치 파일, 저장 기능, 실제 그림과 소리, 스토어 등록은 다음 단계입니다.
@@ -32,7 +35,9 @@ godot --headless --path . --script tests/run_tests.gd
 - `scenes/Main.tscn`, `scripts/main.gd`: 화면과 입력
 - `scripts/game_state.gd`: 게임 규칙과 데이터
 - `tests/run_tests.gd`: 핵심 규칙 검사
+- `tests/run_ui_tests.gd`: 터치 입력과 재시작 검사
 - `docs/ROADMAP.md`: 출시까지의 순서
+- `docs/MOBILE_RELEASE.md`: Android/iPhone 빌드 준비
 - `CLAUDE.md`: Claude와 작업할 때의 규칙
 
 코드를 바꾸면 게임 규칙 검사를 실행하고, 화면도 직접 한 번 플레이해 보세요. 변경 사항은 작은 단위로 Git 커밋에 저장합니다.
