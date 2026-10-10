@@ -51,8 +51,8 @@ window.WinterRushData = {
     pizzaTime: [3.2, 2.4, 1.7],    // seconds per pizza batch by pizza oven level (1 log per batch)
     pizzaRecipe: { veg: 2, meat: 4, fish: 3 }, pizzaRecipeHarbor: { veg: 1, meat: 4, fish: 3 },
     smithTime: [0, 8, 4],          // seconds per trophy processed by smith level
-    warehouse: { cap: [0, 800, 800], perFire: 200 },   // +200 slots per hearth level
-    courier: { carry: [0, 12, 14, 16], speed: [0, 5.5, 5.8, 6.2] },   // delivery trucks
+    warehouse: { cap: [0, 800, 1200, 1600] },   // slots per warehouse level
+    courier: { carry: [0, 12, 14, 16], speed: [0, 5.5, 5.8, 6.2] },   // delivery workers, by warehouse level
     fireLv: .25,                  // each hearth level: a log burns 25% longer
     wage: { every: 60, per: 8, interest: .005, maxInterest: 50 },   // per staff each payday (stage 3)
     staffHouse: .15,               // staff speed bonus per heated house
@@ -79,7 +79,8 @@ window.WinterRushData = {
     boots:   { name: '장화',      icon: '🥾', costs: [30, 80, 200, 2000, 4000], vals: [5, 5.8, 6.6, 7.4, 8.2, 9], stage: [2, 2, 3, 4, 4] },
     cape:    { name: '망토',      icon: '🦸', costs: [100, 300, 700, 1200, 3000, 6000], vals: [5, 6, 7, 8, 9, 11, 13], stage: [4, 4, 4, 4, 4, 4] },   // max HP
     coat:    { name: '외투',      icon: '🧥', costs: [60, 180, 400, 2500, 5000], vals: [0, 1, 2, 3, 4, 5], stage: [1, 2, 3, 4, 4] },
-    gate:    { name: '정문 강화',  icon: '🛡️', costs: [80, 200, 450, 900, 1800, 3200], vals: [0, 1, 2, 3, 3, 3, 3], stage: [1, 1, 1, 2, 2, 2] },   // Lv4+ watchtowers
+    gate:    { name: '정문 강화',   // legacy: no pad since v2.1.6
+               icon: '🛡️', costs: [80, 200, 450, 900, 1800, 3200], vals: [0, 1, 2, 3, 3, 3, 3], stage: [1, 1, 1, 2, 2, 2] },   // Lv4+ watchtowers
     helper:  { name: '나무꾼',    icon: '👷', costs: [100, 220, 450],    vals: [0, 1, 2, 3] },
     server:  { name: '서빙 직원',  icon: '🧑‍🍳', costs: [150, 300, 600],    vals: [0, 1, 2, 3] },
     hunter:  { name: '사냥꾼',    icon: '🏹', costs: [200, 500, 1000],    vals: [0, 1, 2, 3], stage: [1, 1, 2] },
@@ -98,14 +99,15 @@ window.WinterRushData = {
     farmer:    { name: '농부', icon: '🧑‍🌾', costs: [600, 1300], vals: [0, 1, 2], stage: [3, 3] },
     pizzaChef: { name: '피자 쉐프', icon: '👨‍🍳', costs: [600, 1400], vals: [0, 1, 2], stage: [3, 3] },
     pizzaOven: { name: '피자 화덕', icon: '🍕', costs: [800, 1800], vals: [0, 1, 2], stage: [3, 3] },
-    courier:   { name: '배달 직원', icon: '🛵', costs: [800, 1600, 3000], vals: [0, 1, 2, 3], stage: [3, 3, 3] },
+    courier:   { name: '배달 직원',   // legacy: no pad since v2.1.6 (couriers come with warehouse levels)
+                icon: '🛵', costs: [800, 1600, 3000], vals: [0, 1, 2, 3], stage: [3, 3, 3] },
     leatherClerk: { name: '가죽 점원', icon: '🧑‍💼', costs: [300, 700, 1200], vals: [0, 1, 2, 3], stage: [3, 3, 3] },
-    fire:      { name: '모닥불 강화', icon: '🔥', costs: [150, 400, 900, 2000], vals: [0, 1, 2, 3, 4] },
+    fire:      { name: '모닥불 강화', icon: '🔥', costs: [300, 900, 2000, 4000], vals: [0, 1, 2, 3, 4], stage: [1, 2, 2, 3] },   // Lv1 fish, Lv2 leather, Lv3 pizza, Lv4 sushi
     pizzaClerk: { name: '피자 점원', icon: '🧑‍💼', costs: [500, 1000, 1800], vals: [0, 1, 2, 3], stage: [3, 3, 3] },
     smith:     { name: '대장장이', icon: '⚒️', costs: [700, 1500], vals: [0, 1, 2], stage: [3, 3] },
     helper3:   { name: '나무꾼 3', icon: '👷', costs: [1200], vals: [0, 1], stage: [3] },
     hunter3:   { name: '사냥꾼 3', icon: '🏹', costs: [1500], vals: [0, 1], stage: [3] },
-    warehouse: { name: '큰 창고', icon: '🏚️', costs: [2000], vals: [0, 1], stage: [3] },   // capacity grows with the hearth (perFire)
+    warehouse: { name: '큰 창고', icon: '🏚️', costs: [2000, 3500, 6000], vals: [0, 1, 2, 3], stage: [3, 3, 3] },   // each level: +1 courier, more room
     wall:      { name: '돌담', icon: '🧱', costs: [1500, 3000], vals: [0, 1, 2], stage: [3, 3] },   // −1 raider per level
     bank:      { name: '은행', icon: '🏦', costs: [1200], vals: [0, 1], stage: [3] },
     staffHouse: { name: '직원 숙소', icon: '🏘️', costs: [1000, 2000, 3500], vals: [0, 1, 2, 3], stage: [3, 3, 3] },

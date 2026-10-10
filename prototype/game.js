@@ -17,7 +17,9 @@ const S = {
 };
 const val = k => UP[k].vals[S.lv[k]];
 const bagCap = () => val('bag') + 4 * pets.length;
-const hidesOn = () => S.lv.hunter >= 3;
+const hidesOn = () => S.lv.fire >= 2 && S.stage >= 2;   // leather is the hearth Lv2 menu
+// one rule for every menu: each hearth (모닥불) level opens the next product line
+const MENUS = [{ icon: '🥩', name: '스테이크' }, { icon: '🐟', name: '생선구이' }, { icon: '👜', name: '가죽 제품' }, { icon: '🍕', name: '피자' }, { icon: '🍣', name: '초밥' }];
 const logFuel = () => T.logFuel * (1 + T.fireLv * S.lv.fire);
 const heroLv = () => S.lv.axe + S.lv.boots + S.lv.coat + S.lv.cape + S.lv.saberCoat + S.lv.tuskAxe;
 const axeDmg = () => val('axe') + T.legend.axeDmg[S.lv.tuskAxe];
@@ -51,7 +53,7 @@ const DESC = {
   pizzaOven: (a, b) => `피자 화덕 Lv${b + 1}: ${T.pizzaTime[a]}초 → ${T.pizzaTime[b]}초`,
   courier: (a, b) => a ? `배달 직원 ${b}명: ${T.courier.carry[b]}개씩, 더 빠르게` : `배달 직원 고용: 창고 → 모닥불·화덕·공방·피자 재료 칸 자동 배달`,
   leatherClerk: (a, b) => a ? `가죽 점원 숙련 Lv${b}: 동시 손님 ${Math.max(T.leatherShop.slots, ST.clerkSlots[b])}명` : `가죽 가게 점원 고용 (판매, 은행 입금)`,
-  fire: (a, b) => `모닥불 Lv${b + 1} (${['쇠 테두리', '황동 기둥', '푸른 수정', '첨단 고리'][b - 1]}): 장작 지속 +${Math.round(T.fireLv * 100 * b)}%, 창고 +${T.warehouse.perFire * b}칸` + (b % 2 ? '' : ', 배달 트럭 +1'),
+  fire: (a, b) => `모닥불 Lv${b + 1} (${['쇠 테두리', '황동 기둥', '푸른 수정', '첨단 고리'][b - 1]}): 장작 지속 +${Math.round(T.fireLv * 100 * b)}%` + ` · 새 메뉴 ${MENUS[b].icon} ${MENUS[b].name}`,
   pizzaClerk: (a, b) => a ? `피자 점원 숙련 Lv${b}: 동시 손님 ${ST.clerkSlots[a]} → ${ST.clerkSlots[b]}명` : `피자 가게 점원 고용 (판매 속도 ↑)`,
   smith: (a, b) => a ? `가공 속도 ${T.smithTime[a]}초 → ${T.smithTime[b]}초` : `대장장이 고용 (가죽 공방 옆): 맹수 전리품 → 전설 장비 재료 (${T.smithTime[1]}초)`,
   helper3: () => `세 번째 나무꾼 고용`,
@@ -63,7 +65,7 @@ const DESC = {
   lighthouse: (a, b) => `등대 Lv${b}: 안개 ${T.harbor.fogDur[a]}초 → ${T.harbor.fogDur[b]}초` + (b >= 2 ? ', 범고래가 어선을 못 찾음' : '') + ` (장작 ${T.harbor.lighthouseLogEvery}초마다 1개)`,
   sushiChef: (a, b) => a ? `초밥 쉐프 Lv${b}: ${T.harbor.sushiTime[a]}초 → ${T.harbor.sushiTime[b]}초` : `초밥 쉐프 고용 (참치 1 + 생선 1 + 채소 2 + 장작 1 → 초밥)`,
   sushiClerk: (a, b) => a ? `초밥 점원 숙련 Lv${b}` : `초밥 가게 점원 고용 (판매, 은행 입금)`,
-  warehouse: (a, b) => a ? `창고 ${T.warehouse.cap[a]} → ${T.warehouse.cap[b]}칸` : `큰 창고 (${T.warehouse.cap[b]}칸): 나무꾼·사냥꾼·낚시꾼·농부가 모든 재료를 여기 쌓아요`,
+  warehouse: (a, b) => a ? `창고 Lv${b}: 보관 ${T.warehouse.cap[a]} → ${T.warehouse.cap[b]}칸, 배달 직원 ${a} → ${b}명` : `큰 창고 (${T.warehouse.cap[b]}칸) + 배달 직원 1명: 모든 재료가 여기 모이고 필요한 곳으로 배달돼요`,
   wall: (a, b) => `${b === 1 ? '돌담' : '가시 돌담'}: 눈보라 습격 곰 −${b}마리`,
   bank: () => `은행: 점원이 동전을 모아 입금, 월급 자동 지급, 이자 ${Math.round(T.wage.interest * 100)}%`,
   staffHouse: (a, b) => `직원 숙소 ${b}채: 직원 이동 속도 +${Math.round(T.staffHouse * 100 * b)}%`,
@@ -671,8 +673,8 @@ const whLabel = sprite(360, 90, 3.4, .85); whLabel.sp.position.set(P.wh.x, 3.6, 
 let whShown = '';
 const WH_ITEMS = ['log', 'meat', 'fish', 'veg', 'hide', 'pelt', 'tusk', 'tuna', 'blubber', 'ivory', 'whide'], WH_ICON = { log: '🪵', meat: '🥩', fish: '🐟', veg: '🥬', hide: '🟫', pelt: '🐯', tusk: '🦣', tuna: '🍣', blubber: '🛢️', ivory: '🦷', whide: '🦭' };
 const whOn = () => S.stage >= 3 && S.lv.warehouse > 0;
-const whCap = () => T.warehouse.cap[S.lv.warehouse] + (S.lv.warehouse ? T.warehouse.perFire * S.lv.fire : 0);   // a bigger hearth also grows the warehouse
-const courierCount = () => S.lv.courier ? S.lv.courier + Math.floor(S.lv.fire / 2) : 0;   // and adds a truck every two hearth levels
+const whCap = () => T.warehouse.cap[S.lv.warehouse];   // each warehouse level: more room
+const courierCount = () => S.lv.warehouse;   // and one more delivery worker (warehouse Lv1-3 = 1-3 couriers)
 const whTotal = () => WH_ITEMS.reduce((s, k) => s + S.wh[k], 0);
 const whRoom = () => Math.max(0, whCap() - whTotal());
 function whPut(item, n, from) { const k = Math.min(n, whRoom()); if (k > 0) { S.wh[item] += k; if (from) fly(item, from, V(P.whIn.x, .5, P.whIn.z), .3); } return k; }
@@ -736,11 +738,11 @@ function addCourier() {
 }
 // a passing courier takes raw supplies off the hero's back or a hunter's hands and hauls them to the warehouse
 function courierPickup(c, dt) {
-  const cap = T.courier.carry[S.lv.courier];
+  const cap = T.courier.carry[S.lv.warehouse];
   if (!whOn() || whRoom() <= 0 || c.n >= cap || c.state === 'drop' || (c.n && c.state !== 'stash' && c.state !== 'collect') || !tick('handoff' + couriers.indexOf(c), .06, dt)) return;
   const take = (type, from) => {
     if (c.n && c.item !== type) return false;
-    if (!c.n) { c.item = type; c.job = null; c.target = null; }
+    if (!c.n) { c.item = type; c.job = null; c.target = null; c.src = null; }
     c.n++; fly(type, from, V(c.x, 1.2, c.z), .2);
     if (c.state !== 'stash') { c.state = 'stash'; c.path = viaGate(c, V(P.whIn.x, 0, P.whIn.z - 1.3)); popText(c.x, 2.4, c.z, '🛵 대신 가져갈게요!', '#9fd8ff'); }
     return true;
@@ -835,14 +837,20 @@ function updateFarmer(dt) {
     f.state = 'idle';
   }
   if (f.state === 'unload') {   // into the warehouse, or straight onto the pizza tile before there is one
-    if (whOn() && whRoom() <= 0 && Math.hypot(f.x - P.whIn.x, f.z - P.whIn.z) < 2.5) { f.path = [V(P.pizzaIn.x, 0, P.pizzaIn.z + 1.3)]; return; }   // warehouse full: take the veg to the pizza tile
-    const toWh = whOn() && whRoom() > 0, k = toWh ? whPut('veg', f.n, V(f.x, 1.3, f.z)) : Math.min(f.n, T.max.pzVeg - S.pzVeg);
-    if (!toWh && k > 0) { S.pzVeg += k; fly('veg', V(f.x, 1.3, f.z), V(P.pizzaIn.x, .4, P.pizzaIn.z)); }
-    f.n -= k; if (f.n) return; f.state = 'idle';
+    const t = f.dest || (whOn() && whRoom() > 0 ? WH_SPOT : sinkFor('veg', f));
+    const k = !t ? 0 : t.wh ? whPut('veg', f.n, V(f.x, 1.3, f.z)) : Math.min(f.n, t.max() - t.get());
+    if (k > 0 && !t.wh) { t.add(k); fly('veg', V(f.x, 1.3, f.z), V(t.at().x, .4, t.at().z)); }
+    f.n -= k; f.dest = null;
+    if (f.n) {   // that spot filled up: warehouse → a tile that uses veg → sell the rest
+      const nx = whOn() && whRoom() > 0 ? WH_SPOT : sinkFor('veg', f);
+      if (nx && nx !== t) { f.dest = nx; f.path = [V(nx.at().x, 0, nx.at().z + (nx.wh ? -1.3 : 1.3))]; return; }
+      sellSurplus('veg', f.n, f.x, f.z); f.n = 0;
+    }
+    f.state = 'idle';
   }
   let best = -1, bd = 1e9;
   PLOTS.forEach((p, i) => { const d = Math.hypot(p.x - f.x, p.z - f.z); if (plotRipe(i) && d < bd) { bd = d; best = i; } });
-  if (f.n >= ST.farmerCarry[lv] || (f.n && best < 0)) { const toWh = whOn() && whRoom() > 0, to = toWh ? P.whIn : P.pizzaIn; f.state = 'unload'; f.path = [V(to.x, 0, to.z + (toWh ? -1.3 : 1.3))]; return; }
+  if (f.n >= ST.farmerCarry[lv] || (f.n && best < 0)) { const t = whOn() && whRoom() > 0 ? WH_SPOT : sinkFor('veg', f) || { at: () => P.pizzaIn }; f.dest = t.get || t.wh ? t : null; f.state = 'unload'; f.path = [V(t.at().x, 0, t.at().z + (t.wh ? -1.3 : 1.3))]; return; }
   if (best >= 0) { f.state = 'harvest'; f.plot = best; f.path = [V(PLOTS[best].x, 0, PLOTS[best].z + .95)]; }
 }
 // couriers: warehouse → whichever input tile is running lowest
@@ -867,8 +875,25 @@ const DELIVER = [
   { item: 'fish', at: () => P.pizzaIn, get: () => S.pzFish, max: () => T.max.pzFish, add: k => (S.pzFish += k) },
   { item: 'log', at: () => P.pizzaIn, get: () => S.pzWood, max: () => T.max.pzWood, add: k => (S.pzWood += k) },
 ];
+// spots that fill up on their own; couriers take from them straight to a tile that is short (keep = working stock left behind)
+const SOURCES = [
+  { item: 'fish', key: 'fishCrate', at: () => P.fishCrate, keep: () => 0, on: () => S.stage >= 2 },
+  { item: 'fish', key: 'dockFish', at: () => P.dockCrate, keep: () => 0, on: () => S.stage >= 4 },
+  { item: 'tuna', key: 'dockTuna', at: () => P.dockCrate, keep: () => 0, on: () => S.stage >= 4 },
+  { item: 'meat', key: 'meat', at: () => P.meatTile, keep: () => Math.floor(T.max.meat * .5), on: () => true },
+];
+// the tile with room that most needs this item (for workers whose own tile is full)
+function sinkFor(item, w) {
+  return DELIVER.filter(d => d.item === item && (!d.on || d.on()) && d.get() < d.max()).sort((a, b) => a.get() / a.max() - b.get() / b.max())[0] || null;
+}
+// nowhere at all to put it: sell it to the villagers rather than stand around holding it
+function sellSurplus(item, n, x, z) {
+  if (n <= 0) return;
+  const v = Math.max(1, Math.round(n * (T.trade.price[item] || 2)));
+  S.coinPile += v; popText(x, 2.4, z, `🪙 남는 재료 판매 +${v}`, '#ffd36b');
+}
 function updateCourier(c, dt) {
-  const lv = S.lv.courier;
+  const lv = S.lv.warehouse;
   c.inside = inVillage(c); c.walker.visible = c.inside; c.truck.visible = !c.inside;   // cart in the village, truck outside
   showCarry(c);
   courierPickup(c, dt);
@@ -896,10 +921,16 @@ function updateCourier(c, dt) {
     const k = whPut(c.item, c.n, V(c.x, 1.2, c.z)); c.n -= k;
     if (c.n) {   // warehouse full: hand the load to whichever tile needs it most
       const t = DELIVER.filter(d => d.item === c.item && (!d.on || d.on()) && d.get() < d.max()).sort((a, b) => a.get() / a.max() - b.get() / b.max())[0];
-      if (t) { c.job = t; c.state = 'drop'; c.path = viaGate(c, V(t.at().x, 0, t.at().z + 1.3)); }
-      return;
+      if (t) { c.job = t; c.state = 'drop'; c.path = viaGate(c, V(t.at().x, 0, t.at().z + 1.3)); return; }
+      sellSurplus(c.item, c.n, c.x, c.z); c.n = 0;   // nothing anywhere has room
     }
     c.state = 'idle';
+  }
+  if (c.state === 'fetch') {   // straight from an overflowing crate/tile to the tile that is short
+    const t = c.job, src = c.src, k = Math.max(0, Math.min(T.courier.carry[lv], S[src.key] - src.keep(), t.max() - t.get()));
+    c.src = null;
+    if (k <= 0) { c.state = 'idle'; c.job = null; return; }
+    S[src.key] -= k; c.n = k; c.item = t.item; c.state = 'drop'; c.path = viaGate(c, V(t.at().x, 0, t.at().z + 1.3)); return;
   }
   if (c.state === 'load') {
     const t = c.job, k = Math.min(T.courier.carry[lv], S.wh[t.item], t.max() - t.get());
@@ -915,12 +946,17 @@ function updateCourier(c, dt) {
   if (whRoom() > 0 && S.fishCrate >= T.max.fishCrate && fishers.some(f => f.state === 'toShop' && f.n > 0) && !couriers.some(o => o !== c && o.state === 'haul' && o.haulKey === 'fishCrate')) {
     c.state = 'haul'; c.haulKey = 'fishCrate'; c.item = 'fish'; c.path = viaGate(c, V(P.fishCrate.x - 1.3, 0, P.fishCrate.z)); return;
   }
-  let best = null, br = .6;
+  let best = null, br = whTotal() >= whCap() * .9 ? .98 : .6;   // a nearly full warehouse spreads its stock to every tile with room
   for (const t of DELIVER) {
     if ((t.on && !t.on()) || S.wh[t.item] <= 0 || couriers.some(o => o !== c && o.job === t)) continue;
     const r = t.get() / t.max(); if (r < br) { br = r; best = t; }
   }
   if (best) { c.job = best; c.state = 'load'; c.path = viaGate(c, V(P.whIn.x - .6 + couriers.indexOf(c) * .6, 0, P.whIn.z - 1.3)); return; }
+  for (const t of DELIVER) {   // the warehouse has none of it: fetch from wherever it is piling up
+    if ((t.on && !t.on()) || t.get() / t.max() >= .5 || couriers.some(o => o !== c && o.job === t)) continue;
+    const src = SOURCES.find(s => s.item === t.item && s.on() && s.at() !== t.at() && S[s.key] - s.keep() > 0 && !couriers.some(o => o !== c && o.src === s));
+    if (src) { c.job = t; c.src = src; c.state = 'fetch'; c.path = viaGate(c, V(src.at().x - 1.3, 0, src.at().z)); return; }
+  }
   const busy = couriers.some(o => o !== c && o.state === 'haul'), cap4 = T.harbor.dockCap[S.lv.freezer];
   const haul = whRoom() > 0 && !busy && (S.fishCrate >= T.max.fishCrate * .5 ? ['fishCrate', 'fish', P.fishCrate] : S.stage >= 4 && S.dockFish >= cap4 * .4 ? ['dockFish', 'fish', P.dockCrate] : S.stage >= 4 && S.dockTuna >= cap4 * .4 ? ['dockTuna', 'tuna', P.dockCrate] : S.meat >= T.max.meat * .9 ? ['meat', 'meat', P.meatTile] : null);
   const ripe = whRoom() > 0 && S.stage >= 3 && !couriers.some(o => o !== c && o.state === 'reap') && PLOTS.filter((_, i) => plotRipe(i)).length >= 3;
@@ -1414,9 +1450,9 @@ makePad('helper', -6.6, -7.8); makePad('helper2', -6.6, -5.7); makePad('helper3'
 makePad('axe', -4.5, -7.8); makePad('tuskAxe', -2.4, -7.8); makePad('coat', -4.5, -5.7); makePad('saberCoat', -2.4, -5.7);
 makePad('boots', -4.5, -3.6); makePad('cape', -2.4, -3.6); makePad('bag', -4.5, -.2);
 makePad('statue', -.3, -7.8);   // right above the statue
-// hunting gate (x 0, south): hunters on its left, gate defences on its right
+// hunting gate (x 0, south): hunters on its left, the stone wall pad on its right
 makePad('hunter', -2.4, 4.2); makePad('hunter2', -2.4, 2); makePad('hunter3', -2.4, -.2);
-makePad('gate', 2.4, 4.2); makePad('wall', 2.4, 2);
+makePad('wall', 2.4, 4.2);   // gate upgrade removed: the stone wall is the only gate defence
 // in front of the hearth: serving, steak clerk, fire upgrade; the village expansion tile (fishing, then the big hearth)
 makePad('server', 2.4, -.2); makePad('clerk', 4.5, -.2); makePad('fire', 6.6, -.2);
 makePad('fishing', 4.5, 2); makePad('hearth', 4.5, 2);
@@ -1425,7 +1461,7 @@ makePad('fisher', 8.7, -.2); makePad('fisher2', 8.7, 2); makePad('fishClerk', 6.
 // toward the tannery: smith, artisan, leather clerk in one row
 makePad('smith', 4.5, 4.2); makePad('artisan', 6.6, 4.2); makePad('leatherClerk', 8.7, 4.2);
 // stage 3 annex: farmer under the garden, pizza column toward the pizzeria, courier, staff houses (south), harbor (east, toward the sea)
-makePad('farmer', 18, -.2); makePad('courier', 20.2, -.2);
+makePad('farmer', 18, -.2);   // couriers come with warehouse levels
 makePad('pizzaChef', 24.4, -4.8); makePad('pizzaOven', 24.4, -2.6); makePad('pizzaClerk', 24.4, -.2);
 makePad('staffHouse', 22.3, 4.2); makePad('harbor', 24.4, 4.2);
 makePad('warehouse', -4.3, 2.5); makePad('bank', -6.4, 4.7);   // these pads become the warehouse drop tile and the bank tile
@@ -1441,26 +1477,37 @@ const REVEAL = {
   cape: () => true,   // gear pieces unlock one per stage via UP.*.stage
   saberCoat: () => S.raw.pelt + S.forgeRaw.pelt + S.mats.pelt > 0 || S.lv.saberCoat > 0,
   tuskAxe: () => S.raw.tusk + S.forgeRaw.tusk + S.mats.tusk > 0 || S.lv.tuskAxe > 0,
-  hearth: () => S.lv.hearth > 0 || S.stage >= 2 && S.stat.sold >= 60,
+  hearth: () => S.lv.hearth > 0 || S.stage >= 2 && S.lv.fire >= 3,
   fisher2: () => S.stage >= 2 && S.lv.fisher >= 1,
-  farmer: () => S.stage >= 3, pizzaChef: () => S.stage >= 3, pizzaClerk: () => S.lv.bank > 0, smith: () => S.stage >= 3,
-  harbor: () => S.stage >= 3 && S.stat.soldPizza >= 10, boat: () => S.stage >= 4, boat2: () => S.lv.boat >= 2, crane: () => S.lv.boat >= 1, freezer: () => S.stage >= 4, lighthouse: () => S.stage >= 4, sushiChef: () => S.stage >= 4, sushiClerk: () => S.lv.bank > 0,
-  courier: () => S.stage >= 3 && S.lv.warehouse > 0, pizzaOven: () => S.lv.pizzaChef > 0, leatherClerk: () => S.lv.artisan > 0 && S.lv.bank > 0, fire: () => S.bought >= 2,
-  warehouse: () => S.stage >= 3, wall: () => S.stage >= 3, bank: () => S.stage >= 3, staffHouse: () => S.stage >= 3,
-  helper3: () => S.stage >= 3 && S.lv.helper2 >= 1, hunter3: () => S.stage >= 3 && S.lv.hunter2 >= 1,
-  statue: () => S.stage >= 3,
+  farmer: () => S.stage >= 3, pizzaChef: () => S.stage >= 3, pizzaClerk: () => S.lv.bank > 0, smith: () => S.stage >= 3 && (S.lv.smith > 0 || S.raw.pelt + S.raw.tusk + S.forgeRaw.pelt + S.forgeRaw.tusk + S.mats.pelt + S.mats.tusk > 0),
+  harbor: () => S.stage >= 3 && S.lv.fire >= 4, boat: () => S.stage >= 4, boat2: () => S.lv.boat >= 2, crane: () => S.lv.boat >= 1, freezer: () => S.stage >= 4, lighthouse: () => S.stage >= 4, sushiChef: () => S.stage >= 4, sushiClerk: () => S.lv.bank > 0,
+  pizzaOven: () => S.lv.pizzaChef > 0, leatherClerk: () => S.lv.artisan > 0 && S.lv.bank > 0, fire: () => S.bought >= 2,
+  // stage 3 opens in steps: pizza first, then the warehouse (after a few pizzas), then the bank, then what the bank pays for
+  warehouse: () => S.stage >= 3 && (S.lv.warehouse > 0 || S.stat.soldPizza >= 3), wall: () => S.lv.warehouse > 0, bank: () => S.lv.warehouse > 0, staffHouse: () => S.lv.bank > 0,
+  helper3: () => S.lv.warehouse > 0 && S.lv.helper2 >= 1, hunter3: () => S.lv.warehouse > 0 && S.lv.hunter2 >= 1,
+  statue: () => S.lv.bank > 0,
   helper: () => S.stat.sold >= 5,
-  gate: () => S.storms >= 1 || S.phase !== 'calm',
   server: () => S.stat.sold >= 10,
   hunter: () => S.stat.kills >= 5,
-  fishing: () => S.stat.sold >= 25,
+  fishing: () => S.lv.fire >= 1,
   clerk: () => S.lv.bank > 0,   // shop clerks come with the bank: they run the takings there
-  artisan: () => hidesOn() && S.stage >= 2,
+  artisan: () => hidesOn(),
   fisher: () => S.stage >= 2,
   fishClerk: () => S.lv.bank > 0,
   oven: () => S.stage >= 2,
   helper2: () => S.stage >= 2 && S.lv.helper >= 1,
   hunter2: () => S.stage >= 2 && S.lv.hunter >= 1,
+};
+// major unlocks get a camera close-up and a big card instead of a toast
+const SPOT_PADS = {
+  fire: ['🔥', '모닥불 강화', '모닥불 레벨이 오를 때마다 새 메뉴가 하나씩 열려요'],
+  fishing: ['🐟', '모닥불 Lv2 → 새 메뉴: 생선구이', '이 칸에서 마을을 2단계로 넓히면 얼음 낚시터와 생선 가게가 열려요'],
+  artisan: ['👜', '모닥불 Lv3 → 새 메뉴: 가죽 제품', '이제 사냥하면 가죽이 나와요. 가죽 장인을 고용하세요'],
+  hearth: ['🍕', '모닥불 Lv4 → 새 메뉴: 피자', '큰 화로로 3단계 확장: 텃밭과 피자 가게'],
+  harbor: ['🍣', '모닥불 Lv5 → 새 메뉴: 초밥', '빙하 항구로 4단계 확장: 바다·어선·초밥집'],
+  warehouse: ['🏚️', '큰 창고', '재료가 한곳에 모이고 배달 직원이 나와요. 3단계까지 키우면 직원·보관량이 늘어요'],
+  bank: ['🏦', '은행', '은행을 지으면 가게 점원과 직원 숙소가 열려요'],
+  smith: ['⚒️', '대장장이', '맹수 전리품을 장비 재료로 가공해요'],
 };
 // a pad disappears at max level, and waits while its next level needs a later village stage
 const padHidden = p => { if (guardPad(p)) return S.guard >= T.guard.max; const u = UP[p.key], lv = S.lv[p.key]; return lv >= u.costs.length || (u.stage && S.stage < u.stage[lv]); };
@@ -1469,7 +1516,7 @@ function updatePads(dt) {
     p.m.visible = p.on && !padHidden(p);
     if (!p.on && !padHidden(p) && REVEAL[p.key]()) {
       p.on = true; p.m.visible = true; p.m.scale.setScalar(S.started ? .01 : 1);
-      if (S.started) { toast(`✨ 새 업그레이드: ${UP[p.key].icon} ${UP[p.key].name}`); burst(p.x, .4, p.z, 0xffc83d, 12, { spd: 3, up: 6, life: .7 }); play('up'); }
+      if (S.started) { const sp = SPOT_PADS[p.key]; if (sp) spotlight(p.x, p.z, sp[0], sp[1], sp[2]); else toast(`✨ 새 업그레이드: ${UP[p.key].icon} ${UP[p.key].name}`); burst(p.x, .4, p.z, 0xffc83d, 12, { spd: 3, up: 6, life: .7 }); play('up'); }
     }
     if (!p.on) continue;
     if (p.m.scale.x < 1) p.m.scale.setScalar(Math.min(1, p.m.scale.x + dt * 2.5));
@@ -1730,7 +1777,7 @@ function woodSpot(skip) {
   if (whOn() && whRoom() > 0 && skip !== WH_SPOT) return WH_SPOT;
   const open = WOOD_SPOTS.filter(w => w !== skip && w.on() && S[w.key] < w.max());
   const ovenLow = open.find(w => w.key === 'ovenWood' && S.ovenWood < T.max.ovenWood / 2 && S.ovenWood * 3 < S.wood);
-  return ovenLow || open.find(w => w.key === 'wood') || open.sort((a, b) => S[a.key] / a.max() - S[b.key] / b.max())[0] || skip || WOOD_SPOTS[0];
+  return ovenLow || open.find(w => w.key === 'wood') || open.sort((a, b) => S[a.key] / a.max() - S[b.key] / b.max())[0] || null;   // null: every tile is full
 }
 function updateHelpers(dt) {
   for (const h of helpers) {
@@ -1748,18 +1795,22 @@ function updateHelpers(dt) {
         if (chopTree(h.tree)) h.n++;
         if (h.n >= ST.helperCarry[S.lv.helper]) {
           h.body.rotation.x = 0;
-          h.spot = woodSpot(); const dest = h.spot.at();
+          h.spot = woodSpot(); const dest = h.spot ? h.spot.at() : P.woodTile;
           h.path = [V(-9.8, 0, -4), V(-6.5, 0, -4), V(dest.x - .4, 0, dest.z - 1.3)]; h.state = 'deliver';
         }
         else if (h.tree.logs === 0) helperToTree(h);
       }
-    } else if (h.state === 'deliver') {   // unload; when this tile is full, walk on to another wood tile that still has room
-      if (h.spot.wh && !whOn()) h.spot = woodSpot();
-      if (h.spot.wh && whRoom() <= 0) { h.spot = woodSpot(WH_SPOT); if (!h.spot.wh) { h.path = [V(h.spot.at().x - .4, 0, h.spot.at().z - 1.3)]; continue; } }   // warehouse full: take the logs where they are needed
-      const w = h.spot, k = w.wh ? whPut('log', h.n) : Math.min(w.max() - S[w.key], h.n);
-      if (k > 0) { if (!w.wh) S[w.key] += k; h.n -= k; fly('log', V(h.x, 1.3, h.z), V(w.at().x, .4, w.at().z)); }
-      if (!h.n) helperToTree(h);
-      else { const nx = woodSpot(w.wh ? WH_SPOT : w); if (nx !== w) { h.spot = nx; h.path = [V(nx.at().x - .4, 0, nx.at().z - 1.3)]; } }
+    } else if (h.state === 'deliver') {   // unload; a full tile sends them on to the next one with room, and with nowhere left they sell the logs
+      let w = h.spot;
+      if (w && w.wh && (!whOn() || whRoom() <= 0)) { w = h.spot = woodSpot(WH_SPOT); if (w) { h.path = [V(w.at().x - .4, 0, w.at().z - 1.3)]; continue; } }
+      if (w) {
+        const k = w.wh ? whPut('log', h.n) : Math.min(w.max() - S[w.key], h.n);
+        if (k > 0) { if (!w.wh) S[w.key] += k; h.n -= k; fly('log', V(h.x, 1.3, h.z), V(w.at().x, .4, w.at().z)); }
+        const nx = h.n && woodSpot(w.wh ? WH_SPOT : w);
+        if (nx) { h.spot = nx; h.path = [V(nx.at().x - .4, 0, nx.at().z - 1.3)]; continue; }
+      }
+      if (h.n) { sellSurplus('log', h.n, h.x, h.z); h.n = 0; }
+      helperToTree(h);
     } else helperToTree(h);
     h.carry.children.forEach((m, i) => (m.visible = i < h.n));
     h.g.position.set(h.x, 0, h.z);
@@ -1998,9 +2049,20 @@ function updateFishers(dt) {
       if ((f.t += dt) >= ST.fisherCatch[S.lv.fisher]) { f.t = 0; f.n++; burst(f.hole.x, .3, f.hole.z, 0xbfe3f5, 5, { spd: 2, up: 4, life: .4 }); }
       if (f.n >= ST.fisherCarry[S.lv.fisher]) { f.state = 'toShop'; f.path = [V(P.fishCrate.x + 1.2, 0, P.fishCrate.z)]; }   // fishers stay by the pond; couriers haul surplus to the warehouse
     } else {
-      const k = Math.min(f.n, T.max.fishCrate - S.fishCrate);
-      if (k > 0) { S.fishCrate += k; f.n -= k; fly('fish', V(f.x, 1.2, f.z), V(P.fishCrate.x, .5, P.fishCrate.z)); }
-      if (f.n === 0) { f.state = 'toHole'; f.path = [V(f.hole.x + 1, 0, f.hole.z)]; }
+      if (f.state === 'carry') {   // a full crate sent them on: unload at the warehouse or the tile that needs fish
+        const t = f.dest, k = t.wh ? whPut('fish', f.n, V(f.x, 1.2, f.z)) : Math.min(f.n, t.max() - t.get());
+        if (k > 0 && !t.wh) { t.add(k); fly('fish', V(f.x, 1.2, f.z), V(t.at().x, .5, t.at().z)); }
+        f.n -= k;
+      } else {
+        const k = Math.min(f.n, T.max.fishCrate - S.fishCrate);
+        if (k > 0) { S.fishCrate += k; f.n -= k; fly('fish', V(f.x, 1.2, f.z), V(P.fishCrate.x, .5, P.fishCrate.z)); }
+      }
+      if (f.n > 0) {   // crate full (or that tile filled up too): warehouse → a tile that uses fish → sell what is left
+        const t = whOn() && whRoom() > 0 ? WH_SPOT : sinkFor('fish', f);
+        if (t && t !== f.dest) { f.dest = t; f.state = 'carry'; f.path = [V(t.at().x + 1.2, 0, t.at().z)]; return; }
+        sellSurplus('fish', f.n, f.x, f.z); f.n = 0;
+      }
+      if (f.n === 0) { f.state = 'toHole'; f.dest = null; f.path = [V(f.hole.x + 1, 0, f.hole.z)]; }
     }
   });
 }
@@ -2904,6 +2966,14 @@ function levelUp(key) {
   if (key === 'fishing') { S.stage = 2; applyStage(true); }
   if (key === 'hearth') { S.stage = 3; applyStage(true); }
   if (key === 'harbor') { S.stage = 4; applyStage(true); }
+  if (key === 'fishing') spotlight(POND.x, POND.z, '🎣', '2단계 마을 확장!', '얼음 낚시터와 생선 가게가 열렸어요: 낚시꾼과 화덕을 준비하세요');
+  if (key === 'hearth') spotlight(20, -5, '🍕', '3단계 마을 확장!', '텃밭과 피자 가게: 농부와 피자 쉐프를 고용하세요');
+  if (key === 'harbor') spotlight(31, -3, '⚓', '4단계 빙하 항구!', '부두 끝 🚣 칸에서 배를 타고, 초밥 쉐프를 고용하세요');
+  if (key === 'artisan' && S.lv.artisan === 1) spotlight(TAN.out.x, TAN.out.z, '👜', '가죽 가게 개점!', '장인이 가죽으로 제품을 만들어 팔아요');
+  if (key === 'pizzaChef' && S.lv.pizzaChef === 1) spotlight(P.pizzaShop.x, P.pizzaShop.z, '🍕', '피자 가게 개점!', '채소·고기·생선을 모아 피자를 구워요');
+  if (key === 'sushiChef' && S.lv.sushiChef === 1) spotlight(P.sushiShop.x, P.sushiShop.z, '🍣', '초밥집 개점!', '참치·생선·채소·장작으로 초밥을 만들어요');
+  if (key === 'warehouse') { addCourier(); spotlight(P.wh.x, P.wh.z, '🏚️', S.lv.warehouse === 1 ? '큰 창고 완공!' : `창고 Lv${S.lv.warehouse}!`, `배달 직원 ${courierCount()}명 · 보관 ${whCap()}칸` + (S.lv.warehouse === 1 ? ' · 은행·돌담이 열렸어요' : '')); }
+  if (key === 'bank') spotlight(P.bank.x, P.bank.z, '🏦', '은행 개점!', '가게 점원·직원 숙소·명성 동상이 열렸어요');
   if (key === 'boat' || key === 'boat2') syncBoats();
   if (key === 'sushiChef') addSushiChef();
   if (key === 'sushiClerk') syncClerks();
@@ -2929,7 +2999,7 @@ function levelUp(key) {
  applyGear(); burst(pl.x, 1, pl.z, 0xffd36b, 16, { spd: 3, up: 5, life: .7 });
   }
   const pad = pads.find(p => p.key === key);
-  burst(pad.x, .5, pad.z, 0xffc83d, 14, { spd: 4, up: 7, life: .8 }); play('up'); buzz([20, 40, 20]);
+  if (pad) burst(pad.x, .5, pad.z, 0xffc83d, 14, { spd: 4, up: 7, life: .8 }); play('up'); buzz([20, 40, 20]);
   const msg = { bag: `가방 용량 ${bagCap()}`, axe: `⚔️ ${weaponLook().name}! 공격력 ${axeDmg()}`, cape: `최대 체력 ${S.maxHp}`, saberCoat: `검치호 갑옷 Lv${S.lv.saberCoat}: 막기 ${pct(blockChance())}, 체력 ${S.maxHp}`, tuskAxe: `🦣 ${weaponLook().name}! 공격력 ${axeDmg()}`, statue: `명성 +${val('statue')}%: 모든 판매가 상승`, hearth: `3단계 확장!`, fisher2: `두 번째 낚시꾼이 일을 시작합니다`, farmer: `농부 Lv${S.lv.farmer}: 채소를 거둡니다`, pizzaChef: `피자 쉐프 Lv${S.lv.pizzaChef}: 피자를 굽습니다`, pizzaOven: `피자 화덕 Lv${S.lv.pizzaOven + 1}: ${T.pizzaTime[S.lv.pizzaOven]}초`, courier: `배달 트럭 ${courierCount()}대`, leatherClerk: `가죽 점원 Lv${S.lv.leatherClerk}`, fire: `모닥불 Lv${S.lv.fire + 1}!`, pizzaClerk: `피자 점원 Lv${S.lv.pizzaClerk}`, smith: `대장장이 Lv${S.lv.smith}: 전리품을 가공합니다`, helper3: `세 번째 나무꾼이 일을 시작합니다`, harbor: `4단계 빙하 항구!`, boat: `${['', '쪽배', '그물배', '원양선'][S.lv.boat]} 출항!`, boat2: `두 번째 어선 출항!`, crane: `크레인 가동`, freezer: `냉동 창고 ${T.harbor.dockCap[S.lv.freezer]}칸`, lighthouse: `등대 Lv${S.lv.lighthouse}`, sushiChef: `초밥 쉐프 Lv${S.lv.sushiChef}`, sushiClerk: `초밥 점원 Lv${S.lv.sushiClerk}`, warehouse: `큰 창고 ${whCap()}칸: 재료가 모두 여기로 모여요`, wall: `돌담 Lv${S.lv.wall}`, bank: `은행 개점! 점원이 수금해요`, staffHouse: `직원 숙소 ${S.lv.staffHouse}채`, hunter3: `세 번째 사냥꾼이 사냥을 나갑니다`, boots: `이동 속도 ↑ · 막기 ${pct(blockChance())}`, coat: `외투 Lv${S.lv.coat}: 막기 ${pct(blockChance())}`, gate: S.lv.gate > 3 ? `감시탑 Lv${towerLv()} 가동!` : `습격 곰 −${val('gate')}마리`, helper: `나무꾼 Lv${S.lv.helper}: 장작 ${ST.helperCarry[S.lv.helper]}개씩`, server: `서빙 직원 Lv${S.lv.server}: 한 번에 ${ST.serverCarry[S.lv.server]}개`, hunter: `사냥꾼 Lv${S.lv.hunter}: 공격력 ${ST.hunterDmg[S.lv.hunter]}`, fishing: `2단계 확장!`, clerk: `판매 점원 Lv${S.lv.clerk}: 손님 ${ST.clerkSlots[S.lv.clerk]}명 동시 응대`, artisan: S.lv.artisan === 1 ? `가죽 공방 가동! 가죽 제품을 팔아요` : `가죽 제품을 더 빨리 만들어요`, fisher: `낚시꾼 Lv${S.lv.fisher}: 생선 상자를 채웁니다`, fishClerk: `생선 점원 Lv${S.lv.fishClerk}: 손님 ${ST.clerkSlots[S.lv.fishClerk]}명 동시 응대`, helper2: `두 번째 나무꾼이 일을 시작합니다`, oven: `생선을 ${T.ovenTime[S.lv.oven]}초마다 굽고, 위에 ${ovenCap()}마리까지 올려요`, hunter2: `두 번째 사냥꾼이 사냥을 나갑니다` }[key];
   if (key !== 'fishing') toast(`${u.icon} ${u.name} 업그레이드! ${msg}`);
 }
@@ -3028,6 +3098,12 @@ const TUT = [
 const $ = id => document.getElementById(id);
 const coinsEl = $('coins'), stormEl = $('storm'), hpEl = $('hp'), warmEl = $('warm'), warmFill = $('warmFill'), objEl = $('obj'), bagEl = $('bag'), toastEl = $('toast'), frostEl = $('frost'), hurtEl = $('hurt'), goalEl = $('goal');
 let toastT = 0;
+// unlock close-up: the camera flies to the new thing for a moment with a big card (tap anywhere to skip)
+const spotEl = document.createElement('div'); spotEl.id = 'spot'; document.body.appendChild(spotEl);
+const spotQ = []; let spot = null;
+function spotlight(x, z, icon, title, sub) { if (!S.started || spotQ.length >= 4) return; spotQ.push({ x, z, icon, title, sub }); }
+function showSpot(s) { spotEl.innerHTML = `<div class="ic">${s.icon}</div><b>${s.title}</b><span>${s.sub}</span>`; spotEl.classList.add('show'); play('up'); buzz([30, 60, 30]); burst(s.x, .8, s.z, 0xffd36b, 26, { spd: 4, up: 8, life: 1 }); }
+addEventListener('pointerdown', () => { if (spot && spot.t > .6) spot.t = 99; });
 function toast(msg) { toastEl.textContent = msg; toastEl.classList.add('show'); toastT = 2.6; }
 const setText = (el, t) => { if (el.textContent !== t) el.textContent = t; };
 function updateHud(dt) {
@@ -3175,9 +3251,11 @@ function frame(now) {
   COIN_PILES.forEach(c => { c.v.g.visible = c.show(); c.v.set(Math.min(72, Math.ceil(S[c.key] / 5))); });
   updatePads(dt);
   woodTile.setFull(S.wood > 0); meatTile.setFull(S.meat > 0);
-  const off = camOff.clone().multiplyScalar(camera.aspect < 1 ? 1 : .85);
-  const want = V(pl.x, 0, pl.z).add(off);
-  camera.position.lerp(want, Math.min(1, dt * 6));
+  if (!spot && spotQ.length && S.started) { spot = spotQ.shift(); spot.t = 0; showSpot(spot); }
+  if (spot && (spot.t += dt) > 3.2) { spot = null; spotEl.classList.remove('show'); }
+  const zoom = spot ? .55 : 1, off = camOff.clone().multiplyScalar((camera.aspect < 1 ? 1 : .85) * zoom);
+  const want = (spot ? V(spot.x, 0, spot.z) : V(pl.x, 0, pl.z)).add(off);
+  camera.position.lerp(want, Math.min(1, dt * (spot ? 3.5 : 6)));
   if (shake > 0) { shake -= dt; const a = shakeAmp * Math.max(0, shake / .25); camera.position.x += rand(-a, a); camera.position.y += rand(-a, a); } else shakeAmp = 0;
   camera.lookAt(camera.position.x, 0, camera.position.z - off.z);
   sun.position.set(pl.x + 8, 20, pl.z + 10); sun.target.position.set(pl.x, 0, pl.z);

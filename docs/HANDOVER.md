@@ -51,3 +51,4 @@
 - v2.0 4단계: 코드는 `HB`/`seaG` 블록(`updateHarbor`, `updateRowboat`, `updateSushiChef`, `boats`/`syncBoats`, `schools`, `SEA_AI`/`spawnSea`/`seaClamp`). 바다 동물은 `bears` 안에서 `b.ai`·`b.sea`로 동작하고 사냥꾼은 무시. 바다는 `WALLS4`의 큰 상자로 막고, 배를 타면 `collide()` 대신 바다 범위로 고정(`pl.boat`). 안개는 `applySeaFog()`가 날씨 업데이트 뒤에 적용
 - v2.1.3: 오두막 업그레이드 삭제 → `crowd()`(단계-1, 최대 3)가 손님 수를 정함. 점원 칸 `REVEAL`은 `S.lv.bank > 0`. `updatePads`는 `padHidden`인 칸을 해금 알림하지 않음
 - v2.1.5: 칸 배치는 유형별 묶음(`makePad` 블록 주석 참고). 저장이 칸 이름 키라 호출 순서는 무관. `PAD_POS3`는 비어 있음(단계 이동 없음). `fishing`과 `hearth`는 같은 자리를 차례로 씀
+- v2.1.6: `MENUS`(모닥불 레벨별 메뉴), `spotlight()`/`SPOT_PADS`(해금 확대 연출, `#spot` 카드), `crowd()`. `UP.gate`·`UP.courier`는 옛 저장용으로만 남고 칸 없음, `courierCount() = S.lv.warehouse`. 물류: `SOURCES`/`fetch` 상태, `sinkFor()`, `sellSurplus()`. `woodSpot()`은 자리가 없으면 null
