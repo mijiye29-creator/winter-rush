@@ -8,8 +8,8 @@
 - **완료 기능**
   - 코어 루프: 벌목 → 모닥불(장작 칸) → 곰 사냥 → 고기 칸 → 그릴(날것/익음/탐) → 카운터 → 손님 → 동전 → 업그레이드 칸
   - 눈보라(평온 70초, 경고 8초, 눈보라 25초), 마을 온기, 습격 곰, 보스 곰(3회마다)
-  - 업그레이드 11종(`UP` 객체): bag, axe, boots, gate, helper, cart, server, belt, hunter, cabin, fishing
-  - NPC: 나무꾼(helpers), 서빙 직원(servers), 사냥꾼(hunters, 화살 shots), 컨베이어(beltItems)
+  - 업그레이드 10종(`UP` 객체): bag, axe, boots, gate, helper, cart, server, hunter, cabin, fishing. 업그레이드 칸은 레벨업 후 잠기며(`p.lock`), 밖으로 나갔다 오면 풀림. 칸에 서면 효과 설명(`DESC`) 표시
+  - NPC: 나무꾼(helpers), 서빙 직원(servers), 사냥꾼(hunters, 화살 shots). 컨베이어는 서빙 직원과 겹쳐 제거됨
   - 얼음 낚시터(동쪽, `fishBarrier` 벽 제거로 해금), 생선구이 주문
   - 손맛: `startSwing`/`updateSwing`(3단 모션), `playerHit`(히트스톱, 흔들림, 진동, 치명타, 피격 숫자), `burst` 파티클, WebAudio 효과음(`sfx`)
   - 목표 10단계(`GOALS`), Day 표시, 자동 저장(`SAVE_KEY='winter-rush-v1'`, 4초마다 localStorage)
@@ -22,7 +22,7 @@
 | `renderer / scene` | 씬, 카메라, 조명, `mat()` 머티리얼 캐시, `disposeActor()` |
 | `items` | `GEO`, `IMAT`, `ITEM_H`, `pile()`, `fly()` |
 | `juice` | `burst`, `popText`, `SND`, `tone`, `noise`, `sfx`, `play`, `buzz` |
-| `world layout` | `P`(좌표), `walls`, 울타리, 나무, 타일, 모닥불, 그릴(`grillSlots`, `takeReady`), 카운터, 낚시터, 벨트, 오두막, 업그레이드 칸(`makePad`) |
+| `world layout` | `P`(좌표), `walls`, 울타리, 나무, 타일, 모닥불, 그릴(`grillSlots`, `takeReady`), 카운터, 낚시터, 오두막, 업그레이드 칸(`makePad`) |
 | `characters` | `makePerson`, 플레이어, 쌓기(`stack`), 나무꾼, `walkPath`, 서빙 직원, 사냥꾼, 손님, 곰(`makeBear`, `bearHurt`, `updateBears`) |
 | `player` | 입력(조이스틱, 탭), 충돌, `updatePlayer`, 스윙, `playerHit`, `levelUp` |
 | `fire, warmth, blizzard` | `updateFire`(굽기, 탐), `updatePhase`, 눈 파티클 |

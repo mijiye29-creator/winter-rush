@@ -120,7 +120,6 @@ const UP = {
   helper:  { name: '나무꾼',    icon: '👷', costs: [100, 250],         vals: [0, 1, 2] },
   cart:    { name: '장작 수레',  icon: '🛒', costs: [120, 260],         vals: [4, 8, 12] },
   server:  { name: '서빙 직원',  icon: '🧑‍🍳', costs: [150, 350],         vals: [0, 1, 2] },
-  belt:    { name: '컨베이어',   icon: '⚙️', costs: [250, 400, 700],    vals: [0, 1, 2, 3] },
   hunter:  { name: '사냥꾼',    icon: '🏹', costs: [200, 450],         vals: [0, 1, 2] },
   cabin:   { name: '오두막',    icon: '🏠', costs: [180, 360, 600],    vals: [0, 1, 2, 3] },
   fishing: { name: '낚시터',    icon: '🎣', costs: [400],              vals: [0, 1] },
@@ -136,6 +135,20 @@ const S = {
   timers: {}, started: false,
 };
 const val = k => UP[k].vals[S.lv[k]];
+const raidSize = gate => Math.max(0, 1 + Math.floor((S.storms + 1) / 2) - gate);
+const DESC = {
+  bag: (a, b) => `용량 ${a} → ${b}`,
+  axe: (a, b) => `공격력 ${a} → ${b}, 벌목 속도 ↑`,
+  boots: (a, b) => `이동 속도 ${a} → ${b}`,
+  gate: (a, b) => `다음 눈보라 습격 곰 ${raidSize(a)} → ${raidSize(b)}마리`,
+  helper: (a, b) => `나무꾼 ${a} → ${b}명 (장작 자동 운반)`,
+  cart: (a, b) => `나무꾼 1회 운반량 ${a} → ${b}개`,
+  server: (a, b) => `서빙 직원 ${a} → ${b}명 (그릴 → 카운터)`,
+  hunter: (a, b) => `사냥꾼 ${a} → ${b}명 (곰 자동 사냥)`,
+  cabin: (a, b) => `오두막 ${a} → ${b}채 (손님 수·주문량 ↑)`,
+  fishing: () => `동쪽 얼음 낚시터 개방, 생선구이 판매`,
+};
+const descOf = k => { const u = UP[k], l = S.lv[k]; return l >= u.costs.length ? `${u.icon} ${u.name} 최대 레벨` : `${u.icon} ${u.name}: ${DESC[k](u.vals[l], u.vals[l + 1])}`; };
 function tick(key, every, dt) {
   const t = (S.timers[key] = (S.timers[key] ?? every) + dt);
   if (t >= every) { S.timers[key] = t - every; return true; }
@@ -515,42 +528,6 @@ function applyFishing() {
 }
 applyFishing();
 
-// conveyor belt grill → counter
-const BELT = [V(2, 0, -6.4), V(2, 0, -8.9), V(3.4, 0, -8.9)];
-const beltL1 = BELT[0].distanceTo(BELT[1]), beltLen = beltL1 + BELT[1].distanceTo(BELT[2]);
-const beltG = new THREE.Group(); beltG.visible = false; scene.add(beltG);
-const beltTex = canvasTex(64, 64);
-beltTex.draw((c, w, h) => { c.fillStyle = '#3b3f48'; c.fillRect(0, 0, w, h); c.fillStyle = '#69707e'; c.fillRect(0, 0, w, h / 4); });
-const beltTexs = [];
-function beltSeg(a, b) {
-  const len = a.distanceTo(b) + .5, g = new THREE.Group();
-  g.position.set((a.x + b.x) / 2, 0, (a.z + b.z) / 2); g.rotation.y = Math.atan2(b.x - a.x, b.z - a.z) + Math.PI;
-  g.add(mesh(new THREE.BoxGeometry(.95, .3, len), mat(0x22252c), 0, .15, 0));
-  const tex = beltTex.tex.clone(); tex.needsUpdate = true; tex.wrapS = tex.wrapT = THREE.RepeatWrapping; tex.repeat.set(1, len * 2);
-  const top = new THREE.Mesh(new THREE.PlaneGeometry(.75, len).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ map: tex }));
-  top.position.y = .31; g.add(top); beltG.add(g); beltTexs.push(tex);
-}
-beltSeg(BELT[0], BELT[1]); beltSeg(BELT[1], BELT[2]);
-const beltItems = [];
-function updateBelt(dt) {
-  const lv = S.lv.belt; beltG.visible = lv > 0; if (!lv) return;
-  const sp = [0, 1.6, 2.3, 3.2][lv];
-  beltTexs.forEach(t => (t.offset.y += sp * dt * 2));
-  const lastD = beltItems.length ? beltItems[beltItems.length - 1].d : 9;
-  if (beltItems.length < 8 && lastD > .55 && tick('beltIn', [0, 1.1, .7, .45][lv], dt)) {
-    const it = takeReady();
-    if (it) { const m = itemMesh(it.type); scene.add(m); beltItems.push({ type: it.type, m, d: 0 }); }
-  }
-  for (let i = 0; i < beltItems.length; i++) {
-    const b = beltItems[i];
-    b.d = Math.min(i === 0 ? beltLen : beltItems[i - 1].d - .55, b.d + sp * dt);
-    if (i === 0 && b.d >= beltLen && S.counter[b.type] < T.max.counter) { S.counter[b.type]++; scene.remove(b.m); beltItems.shift(); i--; continue; }
-    if (b.d < beltL1) b.m.position.lerpVectors(BELT[0], BELT[1], b.d / beltL1);
-    else b.m.position.lerpVectors(BELT[1], BELT[2], (b.d - beltL1) / (beltLen - beltL1));
-    b.m.position.y = .45;
-  }
-}
-
 // villager cabins (north, outside the fence)
 const CABIN_POS = [V(-6.2, 0, -13.7), V(-2.6, 0, -13.7), V(1, 0, -13.7)];
 const cabins = [];
@@ -596,7 +573,7 @@ function drawPad(p) {
   });
 }
 makePad('bag', -6, 3.6); makePad('axe', -3.8, 3.6); makePad('boots', 3.8, 3.6); makePad('gate', 6, 3.6); makePad('helper', -6, -8.2);
-makePad('hunter', -6, 1.4); makePad('cabin', -3.8, 1.4); makePad('belt', -5.5, -1.4); makePad('cart', -3.8, -8.2); makePad('server', -1.6, -8.2); makePad('fishing', 6.4, -.4);
+makePad('hunter', -6, 1.4); makePad('cabin', -3.8, 1.4); makePad('cart', -3.8, -8.2); makePad('server', -1.6, -8.2); makePad('fishing', 6.4, -.4);
 
 // ───────────────────────── characters ─────────────────────────
 function makePerson(coat, hair) {
@@ -1125,12 +1102,13 @@ function updatePlayer(dt) {
   }
   for (const p of pads) {
     const u = UP[p.key], lv = S.lv[p.key];
+    if (p.lock) { if (!near(p, 1.3)) p.lock = false; continue; }
     if (lv >= u.costs.length || !near(p, 1.0) || S.coins <= 0) continue;
     if (!tick('pad', .03, dt)) continue;
     const cost = u.costs[lv], k = Math.min(S.coins, cost - p.paid, Math.max(1, Math.ceil(cost / 25)));
     S.coins -= k; p.paid += k; play('coin', 45);
     fly('coin', V(pl.x, 1.4, pl.z), V(p.x, .1, p.z), .15);
-    if (p.paid >= cost) { p.paid = 0; levelUp(p.key); }
+    if (p.paid >= cost) { p.paid = 0; p.lock = true; levelUp(p.key); }
     drawPad(p);
   }
   if (inCamp() && S.hp < S.maxHp && tick('regen', 2.5, dt)) S.hp++;
@@ -1176,7 +1154,7 @@ function levelUp(key) {
   if (key === 'fishing') applyFishing();
   const pad = pads.find(p => p.key === key);
   burst(pad.x, .5, pad.z, 0xffc83d, 14, { spd: 4, up: 7, life: .8 }); play('up'); buzz([20, 40, 20]);
-  const msg = { bag: `가방 용량 ${val('bag')}`, axe: `공격력·벌목 속도 ↑`, boots: `이동 속도 ↑`, gate: `습격 곰 −${val('gate')}마리`, helper: `나무꾼 ${val('helper')}명이 장작을 나릅니다`, cart: `나무꾼이 장작을 ${val('cart')}개씩 나릅니다`, server: `서빙 직원 ${val('server')}명이 고기를 나릅니다`, belt: `벨트 Lv${S.lv.belt}: 그릴 → 카운터 자동 운반`, hunter: `사냥꾼 ${val('hunter')}명이 곰을 사냥합니다`, cabin: `손님이 더 많이, 더 자주 옵니다`, fishing: `동쪽 얼음 낚시터가 열렸어요!` }[key];
+  const msg = { bag: `가방 용량 ${val('bag')}`, axe: `공격력·벌목 속도 ↑`, boots: `이동 속도 ↑`, gate: `습격 곰 −${val('gate')}마리`, helper: `나무꾼 ${val('helper')}명이 장작을 나릅니다`, cart: `나무꾼이 장작을 ${val('cart')}개씩 나릅니다`, server: `서빙 직원 ${val('server')}명이 고기를 나릅니다`, hunter: `사냥꾼 ${val('hunter')}명이 곰을 사냥합니다`, cabin: `손님이 더 많이, 더 자주 옵니다`, fishing: `동쪽 얼음 낚시터가 열렸어요!` }[key];
   toast(`${u.icon} ${u.name} 업그레이드! ${msg}`);
 }
 
@@ -1295,6 +1273,8 @@ function updateHud(dt) {
   if (!cur && S.phase === 'warn') obj = '⚠ 눈보라 중엔 불이 3배 빨리 탑니다. 장작을 채우세요!';
   if (!cur && S.phase === 'storm' && bears.some(b => b.raider)) obj = '🐻 마을에 들어온 곰을 쫓아내세요!';
   if (!cur && S.warmth < 35 && S.phase !== 'storm') obj = '🥶 마을이 얼고 있어요. 모닥불에 장작을!';
+  const onPad = pads.find(p => near(p, 1.0));
+  if (onPad) obj = descOf(onPad.key) + (onPad.lock && S.lv[onPad.key] < UP[onPad.key].costs.length ? ' · 칸 밖으로 나갔다 오면 다음 레벨' : '');
   setText(objEl, obj);
   arrow.visible = !!cur;
   if (cur) { const p = cur.at(); arrow.position.set(p.x, 3 + Math.sin(performance.now() / 200) * .3, p.z); }
@@ -1305,7 +1285,7 @@ const GOALS = [
   { text: '곰 5마리 사냥', cur: () => S.stat.kills, n: 5, reward: 60 },
   { text: '불을 지키며 눈보라 버티기', cur: () => S.stat.held, n: 1, reward: 80 },
   { text: '서빙 직원 고용', cur: () => S.lv.server, n: 1, reward: 100 },
-  { text: '컨베이어 벨트 설치', cur: () => S.lv.belt, n: 1, reward: 120 },
+  { text: '서빙 직원 2명 고용', cur: () => S.lv.server, n: 2, reward: 120 },
   { text: '사냥꾼 고용', cur: () => S.lv.hunter, n: 1, reward: 150 },
   { text: '얼음 낚시터 열기', cur: () => S.lv.fishing, n: 1, reward: 150 },
   { text: '생선구이 10개 판매', cur: () => S.stat.soldFish, n: 10, reward: 200 },
@@ -1324,7 +1304,6 @@ const SAVE_KEY = 'winter-rush-v1';
 function save() {
   try {
     const counter = { ...S.counter };
-    beltItems.forEach(b => (counter[b.type] = Math.min(T.max.counter, counter[b.type] + 1)));
     const keys = ['coins', 'coinPile', 'wood', 'meat', 'fish', 'fuel', 'warmth', 'grillItems', 'lv', 'storms', 'stat', 'goal', 'tut', 'woodIn', 'meatIn', 'steakIn', 'served', 'bought'];
     const data = Object.fromEntries(keys.map(k => [k, S[k]]));
     data.counter = counter; data.paid = pads.map(p => p.paid);
@@ -1356,7 +1335,7 @@ function frame(now) {
   if (S.hitstop > 0) { S.hitstop -= dt; g = dt * .08; }
   if (S.started) {
     updatePhase(g); updatePlayer(g); updateFire(g); updateBears(g);
-    updateCustomers(g); updateHelpers(g); updateServers(g); updateHunters(g); updateShots(g); updateBelt(g);
+    updateCustomers(g); updateHelpers(g); updateServers(g); updateHunters(g); updateShots(g);
   }
   updateTrees(g); updateFlyers(g); updateParts(g); updatePops(dt); updateCabins(dt); updateSnow(dt); updateHud(dt);
   woodPile.set(S.wood); meatPile.set(S.meat); fishPile.set(S.fish); renderGrill();
@@ -1385,6 +1364,6 @@ addEventListener('pagehide', () => { if (S.started) save(); });
 document.addEventListener('visibilitychange', () => { if (document.hidden && S.started) save(); });
 $('snd').addEventListener('click', e => { SND.on = !SND.on; e.currentTarget.classList.toggle('off', !SND.on); });
 $('vib').addEventListener('click', e => { SND.vib = !SND.vib; e.currentTarget.classList.toggle('off', !SND.vib); buzz(30); });
-window.__winter = { S, pl, stack, bears, trees, customers, pads, helpers, servers, hunters, beltItems, T, save, levelUp };
+window.__winter = { S, pl, stack, bears, trees, customers, pads, helpers, servers, hunters, T, save, levelUp };
 })();
 </script>
