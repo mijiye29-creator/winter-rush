@@ -294,7 +294,7 @@ const P = {
   ovenWood: V(12, 0, -4.8), fishCrate: V(14.2, 0, -4.8), serverGrill: V(.3, 0, -5.4), serverWay: V(.3, 0, -7.1),
   fishCoin: V(11.4, 0, -7.2), tanCoin: V(12.3, 0, 3.4),
   pizzaOven: V(19, 0, -8.9), pizzaShop: V(21.8, 0, -8.9), pizzaIn: V(19, 0, -6.7), pizzaCoin: V(24.9, 0, -7.4),
-  wh: V(18, 0, 4.4), whIn: V(18, 0, 1.9), bank: V(20.9, 0, 4.2), vault: V(22.2, 0, 4.6),   // warehouse + bank side by side, bottom-left of the annex
+  wh: V(-6.2, 0, 4.5), whIn: V(-6.5, 0, 2.2), bank: V(-3.4, 0, 4.3), vault: V(-2.75, 0, 4.95),   // warehouse + bank side by side in the village's bottom-left corner, by the hunting gate
   holes: [V(11.9, 0, -.4), V(13.4, 0, .8)],
 };
 const BOUNDS = { x1: -21, x2: 18, z1: -15, z2: 24 };
@@ -628,9 +628,9 @@ const pizzaPile = pile('pizza', T.max.pizza, V(P.pizzaShop.x, .9, P.pizzaShop.z)
 const pzSign = sprite(240, 100, 2.2, .92); pzSign.sp.position.set(P.pizzaOven.x, 2.4, P.pizzaOven.z); annexG.add(pzSign.sp);
 // the one big warehouse (south-east corner): every raw material ends up here, couriers hand it out
 const whG = new THREE.Group(); whG.position.copy(P.wh); whG.visible = false; scene.add(whG);
-whG.add(mesh(new THREE.BoxGeometry(2.8, 1.8, 2.2), mat(0x9a6a40), 0, .9, 0));
-whG.add(mesh(new THREE.CylinderGeometry(1.25, 1.25, 2.9, 12, 1, false, 0, Math.PI).rotateZ(Math.PI / 2).rotateY(Math.PI / 2), mat(0x8a2b2b), 0, 1.8, 0));
-whG.add(mesh(new THREE.BoxGeometry(1.1, 1.3, .05), mat(0x5a3420), 0, .65, -1.12));
+whG.add(mesh(new THREE.BoxGeometry(2.6, 1.8, 2), mat(0x9a6a40), 0, .9, 0));
+whG.add(mesh(new THREE.CylinderGeometry(1.15, 1.15, 2.7, 12, 1, false, 0, Math.PI).rotateZ(Math.PI / 2).rotateY(Math.PI / 2), mat(0x8a2b2b), 0, 1.8, 0));
+whG.add(mesh(new THREE.BoxGeometry(1.1, 1.3, .05), mat(0x5a3420), 0, .65, -1.02));
 const whTile = tile(P.whIn, '📦'); whTile.g.visible = false;
 const whLabel = sprite(360, 90, 3.4, .85); whLabel.sp.position.set(P.wh.x, 3.6, P.wh.z); whLabel.sp.visible = false; scene.add(whLabel.sp);
 let whShown = '';
@@ -825,7 +825,7 @@ function updateHearth3(dt) {
 const bankTile = tile(P.bank, '🏦'); bankTile.g.visible = false;
 const bankPile = pile('coin', 72, V(P.bank.x, .09, P.bank.z), 3, 3, .36, .36); bankPile.g.visible = false;
 const vaultG = new THREE.Group(); vaultG.position.copy(P.vault); vaultG.visible = false; scene.add(vaultG);
-vaultG.add(mesh(new THREE.BoxGeometry(.8, 1.1, .8), mat(0x8a8f99), 0, .55, 0), mesh(new THREE.CylinderGeometry(.22, .22, .06, 12).rotateZ(Math.PI / 2), mat(0xffc83d, { emissive: 0x664400 }), -.42, .6, 0));
+vaultG.add(mesh(new THREE.BoxGeometry(.5, .8, .5), mat(0x8a8f99), 0, .4, 0), mesh(new THREE.CylinderGeometry(.16, .16, .06, 12).rotateX(Math.PI / 2), mat(0xffc83d, { emissive: 0x664400 }), 0, .45, -.27));   // small safe on the bank tile
 const bankLabel = sprite(220, 90, 1.9, .9); bankLabel.sp.position.set(P.bank.x, 2.2, P.bank.z); bankLabel.sp.visible = false; scene.add(bankLabel.sp);
 let bankShown = '';
 const staffCount = () => helpers.length + servers.length + hunters.length + fishers.length + couriers.length + (artisan ? 1 : 0) + (farmer ? 1 : 0) + (pizzaChefNpc ? 1 : 0) + (smithNpc ? 1 : 0) + (S.lv.clerk > 0) + (S.lv.fishClerk > 0) + (S.lv.pizzaClerk > 0) + (S.lv.leatherClerk > 0);
@@ -867,8 +867,8 @@ function updateBank(dt) {
       continue;
     }
     if (!walkPath(n, dt, 3.6)) continue;
-    if (n.st === 'grab') { n.cash = S[r.coin]; S[r.coin] = 0; popText(n.x, 2.4, n.z, `🪙${n.cash}`, '#ffd36b'); n.st = 'bank'; n.path = [V(16.8, 0, -1), V(P.bank.x, 0, P.bank.z - 1.3)]; }
-    else if (n.st === 'bank') { S.bank += n.cash; fly('coin', V(n.x, 1.4, n.z), V(P.bank.x, .3, P.bank.z)); n.cash = 0; play('coin', 45); n.st = 'back'; n.path = [V(16.8, 0, -1), r.post.clone()]; }
+    if (n.st === 'grab') { n.cash = S[r.coin]; S[r.coin] = 0; popText(n.x, 2.4, n.z, `🪙${n.cash}`, '#ffd36b'); n.st = 'bank'; n.path = [V(P.bank.x, 0, P.bank.z - 1.3)]; }
+    else if (n.st === 'bank') { S.bank += n.cash; fly('coin', V(n.x, 1.4, n.z), V(P.bank.x, .3, P.bank.z)); n.cash = 0; play('coin', 45); n.st = 'back'; n.path = [r.post.clone()]; }
     else { n.st = 'post'; n.g.rotation.y = r.face; }
   }
   if (near(P.bank, 1.3) && S.bank > 0 && tick('withdraw', .03, dt)) {
@@ -971,10 +971,11 @@ makePad('clerk', 4.5, -.2); makePad('artisan', 6.6, 4.2); makePad('fisher', 4.5,
 makePad('coat', -2.4, 2); makePad('cape', -6.6, 4.2);
 makePad('hearth', 8.7, -.2); makePad('fisher2', 8.7, 2);   // stage 2 column east of the right block
 makePad('farmer', 18, -.2); makePad('pizzaChef', 24.4, -.2); makePad('pizzaClerk', 22.3, -.2); makePad('smith', 8.7, -5.6); makePad('helper3', 22.3, 2); makePad('hunter3', 24.4, 2);   // stage 3 annex grid
-makePad('warehouse', 24.4, -4.8); makePad('wall', 24.4, 4.2); makePad('bank', 20.9, 4.2); makePad('staffHouse', 24.4, -2.6);   // the bank pad becomes the bank tile
+makePad('warehouse', -6.5, 2.2); makePad('wall', 24.4, 4.2); makePad('bank', -3.4, 4.3); makePad('staffHouse', 24.4, -2.6);   // the bank pad becomes the bank tile
 makePad('courier', 20.2, -.2); makePad('pizzaOven', 20.2, 2); makePad('leatherClerk', 8.7, 4.2); makePad('fire', -.3, -7.8);
 makePad('saberCoat', -6.6, -7.8); makePad('tuskAxe', -4.5, -7.8); makePad('statue', -2.4, -7.8);   // legend row, north-west
 const PAD_POS2 = {};   // pads that move when the village grows
+const PAD_POS3 = { helper2: [18, 2], cape: [18, 4.2], hunter2: [20.2, 4.2], hunter: [22.3, 4.2] };   // stage 3: clear the bottom-left corner for the warehouse and bank
 const REVEAL = {
   bag: () => true, axe: () => true,
   boots: () => S.bought >= 1,
@@ -1051,6 +1052,7 @@ function applyStage(fanfare) {
       burst(P.fire.x, 1, P.fire.z, 0xffb347, 30, { spd: 5, up: 8, life: 1, size: 1.2 });
     }
   }
+  if (three && !applyStage.moved3) { applyStage.moved3 = true; for (const p of pads) if (PAD_POS3[p.key]) { [p.x, p.z] = PAD_POS3[p.key]; p.m.position.set(p.x, .03, p.z); } }
   if (!fanfare) return;
   if (three) {
     for (let x = 16; x <= 26; x += 2.2) { burst(x, 1.4, -10, 0xff8a3c, 5, { spd: 2, up: 6, life: .9 }); burst(x, 1.4, 6, 0xff8a3c, 5, { spd: 2, up: 6, life: .9 }); }
@@ -1479,9 +1481,9 @@ function updateFishers(dt) {
     if (f.state === 'toHole') {
       f.g.rotation.y = -Math.PI / 2; f.body.rotation.x = Math.sin(performance.now() / 300) * .05;
       if ((f.t += dt) >= ST.fisherCatch[S.lv.fisher]) { f.t = 0; f.n++; burst(f.hole.x, .3, f.hole.z, 0xbfe3f5, 5, { spd: 2, up: 4, life: .4 }); }
-      if (f.n >= ST.fisherCarry[S.lv.fisher]) { f.state = 'toShop'; f.path = whOn() ? [V(16.8, 0, f.z), V(P.whIn.x - .8, 0, P.whIn.z - 1.3)] : [V(P.fishCrate.x + 1.2, 0, P.fishCrate.z)]; }
+      if (f.n >= ST.fisherCarry[S.lv.fisher]) { f.state = 'toShop'; f.path = whOn() ? [V(P.whIn.x + .8, 0, P.whIn.z - 1.3)] : [V(P.fishCrate.x + 1.2, 0, P.fishCrate.z)]; }
     } else {
-      if (whOn()) { f.n -= whPut('fish', f.n, V(f.x, 1.2, f.z)); if (f.n === 0) { f.state = 'toHole'; f.path = [V(16.8, 0, f.hole.z), V(f.hole.x + 1, 0, f.hole.z)]; } return; }
+      if (whOn()) { f.n -= whPut('fish', f.n, V(f.x, 1.2, f.z)); if (f.n === 0) { f.state = 'toHole'; f.path = [V(f.hole.x + 1, 0, f.hole.z)]; } return; }
       const k = Math.min(f.n, T.max.fishCrate - S.fishCrate);
       if (k > 0) { S.fishCrate += k; f.n -= k; fly('fish', V(f.x, 1.2, f.z), V(P.fishCrate.x, .5, P.fishCrate.z)); }
       if (f.n === 0) { f.state = 'toHole'; f.path = [V(f.hole.x + 1, 0, f.hole.z)]; }
@@ -2560,7 +2562,7 @@ function footprints() {
   if (three) {
     PLOTS.forEach((pp, i) => f.push(box('plot' + i, pp.x, pp.z, 1.6, 1.6)));
     f.push(box('pizzaIn', P.pizzaIn.x, P.pizzaIn.z, 1.9, 1.9), box('pizzaOven', P.pizzaOven.x, P.pizzaOven.z, 1.4, 1.4), box('pizzaShop', P.pizzaShop.x, P.pizzaShop.z, 2.6, 1.1), box('pizzaCoin', P.pizzaCoin.x, P.pizzaCoin.z, 1.3, 1.3), box('pizzaClerk', 23.8, -8.8, .8, .8));
-    f.push(box('wh', P.wh.x, P.wh.z, 2.8, 2.2), box('whIn', P.whIn.x, P.whIn.z, 1.9, 1.9), box('bank', P.bank.x, P.bank.z, 1.9, 1.9), box('vault', P.vault.x, P.vault.z, .8, .8));
+    f.push(box('wh', P.wh.x, P.wh.z, 2.6, 2), box('whIn', P.whIn.x, P.whIn.z, 1.9, 1.9), box('bank', P.bank.x, P.bank.z, 1.9, 1.9));
   }
   return f;
 }

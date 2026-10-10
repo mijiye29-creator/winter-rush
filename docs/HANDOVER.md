@@ -47,3 +47,4 @@
 - v1.3: 창고 `S.whWood/whMeat`, `belts`/`updateWarehouses`(벨트 위 물건은 저장 안 됨), 은행 `S.bank`·`RUNNERS`(점원 NPC가 `walkPath`로 이동)·`payday()`/`S.strike`, `staffMul()`(walkPath·나무꾼 속도), 돌담 `stoneFence`, 숙소 `buildHouses()`
 - v1.4: 창고는 `S.wh`(품목별)·`whOn()`/`whPut()`/`whRoom()`, 배달 `couriers`/`updateCourier`(`DELIVER` 목록, `collect`/`stash` 상태, `viaGate`). 공방 칸 `TAN.in`이 가죽·장작·전리품 공용, 대장장이는 `updateSmith`(`updateTannery`에서 호출). 피자 `T.pizzaRecipe`. 무기 `WEAPONS`/`buildWeapon()`(`axeHead`는 현재 칼날). `logFuel()`은 `UP.fire` 반영
 - v1.4.1: Codex 병합. `guardPad`(큰 화로 칸 재사용), `S.paydayT`, 저장 `paid`는 칸 이름 키(옛 배열 저장은 버전별 칸 순서로 복원). `whCap()`·`courierCount()`가 `S.lv.fire` 반영. 전리품 픽업은 `beamGeo`/`ringGeo` 자식 메시
+- v1.4.3: 창고·은행은 남서쪽 구석. `PAD_POS3`가 3단계 진입 때 칸 4개를 옮김. 겹침 검사는 같은 세션에서 1→2→3단계 순서로 해야 이동이 반영됨
