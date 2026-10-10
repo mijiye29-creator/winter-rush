@@ -802,7 +802,6 @@ const DELIVER = [
   { item: 'log', at: () => P.woodTile, get: () => S.wood, max: () => T.max.wood, add: k => (S.wood += k) },
   { item: 'meat', at: () => P.meatTile, get: () => S.meat, max: () => T.max.meat, add: k => (S.meat += k) },
   { item: 'log', at: () => P.ovenWood, get: () => S.ovenWood, max: () => T.max.ovenWood, add: k => (S.ovenWood += k) },
-  { item: 'fish', at: () => P.fishCrate, get: () => S.fishCrate, max: () => T.max.fishCrate, add: k => (S.fishCrate += k) },
   { item: 'log', at: () => TAN.in, get: () => S.tanWood, max: () => T.max.tanWood, add: k => (S.tanWood += k), on: () => S.lv.artisan > 0 },
   { item: 'hide', at: () => TAN.in, get: () => S.hide, max: () => T.max.hide, add: k => (S.hide += k), on: () => S.lv.artisan > 0 },
   { item: 'pelt', at: () => TAN.in, get: () => S.forgeRaw.pelt, max: () => T.max.forgeRaw, add: k => (S.forgeRaw.pelt += k), on: () => S.lv.smith > 0 },
@@ -828,6 +827,7 @@ function updateCourier(c, dt) {
     if (next) { c.target = next; c.path = viaGate(c, V(next.x, 0, next.z)); return; }
     c.target = null; c.state = 'stash'; c.path = viaGate(c, V(P.whIn.x, 0, P.whIn.z - 1.3)); return;
   }
+  if (c.state === 'haul') { const k = Math.min(T.courier.carry[lv], S.fishCrate, whRoom()); S.fishCrate -= k; c.n = k; c.item = 'fish'; c.state = 'stash'; c.path = viaGate(c, V(P.whIn.x, 0, P.whIn.z - 1.3)); return; }
   if (c.state === 'stash') { const k = whPut(c.item, c.n, V(c.x, 1.2, c.z)); c.n -= k; if (c.n) return; c.state = 'idle'; }
   if (c.state === 'load') {
     const t = c.job, k = Math.min(T.courier.carry[lv], S.wh[t.item], t.max() - t.get());
@@ -846,6 +846,8 @@ function updateCourier(c, dt) {
     const r = t.get() / t.max(); if (r < br) { br = r; best = t; }
   }
   if (best) { c.job = best; c.state = 'load'; c.path = viaGate(c, V(P.whIn.x - .6 + couriers.indexOf(c) * .6, 0, P.whIn.z - 1.3)); return; }
+  const crate = whRoom() > 0 && S.fishCrate >= T.max.fishCrate * .7 && !couriers.some(o => o !== c && o.state === 'haul');
+  if (crate) { c.state = 'haul'; c.item = 'fish'; c.path = viaGate(c, V(P.fishCrate.x - 1.3, 0, P.fishCrate.z)); return; }   // surplus fish from the pond crate → warehouse
   const pk = whRoom() > 0 && nearestPickup(c);
   if (pk) { c.state = 'collect'; c.item = pk.type; c.target = pk; c.path = viaGate(c, V(pk.x, 0, pk.z)); }
 }
@@ -1553,9 +1555,8 @@ function updateFishers(dt) {
     if (f.state === 'toHole') {
       f.g.rotation.y = -Math.PI / 2; f.body.rotation.x = Math.sin(performance.now() / 300) * .05;
       if ((f.t += dt) >= ST.fisherCatch[S.lv.fisher]) { f.t = 0; f.n++; burst(f.hole.x, .3, f.hole.z, 0xbfe3f5, 5, { spd: 2, up: 4, life: .4 }); }
-      if (f.n >= ST.fisherCarry[S.lv.fisher]) { f.state = 'toShop'; f.path = whOn() ? [V(P.whIn.x + .8, 0, P.whIn.z - 1.3)] : [V(P.fishCrate.x + 1.2, 0, P.fishCrate.z)]; }
+      if (f.n >= ST.fisherCarry[S.lv.fisher]) { f.state = 'toShop'; f.path = [V(P.fishCrate.x + 1.2, 0, P.fishCrate.z)]; }   // fishers stay by the pond; couriers haul surplus to the warehouse
     } else {
-      if (whOn()) { f.n -= whPut('fish', f.n, V(f.x, 1.2, f.z)); if (f.n === 0) { f.state = 'toHole'; f.path = [V(f.hole.x + 1, 0, f.hole.z)]; } return; }
       const k = Math.min(f.n, T.max.fishCrate - S.fishCrate);
       if (k > 0) { S.fishCrate += k; f.n -= k; fly('fish', V(f.x, 1.2, f.z), V(P.fishCrate.x, .5, P.fishCrate.z)); }
       if (f.n === 0) { f.state = 'toHole'; f.path = [V(f.hole.x + 1, 0, f.hole.z)]; }
