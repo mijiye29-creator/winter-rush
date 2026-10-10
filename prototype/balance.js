@@ -15,7 +15,7 @@ window.WinterRushData = {
       serverCarry: [0, 6, 10, 14], serverSpeed: [0, 3.6, 4.4, 5.2], serverIv: [0, .15, .1, .06],
       hunterDmg: [0, 2, 3, 4], hunterCd: [0, .7, .55, .4],
       clerkSlots: [1, 2, 2, 3], clerkIv: [.35, .28, .2, .14],
-      hunterCarry: [0, 6, 9, 12], hunterHides: [0, 4, 6, 8],   // meat / hides a hunter carries home by level
+      hunterCarry: [0, 8, 12, 16], hunterHides: [0, 4, 6, 8],   // meat / hides a hunter carries home by level
     farmerCarry: [0, 4, 8], farmerSpeed: [0, 3.4, 4.2], pizzaChefCarry: [0, 4, 8], pizzaChefSpeed: [0, 3.6, 4.4],
     fisherCatch: [0, 2.6, 1.9], fisherCarry: [0, 6, 10],
     },
@@ -44,11 +44,14 @@ window.WinterRushData = {
     garden: { grow: 12 },          // seconds for a plot to ripen
     pizzaTime: 3.2,                // seconds per pizza in the pizza oven (1 veg + 1 meat + 1 log)
     smithTime: [0, 8, 4],          // seconds per trophy processed by smith level
+    warehouse: { cap: [0, 80, 160], beltIv: [0, .5, .3], beltSpeed: [0, 2.5, 3.5] },
+    wage: { every: 60, per: 8, interest: .02, maxInterest: 200 },   // per staff each payday (stage 3)
+    staffHouse: .15,               // staff speed bonus per house
     armor: { boots: [0, .04, .08, .12], coat: [0, .08, .16, .24] },   // chance to block a hit
     max: { vegCrate: 20, pzVeg: 12, pzMeat: 12, pzWood: 12, pizza: 16, forgeRaw: 10, tanWood: 16, wood: 40, meat: 30, grill: 18, counter: 16, hide: 20, fishCrate: 20, fishRaw: 30, ovenWood: 12, fishSmoked: 12, fishStock: 20, leather: 16, tanFuel: 8 },
   },
   UP: {
-    bag:     { name: '가방',      icon: '🎒', costs: [30, 60, 120, 240], vals: [8, 12, 16, 22, 30] },
+    bag:     { name: '가방',      icon: '🎒', costs: [30, 60, 120, 240, 500], vals: [10, 16, 22, 30, 40, 50] },
     axe:     { name: '도끼',      icon: '🪓', costs: [40, 90, 200, 450, 900, 1600], vals: [1, 2, 3, 4, 6, 8, 11], stage: [1, 1, 1, 2, 2, 2] },
     boots:   { name: '장화',      icon: '🥾', costs: [30, 80, 200],      vals: [5, 5.8, 6.6, 7.4] },
     cape:    { name: '망토',      icon: '🦸', costs: [100, 300, 700, 1200], vals: [5, 6, 7, 8, 9], stage: [1, 1, 2, 2] },   // max HP
@@ -76,6 +79,10 @@ window.WinterRushData = {
     smith:     { name: '대장장이', icon: '⚒️', costs: [700, 1500], vals: [0, 1, 2], stage: [3, 3] },
     helper3:   { name: '나무꾼 3', icon: '👷', costs: [1200], vals: [0, 1], stage: [3] },
     hunter3:   { name: '사냥꾼 3', icon: '🏹', costs: [1500], vals: [0, 1], stage: [3] },
+    warehouse: { name: '마을 창고', icon: '🏚️', costs: [1500, 3000], vals: [0, 1, 2], stage: [3, 3] },
+    wall:      { name: '돌담', icon: '🧱', costs: [1500, 3000], vals: [0, 1, 2], stage: [3, 3] },   // −1 raider per level
+    bank:      { name: '은행', icon: '🏦', costs: [1200], vals: [0, 1], stage: [3] },
+    staffHouse: { name: '직원 숙소', icon: '🏘️', costs: [1000, 2000, 3500], vals: [0, 1, 2, 3], stage: [3, 3, 3] },
     fishClerk: { name: '생선 점원', icon: '🧑‍💼', costs: [200, 500, 1000],  vals: [0, 1, 2, 3], stage: [2, 2, 2] },
   },
 };

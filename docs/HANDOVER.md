@@ -44,3 +44,4 @@
 - v1.0: `COIN_PILES`(S.coinPile/coinFish/coinLeather, `SHOPS.*.coin`), `WOOD_SPOTS`/`woodSpot()`(나무꾼 `deliver` 상태), `S.tanWood`, `heroLv()`, `makeBeast(kind)`/`spawnBeast()`(`T.beasts`, 몹 객체 `kind`/`sc`/`dmg`/`reach`/`big`), `AXE_LOOKS`, 망토 `capeG`
 - v1.1: 재료 `S.mats`(pelt/tusk), 업그레이드 `UP.*.mats`(`matsNeed`/`matsOk`, 레벨업 시 차감), `axeDmg()`/`maxHpOf()`, 감시탑 `TOWERS`/`updateTowers`(`shots`의 `dmg` 덮어쓰기), 동상 `buildStatue()`
 - v1.2: `S.stage` 3 = `UP.hearth`. `applyStage`가 `fence3`/`WALLS3`, `CAMP.x2`·`BOUNDS.x2`, `annexG`·`farTrees`·`eastBorder`, `LEATHER_ROUTE`를 처리. 3단계 코드는 `annexG` 블록(`PLOTS`, `updateAnnex`, `updateFarmer`, `updatePizzaCook`, 대장장이 `smithNpc`). 전리품 `S.raw`(주머니) → `S.forgeRaw`(⚒️ 칸) → `S.mats`. 겹침 점검은 1·2·3단계 모두 (`stage3Only`)
+- v1.3: 창고 `S.whWood/whMeat`, `belts`/`updateWarehouses`(벨트 위 물건은 저장 안 됨), 은행 `S.bank`·`RUNNERS`(점원 NPC가 `walkPath`로 이동)·`payday()`/`S.strike`, `staffMul()`(walkPath·나무꾼 속도), 돌담 `stoneFence`, 숙소 `buildHouses()`
