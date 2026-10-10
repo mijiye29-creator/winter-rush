@@ -8,6 +8,8 @@ const LEVEL_TILE := Vector2i(4, 3)
 const EXPAND_TILE := Vector2i(3, 2)
 const TREES := [Vector2i(1, 4), Vector2i(5, 4), Vector2i(1, 6), Vector2i(5, 6)]
 const ORES := [Vector2i(0, 7), Vector2i(6, 7)]
+const BUILDING_CELLS := [Vector2i(2, 2), Vector2i(4, 2), Vector2i(3, 1)]
+const BUILDING_NAMES := ["집", "작업장", "망루"]
 
 var player := Vector2i(3, 4)
 var wood := 0
@@ -36,7 +38,16 @@ func tile_at(cell: Vector2i) -> String:
 		return "tree"
 	if cell in ORES:
 		return "ore"
+	if building_at(cell) != "":
+		return "building"
 	return "ground"
+
+
+func building_at(cell: Vector2i) -> String:
+	var index := BUILDING_CELLS.find(cell)
+	if index >= 0 and index < expansions:
+		return BUILDING_NAMES[index]
+	return ""
 
 
 func move_to(cell: Vector2i) -> String:
@@ -81,11 +92,13 @@ func move_to(cell: Vector2i) -> String:
 					message = "레벨업에는 경험치 %d가 필요해요." % cost
 			"expand":
 				var cost := (expansions + 1) * 10
-				if coins >= cost:
+				if expansions >= BUILDING_NAMES.size():
+					message = "마을을 모두 확장했어요."
+				elif coins >= cost:
 					coins -= cost
 					expansions += 1
 					village_hp += 3
-					message = "마을을 확장했어요! 방어력 +3"
+					message = "%s 건설! 마을 체력 +3" % BUILDING_NAMES[expansions - 1]
 				else:
 					message = "확장에는 %d원이 필요해요." % cost
 

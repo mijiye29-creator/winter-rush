@@ -8,6 +8,7 @@ func _initialize() -> void:
 	_test_gather_sell_expand()
 	_test_level_defense_and_loss()
 	_test_wave_and_victory()
+	_test_visible_expansion()
 	print("GameState tests: %d failure(s)" % failures)
 	quit(1 if failures > 0 else 0)
 
@@ -58,3 +59,24 @@ func _test_wave_and_victory() -> void:
 	game.level = 3
 	game.move_to(Vector2i(2, 4))
 	_check(game.finished and game.won, "three expansions and level three win the game")
+
+
+func _test_visible_expansion() -> void:
+	var game = GameState.new()
+	var first: Vector2i = GameState.BUILDING_CELLS[0]
+	_check(game.building_at(first) == "" and game.tile_at(first) == "ground", "unbuilt space starts empty")
+	game.move_to(Vector2i(3, 3))
+	game.move_to(Vector2i(3, 2))
+	_check(game.expansions == 0 and game.building_at(first) == "", "unaffordable expansion creates no building")
+	for index in 3:
+		game.coins = (index + 1) * 10
+		game.move_to(Vector2i(3, 3))
+		game.move_to(Vector2i(3, 2))
+		var site: Vector2i = GameState.BUILDING_CELLS[index]
+		_check(game.building_at(site) == GameState.BUILDING_NAMES[index], "paid expansion creates its building")
+		_check(game.tile_at(site) == "building", "built space is visible to the map")
+	_check(game.expansions == 3 and game.coins == 0, "all three expansion prices are paid")
+	game.coins = 100
+	game.move_to(Vector2i(3, 3))
+	game.move_to(Vector2i(3, 2))
+	_check(game.expansions == 3 and game.coins == 100, "completed village cannot buy a fourth building")

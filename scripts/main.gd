@@ -4,12 +4,14 @@ const GameState = preload("res://scripts/game_state.gd")
 const LABELS := {
 	"tree": "나무", "ore": "광석", "market": "시장",
 	"level": "성장", "expand": "확장", "village": "마을",
+	"building": "건물",
 	"ground": ""
 }
 const COLORS := {
 	"tree": Color("307c61"), "ore": Color("627487"),
 	"market": Color("c58338"), "level": Color("8070b9"),
 	"expand": Color("b4777e"), "village": Color("546e9a"),
+	"building": Color("6b8e7f"),
 	"ground": Color("cfdfdf")
 }
 
@@ -73,7 +75,7 @@ func _draw() -> void:
 			var kind := game.tile_at(point)
 			var rect := Rect2(origin + Vector2(x * cell, y * cell), Vector2(cell - 2, cell - 2))
 			draw_rect(rect, COLORS[kind])
-			var label: String = LABELS[kind]
+			var label: String = game.building_at(point) if kind == "building" else LABELS[kind]
 			if point in game.enemies:
 				draw_rect(rect.grow(-4), Color("bd4249"))
 				label = "적"
