@@ -169,6 +169,11 @@ function mesh(geo, material, x = 0, y = 0, z = 0, shadow = true) {
   m.castShadow = shadow; m.receiveShadow = true;
   return m;
 }
+function disposeActor(group, sharedGeometry = null) {
+  const geometries = new Set();
+  group.traverse(o => { if (o.isMesh && o.geometry !== sharedGeometry) geometries.add(o.geometry); });
+  geometries.forEach(g => g.dispose());
+}
 
 // ───────────────────────── canvas labels ─────────────────────────
 function canvasTex(w, h) {
@@ -521,7 +526,11 @@ function updateCustomers(dt) {
     const c = customers[i];
     if (c.state !== 'leave') continue;
     move(c, -22, -12.8, 3.2, dt);
-    if (c.x < -21) { scene.remove(c.g); customers.splice(i, 1); }
+    if (c.x < -21) {
+      scene.remove(c.g); disposeActor(c.g);
+      c.b.tex.dispose(); c.b.sp.material.dispose();
+      customers.splice(i, 1);
+    }
   }
 }
 function move(e, tx, tz, sp, dt) {
@@ -582,6 +591,8 @@ function bearHurt(b, dmg) {
   b.x += dx / d * .35; b.z += dz / d * .35;
   if (b.hp <= 0) {
     scene.remove(b.g); bears.splice(bears.indexOf(b), 1);
+    disposeActor(b.g, hpBarGeo);
+    b.fur.dispose(); b.bar.children.forEach(o => o.material.dispose());
     for (let i = 0; i < 3; i++) dropPickup('meat', b.x + rand(-1, 1), b.z + rand(-1, 1));
     const fieldCount = bears.filter(x => !x.raider).length + pendingBears.length;
     const target = Math.min(T.maxFieldBears, T.fieldBears + S.storms);
