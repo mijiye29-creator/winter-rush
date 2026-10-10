@@ -5,7 +5,7 @@
 ## 현재 진행 상황 (Progress)
 - **게임**: `prototype/index.html` 단일 파일(약 1,390줄, three.js r128, 빌드 없음). Three.js는 `prototype/vendor/three.min.js`에 포함됨.
 - **기획서**: `docs/GDD.md` (코어 루프, 눈보라/곰 시스템, 수치표, v0.2 기능 표)
-- **완료 기능**
+- **완료 기능** (v0.3 추가: 늑대 `makeWolf`/`spawnPack`(bears 배열에 `wolf:true`로 들어감), 가죽 작업대 `updateTannery`, 털 장비(`UP`의 `cur:'fur'` 항목은 털가죽으로 결제), 펫 `pets`/`pups`/`updatePets`, 가방 용량은 `bagCap()`)
   - 코어 루프: 벌목 → 모닥불(장작 칸) → 곰 사냥 → 고기 칸 → 그릴(날것/익음/탐) → 카운터 → 손님 → 동전 → 업그레이드 칸
   - 눈보라(평온 70초, 경고 8초, 눈보라 25초), 마을 온기, 습격 곰, 보스 곰(3회마다)
   - 업그레이드 10종(`UP` 객체): bag, axe, boots, gate, helper, cart, server, hunter, cabin, fishing. 업그레이드 칸은 레벨업 후 잠기며(`p.lock`), 밖으로 나갔다 오면 풀림. 칸에 서면 효과 설명(`DESC`) 표시. 칸은 관련 시설 옆에 배치되고 `REVEAL` 조건을 만족하면 순서대로 등장, 돈이 부족하면 흐리게 표시(`updatePads`)
