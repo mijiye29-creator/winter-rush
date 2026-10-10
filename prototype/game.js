@@ -898,6 +898,21 @@ function updateHunters(dt) {
       fly('hide', V(h.x, 1.3, h.z), V(TAN.in.x, .5, TAN.in.z)); huntOut(h);
       continue;
     }
+    if (h.state === 'collect') {             // picking up meat/hides lying inside the village
+      if (!walkPath(h, dt, 3.4)) continue;
+      for (let i = pickups.length - 1; i >= 0; i--) {
+        const pk = pickups[i];
+        if (Math.hypot(pk.x - h.x, pk.z - h.z) > 1.4) continue;
+        if (pk.type === 'meat' && h.n < 6) h.n++; else if (pk.type === 'hide' && h.hides < 4) h.hides++; else continue;
+        scene.remove(pk.m); pickups.splice(i, 1);
+      }
+      const next = campPickup(h);
+      if (next) h.path = [V(next.x, 0, next.z)];
+      else if (h.n || h.hides) huntHome(h); else huntOut(h);
+      continue;
+    }
+    const loot = campPickup(h);
+    if (loot) { h.state = 'collect'; h.path = (h.z > 6 ? [GATE_OUT.clone(), GATE_IN.clone()] : []).concat([V(loot.x, 0, loot.z)]); continue; }
     if (h.n >= 6 || h.hides >= 4) { huntHome(h); continue; }
     if (h.hp < 8 && tick('hReg' + hunters.indexOf(h), 2, dt)) h.hp++;
     if (!h.prey || !bears.includes(h.prey) || h.prey.raider) {
@@ -1277,6 +1292,17 @@ function updateBears(dt) {
 const lerpAngle = (a, b, k) => { let d = ((b - a + Math.PI) % (Math.PI * 2)) - Math.PI; if (d < -Math.PI) d += Math.PI * 2; return a + d * Math.min(1, k); };
 
 const pickups = [];
+// nearest meat/hide on the ground inside the fence that this hunter still has room for
+function campPickup(h) {
+  let best = null, bd = 1e9;
+  for (const pk of pickups) {
+    if (pk.x < CAMP.x1 || pk.x > CAMP.x2 || pk.z < CAMP.z1 || pk.z > CAMP.z2) continue;
+    if (pk.type === 'meat' ? h.n >= 6 : pk.type === 'hide' ? h.hides >= 4 : true) continue;
+    const d = Math.hypot(pk.x - h.x, pk.z - h.z);
+    if (d < bd) { bd = d; best = pk; }
+  }
+  return best;
+}
 function dropPickup(type, x, z) {
   const m = itemMesh(type); m.position.set(x, .3, z); scene.add(m);
   pickups.push({ type, m, x, z, t: rand(0, 6) });
@@ -1828,5 +1854,5 @@ function footprints() {
   }
   return f;
 }
-window.__winter = { footprints, spawnPup, addPet, spawnPack, applyPetLook, pups, stackAdd, pets, fishers, SHOPS, P, S, pl, stack, bears, trees, customers, pads, helpers, servers, hunters, camera, T, save, levelUp };
+window.__winter = { dropPickup, pickups, footprints, spawnPup, addPet, spawnPack, applyPetLook, pups, stackAdd, pets, fishers, SHOPS, P, S, pl, stack, bears, trees, customers, pads, helpers, servers, hunters, camera, T, save, levelUp };
 })();
