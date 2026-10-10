@@ -7,6 +7,8 @@
 
 - 기획서: [`docs/GDD.md`](docs/GDD.md)
 - 플레이 가능한 프로토타입: [`prototype/index.html`](prototype/index.html)
+- 플레이테스트 기록: [`docs/PLAYTEST.md`](docs/PLAYTEST.md)
+- Claude·Codex 협업 방식: [`docs/WORKFLOW.md`](docs/WORKFLOW.md)
 
 ## 프로토타입 실행
 빌드가 필요 없습니다. `prototype/index.html`을 브라우저로 열면 됩니다. Three.js는 프로젝트에 포함되어 있어 인터넷 연결 없이도 게임을 시작할 수 있습니다. 웹 글꼴은 연결되지 않으면 기기의 기본 글꼴로 표시됩니다.
@@ -17,3 +19,5 @@ cd prototype && python3 -m http.server 8000
 ```
 
 조작: 화면을 탭/클릭하면 그 위치로 이동, 드래그하면 가상 조이스틱, PC는 WASD 또는 방향키.
+
+수치·업그레이드 비용은 `prototype/balance.js`, 게임 규칙은 `prototype/game.js`, 화면은 `prototype/index.html`과 `prototype/style.css`에서 관리합니다.
