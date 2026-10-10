@@ -28,3 +28,10 @@
 - 새 업그레이드: `clerk`(판매 점원), `artisan`(가죽 장인, `T.tanTime`), `fisher`(낚시꾼, `updateFishers`). 털 장비와 `cur:'fur'` 결제 제거
 - 생선 굽기 제거: 생선은 `S.fishStock` → 생선 가게. 가죽 → `S.leather` → 가죽 가게
 - 사냥꾼은 `h.hides`를 들고 와 가죽 공방에 넣음. 펫은 1마리, `S.petHits`로 `T.pet` 레벨 성장
+
+## 2026-10-10 단계 구조 (Claude, `game.js`·`balance.js`)
+- `S.stage` 1/2. `applyStage(fanfare)`가 울타리(`fence1/2`, `WALLS1/2`), `CAMP.x2`, `eastG`/`decoG`, 모닥불 이동(`HEARTH_SHIFT`=3, `P.*`·타일·그릴 이동), `PAD_POS2`를 처리
+- 직원은 1명씩(`addHelper` 등은 중복 생성 안 함), 능력치는 `T.staff`의 레벨별 배열
+- 가죽은 `hidesOn()`(사냥꾼 Lv3) && 2단계에서만. `UP.*.stage`로 레벨별 필요 단계 지정, `padHidden()`은 최대 레벨/단계 미달 칸 숨김
+- 훈제: `S.fishRaw`(투입 칸) → `updateSmoker` → `S.fishStock`(가게, `sfish`). 장작은 모닥불 장작 더미(`S.wood`)에서 가져감
+- 배치 점검: `window.__winter.footprints()`가 바닥 시설·업그레이드 칸의 사각형 목록을 돌려줌. 업데이트 후 1·2단계 모두에서 겹침이 없는지 확인할 것 (연못은 원으로 판정)
