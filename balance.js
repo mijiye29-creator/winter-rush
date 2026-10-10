@@ -9,7 +9,7 @@ window.WinterRushData = {
     playerFishTime: 2.2,           // seconds per fish when the player fishes  // stage 2 fish oven: slow roast on the oven top, 1 log cooks 2 fish
     tanPerLog: 1,                  // artisan's small fire: 1 log per hide (1.5 in a blizzard)
     padDwell: .5,                  // seconds standing still on a pad before it starts taking coins
-    tanTime: [0, 3, 1.6],          // seconds per leather good by artisan level
+    tanTime: [0, 2, 1.2],          // seconds per leather good by artisan level
     staff: {                       // one worker per job; levels raise mastery
       helperCarry: [0, 4, 8, 12], helperSpeed: [0, 3.4, 4, 4.8], helperChop: [0, .8, .6, .45],
       serverCarry: [0, 6, 10, 14], serverSpeed: [0, 3.6, 4.4, 5.2], serverIv: [0, .15, .1, .06],
@@ -24,13 +24,25 @@ window.WinterRushData = {
     stormBurn: 3.5, stormSlow: .35,
     fieldBears: 5, maxFieldBears: 9, bearRespawn: 5, bearHp: 4, bossEvery: 4,
     wolfPackSize: 3, maxWolves: 10, wolfSpawn: 14, wolfStartSold: 8, hurtGrace: .8,
+    hideChance: { bear: .35, wolf: .2 },   // hides drop only sometimes; bosses/alpha/beasts always drop theirs
+    leatherShop: { iv: 2.4, maxQ: 6, slots: 2 },
+    axeChop: [.42, .34, .27, .21, .19, .17, .15],   // seconds per chop by axe level
+    // hero power = axe + boots + coat + cape levels; field animals get tougher and new beasts appear
+    powerHp: { bear: .6, wolf: .34, alpha: 1, boss: 2 },
+    beasts: {
+      every: 25, coinsPer: 5,
+      chief:   { name: '대장 곰', power: 4,  hp: 20, hpPer: 3, dmg: 2, spd: 2.8, scale: 1.45, meat: 6,  coins: 60,  hides: 1, max: 1 },
+      saber:   { name: '검치호',  power: 7,  hp: 12, hpPer: 2, dmg: 2, spd: 4.4, scale: 1.1,  meat: 4,  coins: 50,  hides: 1, max: 2 },
+      mammoth: { name: '매머드',  power: 11, hp: 45, hpPer: 4, dmg: 3, spd: 2.2, scale: 1,    meat: 10, coins: 160, hides: 2, max: 1 },
+    },
     armor: { boots: [0, .04, .08, .12], coat: [0, .08, .16, .24] },   // chance to block a hit
-    max: { wood: 40, meat: 30, grill: 18, counter: 16, hide: 20, fishCrate: 20, fishRaw: 30, ovenWood: 12, fishSmoked: 12, fishStock: 20, leather: 16, tanFuel: 8 },
+    max: { tanWood: 16, wood: 40, meat: 30, grill: 18, counter: 16, hide: 20, fishCrate: 20, fishRaw: 30, ovenWood: 12, fishSmoked: 12, fishStock: 20, leather: 16, tanFuel: 8 },
   },
   UP: {
     bag:     { name: '가방',      icon: '🎒', costs: [30, 60, 120, 240], vals: [8, 12, 16, 22, 30] },
-    axe:     { name: '도끼',      icon: '🪓', costs: [40, 90, 180],      vals: [1, 2, 3, 4] },
+    axe:     { name: '도끼',      icon: '🪓', costs: [40, 90, 180, 350, 600, 1000], vals: [1, 2, 3, 4, 6, 8, 11], stage: [1, 1, 1, 2, 2, 2] },
     boots:   { name: '장화',      icon: '🥾', costs: [30, 70, 150],      vals: [5, 5.8, 6.6, 7.4] },
+    cape:    { name: '망토',      icon: '🦸', costs: [80, 200, 400, 700], vals: [5, 6, 7, 8, 9], stage: [1, 1, 2, 2] },   // max HP
     coat:    { name: '외투',      icon: '🧥', costs: [50, 120, 250],     vals: [0, 1, 2, 3] },
     gate:    { name: '정문 강화',  icon: '🛡️', costs: [80, 160, 300],     vals: [0, 1, 2, 3] },
     helper:  { name: '나무꾼',    icon: '👷', costs: [100, 220, 450],    vals: [0, 1, 2, 3] },
