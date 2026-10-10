@@ -7,7 +7,7 @@ const rand = (a, b) => a + Math.random() * (b - a);
 const { T, UP } = window.WinterRushData;
 
 const S = {
-  coins: 0, coinPile: 0, wood: 0, meat: 0, hide: 0, fishRaw: 0, fishStock: 0, smokeFuel: 0, smokeT: 0, leather: 0, stage: 1, tanT: 0, petCount: 0, petHits: 0, grillItems: [], counter: { steak: 0 },
+  coins: 0, coinPile: 0, wood: 0, meat: 0, hide: 0, fishCrate: 0, fishRaw: 0, ovenWood: 0, fishSmoked: 0, fishStock: 0, smokeFuel: 0, smokeT: 0, tanFuel: 0, leather: 0, stage: 1, tanT: 0, petCount: 0, petHits: 0, grillItems: [], counter: { steak: 0 },
   fuel: 0, cookT: 0, warmth: 55, hp: 5, maxHp: 5, stun: 0, hurtCd: 0, hitstop: 0,
   lv: Object.fromEntries(Object.keys(UP).map(k => [k, 0])),
   phase: 'calm', phaseT: T.firstCalm, stormK: 0, storms: 0, stormFireOut: false,
@@ -32,7 +32,8 @@ const DESC = {
   fishing: () => `2단계! 마을 확장, 얼음 낚시터 + 훈제 생선 가게 개방`,
   clerk: (a, b) => `점원 숙련 Lv${b}: 동시 손님 ${ST.clerkSlots[a]} → ${ST.clerkSlots[b]}명, 판매 속도 ↑`,
   artisan: (a, b) => b === 1 ? `가죽 장인 고용: 가죽 → 가죽 제품 (${T.tanTime[1]}초)` : `제작 속도 ${T.tanTime[a]}초 → ${T.tanTime[b]}초`,
-  fisher: (a, b) => a ? `낚시꾼 숙련 Lv${b}: 더 빨리, ${ST.fisherCarry[b]}마리씩` : `낚시꾼 고용 (훈제장 자동 공급)`,
+  fishClerk: (a, b) => a ? `생선 점원 숙련 Lv${b}: 동시 손님 ${ST.clerkSlots[a]} → ${ST.clerkSlots[b]}명` : `생선 가게 점원 고용 (판매 속도 ↑)`,
+  fisher: (a, b) => a ? `낚시꾼 숙련 Lv${b}: 더 빨리, ${ST.fisherCarry[b]}마리씩` : `낚시꾼 고용 (생선 상자에 자동 공급)`,
 };
 const descOf = k => { const u = UP[k], l = S.lv[k]; return l >= u.costs.length ? `${u.icon} ${u.name} 최대 레벨` : `${u.icon} ${u.name}: ${DESC[k](u.vals[l], u.vals[l + 1])}`; };
 function tick(key, every, dt) {
@@ -218,6 +219,7 @@ const sfx = {
   chop: () => { noise(.09, 2200, 1.5, .3); tone(260, .07, 'triangle', .12, 150); },
   swing: () => noise(.12, 3500, .7, .06),
   hit: () => { tone(140, .14, 'sine', .55, 45); noise(.08, 900, 1, .4); },
+  pain: () => tone(190, .2, 'sawtooth', .12, 85),
   crit: () => { tone(180, .22, 'square', .22, 50); noise(.15, 600, .8, .5); },
   kill: () => { tone(110, .45, 'sawtooth', .2, 35); noise(.3, 400, .7, .35); },
   coin: () => tone(1400 + Math.random() * 300, .06, 'square', .05, 2000),
@@ -246,8 +248,9 @@ const P = {
   woodTile: V(-.4, 0, -3), fire: V(2, 0, -3), meatTile: V(4.4, 0, -3),
   grill: V(2, 0, -5.4), counter: V(4.6, 0, -8.9), counterStand: V(4.6, 0, -7.6),
   coinPile: V(6.9, 0, -7.2), gate: V(0, 0, 6), queueFront: V(3.6, 0, -11.2),
-  fishShop: V(12, 0, -8.9), fishIn: V(12, 0, -6.4), smoker: V(14.4, 0, -6.4), serverGrill: V(.3, 0, -5.4), serverWay: V(.3, 0, -7.1),
-  holes: [V(11, 0, -1.8), V(13.2, 0, .2)],
+  fishShop: V(11.6, 0, -8.9), fishStand: V(11.6, 0, -7.6), oven: V(14, 0, -8.9), ovenOut: V(14, 0, -7.2),
+  ovenWood: V(12, 0, -4.8), ovenFish: V(14.2, 0, -4.8), fishCrate: V(9.3, 0, -2), serverGrill: V(.3, 0, -5.4), serverWay: V(.3, 0, -7.1),
+  holes: [V(11.7, 0, 0), V(13.4, 0, 1.4)],
 };
 const BOUNDS = { x1: -21, x2: 18, z1: -15, z2: 24 };
 const CAMP = { x1: -8, x2: 8, z1: -10, z2: 6 };
@@ -264,8 +267,8 @@ const WALLS2 = [   // stage 2: the village extends east to x = 16
   { x1: -8.3, x2: -1.8, z1: 5.7, z2: 6.3 }, { x1: 1.8, x2: 16.3, z1: 5.7, z2: 6.3 },
   { x1: -8.3, x2: -7.7, z1: -10.3, z2: -6 }, { x1: -8.3, x2: -7.7, z1: -2, z2: 6.3 },
   { x1: 15.7, x2: 16.3, z1: -10.3, z2: 6.3 }, grillBox, counterBox,
-  { x1: 10.7, x2: 13.3, z1: -9.45, z2: -8.35 },   // fish shop bench
-  { x1: 13.7, x2: 15.1, z1: -7.1, z2: -5.7 },     // smokehouse
+  { x1: 10.3, x2: 12.9, z1: -9.45, z2: -8.35 },   // fish shop bench
+  { x1: 13.3, x2: 14.7, z1: -9.6, z2: -7.75 },    // fish oven, attached to the shop
 ];
 let walls = WALLS1;
 const circles = [{ x: P.fire.x, z: P.fire.z, r: .95 }];
@@ -411,7 +414,7 @@ const counterPile = pile('steak', T.max.counter, V(P.counter.x, .9, P.counter.z)
 // stage 2 east district: ice fishing, smokehouse and the smoked-fish shop (north fence)
 const eastG = new THREE.Group(); scene.add(eastG);
 eastG.add(mesh(new THREE.PlaneGeometry(8, 16).rotateX(-Math.PI / 2), mat(0xd99c86), 12, .011, -2, false));
-eastG.add(mesh(new THREE.CylinderGeometry(3, 3, .06, 28), mat(0x8fc4e6), 12, .03, -1, false));
+eastG.add(mesh(new THREE.CylinderGeometry(2.4, 2.4, .06, 28), mat(0x8fc4e6), 12.5, .03, .6, false));
 P.holes.forEach(h => eastG.add(mesh(new THREE.CylinderGeometry(.55, .55, .07, 16), mat(0x1d4f73), h.x, .05, h.z, false)));
 function stall(x, z, color) {
   const g = new THREE.Group(); g.position.set(x, 0, z);
@@ -421,14 +424,21 @@ function stall(x, z, color) {
   return g;
 }
 const fishStall = stall(P.fishShop.x, P.fishShop.z, 0x3a9ad9); fishStall.rotation.y = Math.PI; eastG.add(fishStall);
-const smokerG = new THREE.Group(); smokerG.position.copy(P.smoker); eastG.add(smokerG);
-smokerG.add(mesh(new THREE.BoxGeometry(1.3, 1.3, 1.3), mat(0x5a3a28), 0, .65, 0));
-const smRoof = mesh(new THREE.ConeGeometry(1.0, .5, 4), mat(0x3b2a20), 0, 1.55, 0); smRoof.rotation.y = Math.PI / 4; smokerG.add(smRoof);
-smokerG.add(mesh(new THREE.BoxGeometry(.3, .9, .3), mat(0x8a8f99), .3, 2.1, .2));
-const fishInTile = tile(P.fishIn, '🐟'); eastG.add(fishInTile.g);
-const fishRawPile = pile('fish', T.max.fishRaw, V(P.fishIn.x, .09, P.fishIn.z), 3, 3, .5, .45); eastG.add(fishRawPile.g);
+// fish oven (화덕) right next to the fish shop: raw fish + its own logs → smoked fish on the oven ledge
+const ovenG = new THREE.Group(); ovenG.position.copy(P.oven); eastG.add(ovenG);
+ovenG.add(mesh(new THREE.SphereGeometry(.85, 12, 8, 0, Math.PI * 2, 0, Math.PI / 2), mat(0x9a9590), 0, 0, -.2));
+ovenG.add(mesh(new THREE.BoxGeometry(1.3, .35, .55), mat(0x7a756f), 0, .5, .55));
+ovenG.add(mesh(new THREE.BoxGeometry(.25, .9, .25), mat(0x6e6a72), .35, 1.1, -.35));
+const ovenFire = new THREE.Mesh(new THREE.ConeGeometry(.22, .45, 6), new THREE.MeshBasicMaterial({ color: 0xff8a2a })); ovenFire.position.set(0, .3, .45); ovenG.add(ovenFire);
+const ovenWoodTile = tile(P.ovenWood, '🪵'); eastG.add(ovenWoodTile.g);
+const ovenWoodPile = pile('log', T.max.ovenWood, V(P.ovenWood.x, .09, P.ovenWood.z), 2, 3, .9, .42); eastG.add(ovenWoodPile.g);
+const ovenFishTile = tile(P.ovenFish, '🐟'); eastG.add(ovenFishTile.g);
+const fishRawPile = pile('fish', T.max.fishRaw, V(P.ovenFish.x, .09, P.ovenFish.z), 3, 3, .5, .45); eastG.add(fishRawPile.g);
+const crateTile = tile(P.fishCrate, '📦'); eastG.add(crateTile.g);
+const fishCratePile = pile('fish', T.max.fishCrate, V(P.fishCrate.x, .09, P.fishCrate.z), 3, 3, .5, .45); eastG.add(fishCratePile.g);
+const smokedPile = pile('sfish', T.max.fishSmoked, V(P.oven.x, .7, P.oven.z + .55), 3, 1, .4, .3); eastG.add(smokedPile.g);
 const fishShopPile = pile('sfish', T.max.fishStock, V(P.fishShop.x, .9, P.fishShop.z), 4, 2, .55, .45); eastG.add(fishShopPile.g);
-const smokerSign = sprite(240, 100, 2.2, .92); smokerSign.sp.position.set(P.smoker.x, 3.3, P.smoker.z); eastG.add(smokerSign.sp);
+const smokerSign = sprite(240, 100, 2.2, .92); smokerSign.sp.position.set(P.oven.x, 2.6, P.oven.z); eastG.add(smokerSign.sp);
 smokerSign.draw((c, w, h) => bubble(c, w, h, '🪵 장작 필요', '#ffd36b'));
 // lanterns that make the stage 2 village look finished
 const decoG = new THREE.Group(); scene.add(decoG);
@@ -438,7 +448,7 @@ for (const [x, z] of [[-7.4, -9.4], [3, -9.4], [8.5, -9.4], [15.4, -9.4], [-7.4,
 }
 
 // tannery + leather shop (stage 2, east): unlocked when the hunter reaches mastery Lv3 and starts bringing hides
-const TAN = { in: V(12.6, 0, 3.6), out: V(15, 0, 3.5) };
+const TAN = { in: V(12.6, 0, 4), out: V(15, 0, 3.5), fire: V(14, 0, 5.2), home: V(14, 0, 4) };
 const tanTile = tile(TAN.in, '🟫');
 const hidePile = pile('hide', T.max.hide, V(TAN.in.x, .09, TAN.in.z), 2, 2, .7, .55);
 const tanG = stall(TAN.out.x, TAN.out.z, 0x8a5a3a); tanG.rotation.y = Math.PI / 2; scene.add(tanG);
@@ -446,46 +456,72 @@ const tanHide = mesh(new THREE.BoxGeometry(.8, .6, .05), mat(0x9b6a45), 0, 1.25,
 const leatherPile = pile('leather', T.max.leather, V(TAN.out.x, .9, TAN.out.z), 2, 4, .5, .5);
 const tanSign = sprite(260, 100, 2.4, .92); tanSign.sp.position.set(TAN.out.x, 3.2, TAN.out.z); scene.add(tanSign.sp);
 tanSign.draw((c, w, h) => bubble(c, w, h, '🧵 가죽 장인 필요', '#ffd36b'));
+const tanFireG = new THREE.Group(); tanFireG.position.copy(TAN.fire); scene.add(tanFireG);
+for (let i = 0; i < 6; i++) { const a = i / 6 * Math.PI * 2; tanFireG.add(mesh(new THREE.DodecahedronGeometry(.13), mat(0xa9adb8), Math.cos(a) * .35, .08, Math.sin(a) * .35)); }
+const tanFlame = new THREE.Mesh(new THREE.ConeGeometry(.2, .45, 6), new THREE.MeshBasicMaterial({ color: 0xff8a2a })); tanFlame.position.y = .3; tanFireG.add(tanFlame);
 let artisan = null;
 function addArtisan() {
   if (artisan) return;
-  artisan = makePerson(0x8a5a3a, 0x3a2a22);
-  artisan.body.add(mesh(new THREE.BoxGeometry(.5, .6, .05), mat(0xd9c3a0), 0, .7, .4));
-  artisan.g.position.set(TAN.out.x - 1.4, 0, TAN.out.z - 1.3); artisan.g.rotation.y = Math.PI * .75;
+  const p = makePerson(0x8a5a3a, 0x3a2a22);
+  p.body.add(mesh(new THREE.BoxGeometry(.5, .6, .05), mat(0xd9c3a0), 0, .7, .4));
+  const carry = new THREE.Group(); carry.position.z = -.5; p.g.add(carry);
+  for (let i = 0; i < 3; i++) { const m = itemMesh('log'); m.position.y = 1.1 + i * .4; m.visible = false; carry.add(m); }
+  artisan = { ...p, carry, n: 0, x: TAN.home.x, z: TAN.home.z, path: [], state: 'work' };
+  p.g.position.set(artisan.x, 0, artisan.z);
 }
 function updateTannery(dt) {
   const on = hidesOn() && S.stage >= 2;
-  tanTile.g.visible = tanG.visible = leatherPile.g.visible = hidePile.g.visible = on;
+  tanTile.g.visible = tanG.visible = leatherPile.g.visible = hidePile.g.visible = tanFireG.visible = on;
   tanSign.sp.visible = on && !S.lv.artisan;
   if (on && !tanG.shown && S.started) { tanG.shown = true; toast('🟫 가죽 공방이 생겼어요 (동쪽): 장인을 고용하면 가죽 제품을 팔아요'); }
   tanG.shown = tanG.shown || on;
-  const busy = S.lv.artisan > 0 && S.hide > 0 && S.leather < T.max.leather;
+  tanFlame.visible = S.tanFuel > 0;
+  if (S.tanFuel > 0) tanFlame.scale.setScalar(.8 + Math.sin(performance.now() / 70) * .2);
+  hidePile.set(S.hide); leatherPile.set(S.leather); tanTile.setFull(S.hide > 0);
+  if (!artisan) return;
+  const a = artisan;
+  a.carry.children.forEach((m, i) => (m.visible = i < a.n));
+  if (a.state === 'getWood') {          // walk to the main log pile and bring logs back for the small fire
+    if (!walkPath(a, dt, 3.6)) return;
+    const k = Math.min(3, S.wood, Math.ceil((T.max.tanFuel - S.tanFuel) / T.tanPerLog));
+    if (k > 0) { S.wood -= k; a.n = k; fly('log', V(P.woodTile.x, .5, P.woodTile.z), V(a.x, 1.3, a.z)); }
+    a.state = 'back'; a.path = [TAN.home.clone()]; return;
+  }
+  if (a.state === 'back') {
+    if (!walkPath(a, dt, 3.6)) return;
+    if (a.n) { S.tanFuel = Math.min(T.max.tanFuel, S.tanFuel + a.n * T.tanPerLog); fly('log', V(a.x, 1.3, a.z), V(TAN.fire.x, .3, TAN.fire.z)); a.n = 0; }
+    a.state = 'work'; return;
+  }
+  a.body.position.y = 0; a.g.rotation.y = Math.PI / 2;
+  if (S.tanFuel <= 0 && S.hide > 0 && S.wood > 0) { a.state = 'getWood'; a.path = [V(P.woodTile.x + .8, 0, P.woodTile.z + 1.3)]; return; }
+  const busy = S.hide > 0 && S.leather < T.max.leather && S.tanFuel > 0;
   tanHide.rotation.y = busy ? Math.sin(performance.now() / 120) * .15 : 0;
-  if (artisan) artisan.body.rotation.x = busy ? Math.sin(performance.now() / 90) * .15 : 0;
+  a.body.rotation.x = busy ? Math.sin(performance.now() / 90) * .15 : 0;
   if (busy && (S.tanT += dt) >= T.tanTime[S.lv.artisan]) {
-    S.tanT = 0; S.hide--; S.leather++;
+    S.tanT = 0; S.hide--; S.leather++; S.tanFuel--;
     burst(TAN.out.x, 1.2, TAN.out.z, 0xb07a4a, 5, { spd: 2, up: 3, life: .5 });
   }
-  hidePile.set(S.hide); leatherPile.set(S.leather); tanTile.setFull(S.hide > 0);
 }
-// smokehouse: raw fish + wood from the fire's log pile → smoked fish on the shop counter
-function updateSmoker(dt) {
-  fishRawPile.set(S.fishRaw); fishShopPile.set(S.fishStock); fishInTile.setFull(S.fishRaw > 0);
+// fish oven: uses only the logs stacked on its own wood tile
+function updateOven(dt) {
+  fishRawPile.set(S.fishRaw); fishCratePile.set(S.fishCrate); smokedPile.set(S.fishSmoked); fishShopPile.set(S.fishStock); ovenWoodPile.set(S.ovenWood);
+  ovenFishTile.setFull(S.fishRaw > 0); ovenWoodTile.setFull(S.ovenWood > 0); crateTile.setFull(S.fishCrate > 0);
   if (S.stage < 2) return;
-  const need = S.fishRaw > 0 && S.fishStock < T.max.fishStock;
-  if (need && S.smokeFuel <= 0 && S.wood > 0) { S.wood--; S.smokeFuel += T.smoke.fishPerLog; fly('log', V(P.woodTile.x, .5, P.woodTile.z), V(P.smoker.x, 1.2, P.smoker.z), .6); }
+  const need = S.fishRaw > 0 && S.fishSmoked < T.max.fishSmoked;
+  if (need && S.smokeFuel <= 0 && S.ovenWood > 0) { S.ovenWood--; S.smokeFuel += T.smoke.fishPerLog; }
   smokerSign.sp.visible = need && S.smokeFuel <= 0;
+  ovenFire.visible = S.smokeFuel > 0;
+  if (ovenFire.visible) ovenFire.scale.setScalar(.8 + Math.sin(performance.now() / 60) * .2);
   if (!need || S.smokeFuel <= 0) return;
-  if ((S.smokeT += dt) >= T.smoke.time) { S.smokeT = 0; S.fishRaw--; S.fishStock++; S.smokeFuel--; }
-  if (tick('smokePuff', .45, dt)) burst(P.smoker.x + .3, 2.6, P.smoker.z + .2, 0x9aa0aa, 2, { spd: .4, up: 1.2, grav: -1.5, life: 1.4, size: 1.4 });
+  if ((S.smokeT += dt) >= T.smoke.time) { S.smokeT = 0; S.fishRaw--; S.fishSmoked++; S.smokeFuel--; }
+  if (tick('smokePuff', .45, dt)) burst(P.oven.x + .35, 1.8, P.oven.z - .35, 0x9aa0aa, 2, { spd: .4, up: 1.2, grav: -1.5, life: 1.4, size: 1.4 });
 }
 
 // one sales clerk behind the main counter; mastery adds parallel service and speed
-let clerkNpc = null;
+let clerkNpc = null, fishClerkNpc = null;
 function syncClerks() {
-  if (clerkNpc || !S.lv.clerk) return;
-  clerkNpc = makePerson(0x2b6e4f, 0x2b2f3a);
-  clerkNpc.g.position.set(6.6, 0, -8.7); clerkNpc.g.rotation.y = Math.PI;
+  if (!clerkNpc && S.lv.clerk) { clerkNpc = makePerson(0x2b6e4f, 0x2b2f3a); clerkNpc.g.position.set(6.6, 0, -8.7); clerkNpc.g.rotation.y = Math.PI; }
+  if (!fishClerkNpc && S.lv.fishClerk) { fishClerkNpc = makePerson(0x2f6e8a, 0x2b2f3a); fishClerkNpc.g.position.set(9.6, 0, -8.8); fishClerkNpc.g.rotation.y = Math.PI; }
 }
 
 // villager cabins (north, outside the fence)
@@ -538,7 +574,7 @@ makePad('bag', -3.6, 1.2); makePad('boots', -6.3, 1.3);
 makePad('axe', -6.2, -4); makePad('helper', -6, -8.2);
 makePad('gate', 3.6, 4.2); makePad('hunter', -3.6, 4.2);
 makePad('server', -1, -6.6); makePad('cabin', 6.6, -4.6); makePad('fishing', 6.4, -.4);
-makePad('clerk', 2, -8.3); makePad('artisan', 10.4, 3.8); makePad('fisher', 9.4, -4.8);
+makePad('clerk', 2, -8.3); makePad('artisan', 10.4, 3.8); makePad('fisher', 9.4, -4.8); makePad('fishClerk', 7.4, -5.2);
 const PAD_POS2 = { cabin: [9.4, -7.1] };   // pads that move when the village grows
 const REVEAL = {
   bag: () => true, axe: () => true,
@@ -552,6 +588,7 @@ const REVEAL = {
   clerk: () => S.stat.sold >= 15 || S.lv.server >= 1,
   artisan: () => hidesOn() && S.stage >= 2,
   fisher: () => S.stage >= 2,
+  fishClerk: () => S.stage >= 2,
 };
 // a pad disappears at max level, and waits while its next level needs a later village stage
 const padHidden = p => { const u = UP[p.key], lv = S.lv[p.key]; return lv >= u.costs.length || (u.stage && S.stage < u.stage[lv]); };
@@ -633,7 +670,7 @@ shock.visible = false; scene.add(shock);
 const swoosh = new THREE.Mesh(new THREE.RingGeometry(.7, 1.35, 18, 1, -Math.PI * .8, Math.PI * .6).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0, side: THREE.DoubleSide, depthWrite: false }));
 swoosh.position.y = .95; swoosh.visible = false; player.g.add(swoosh);
 const stackG = new THREE.Group(); stackG.position.set(0, 0, -.5); player.g.add(stackG);
-const pl = { combo: 0, comboT: 0, x: 0, z: 0, rot: Math.PI, swing: 0, moving: false };
+const pl = { combo: 0, comboT: 0, manual: 0, focus: null, x: 0, z: 0, rot: Math.PI, swing: 0, moving: false };
 player.g.position.set(0, 0, 0);
 const stack = [];
 function layoutStack() {
@@ -690,13 +727,22 @@ function updateHelpers(dt) {
       if (h.t > ST.helperChop[S.lv.helper]) {
         h.t = 0;
         if (chopTree(h.tree)) h.n++;
-        if (h.n >= ST.helperCarry[S.lv.helper]) { h.body.rotation.x = 0; h.path = [V(-9.8, 0, -4), V(-6.5, 0, -4), V(P.woodTile.x - .4, 0, P.woodTile.z - 1.3)]; h.state = 'toFire'; }
+        if (h.n >= ST.helperCarry[S.lv.helper]) {
+          h.body.rotation.x = 0;
+          const oven = S.stage >= 2 && S.ovenWood < T.max.ovenWood / 2 && S.ovenWood * 3 < S.wood;
+          const dest = oven ? P.ovenWood : P.woodTile;
+          h.path = [V(-9.8, 0, -4), V(-6.5, 0, -4), V(dest.x - .4, 0, dest.z - 1.3)]; h.state = oven ? 'toOven' : 'toFire';
+        }
         else if (h.tree.logs === 0) helperToTree(h);
       }
     } else if (h.state === 'toFire') {
       const room = T.max.wood - S.wood;
       if (room > 0) { const k = Math.min(room, h.n); S.wood += k; h.n -= k; fly('log', V(h.x, 1.3, h.z), V(P.woodTile.x, .4, P.woodTile.z)); }
       if (h.n === 0) helperToTree(h);
+    } else if (h.state === 'toOven') {
+      const k = Math.min(T.max.ovenWood - S.ovenWood, h.n);
+      if (k > 0) { S.ovenWood += k; h.n -= k; fly('log', V(h.x, 1.3, h.z), V(P.ovenWood.x, .4, P.ovenWood.z)); }
+      h.state = h.n ? 'toFire' : 'idle'; if (h.n) h.path = [V(P.woodTile.x - .4, 0, P.woodTile.z - 1.3)]; else helperToTree(h);
     } else helperToTree(h);
     h.carry.children.forEach((m, i) => (m.visible = i < h.n));
     h.g.position.set(h.x, 0, h.z);
@@ -727,18 +773,43 @@ function renderCarry(w) {
   w.carry.clear();
   w.items.forEach((t, i) => { const m = itemMesh(t); m.position.set(0, .95 + i * .16, 0); w.carry.add(m); });
 }
+// the chef picks whichever job is most backed up: steaks to the counter, raw fish into the oven, smoked fish to the fish shop
+const CHEF_JOBS = {
+  steak:   { pick: () => P.serverGrill, drop: () => P.counterStand, has: () => S.grillItems.filter(isReady).length, room: () => T.max.counter - S.counter.steak,
+             take: () => !!takeReady('steak'), give: () => S.counter.steak++, item: 'steak' },
+  fishIn:  { pick: () => P.fishCrate, drop: () => P.ovenFish, has: () => S.fishCrate, room: () => T.max.fishRaw - S.fishRaw,
+             take: () => S.fishCrate > 0 && !!S.fishCrate--, give: () => S.fishRaw++, item: 'fish' },
+  fishOut: { pick: () => P.ovenOut, drop: () => P.fishStand, has: () => S.fishSmoked, room: () => T.max.fishStock - S.fishStock,
+             take: () => S.fishSmoked > 0 && !!S.fishSmoked--, give: () => S.fishStock++, item: 'sfish' },
+};
+function chooseChefJob() {
+  let best = null, score = 0;
+  for (const [k, j] of Object.entries(CHEF_JOBS)) {
+    if (k !== 'steak' && S.stage < 2) continue;
+    const v = Math.min(j.has(), j.room()) * (k === 'fishOut' ? 1.3 : 1);
+    if (v > score) { score = v; best = k; }
+  }
+  return best;
+}
 function updateServers(dt) {
   for (const w of servers) {
     const lv = S.lv.server;
     if (!walkPath(w, dt, ST.serverSpeed[lv])) continue;
     w.body.position.y = 0;
-    if (w.state === 'toGrill') {
-      if (w.items.length < ST.serverCarry[lv] && tick('srvPick' + w.id, ST.serverIv[lv], dt)) { const it = takeReady(); if (it) { w.items.push(it.type); renderCarry(w); } }
-      if (w.items.length >= ST.serverCarry[lv] || (w.items.length && !S.grillItems.some(isReady))) { w.state = 'toCounter'; w.path = [P.serverWay.clone(), P.counterStand.clone()]; }
+    if (w.state === 'idle' || w.state === 'toGrill') {
+      w.job = chooseChefJob();
+      if (!w.job) { if (Math.hypot(w.x - P.serverGrill.x, w.z - P.serverGrill.z) > .3) w.path = [P.serverGrill.clone()]; continue; }
+      w.state = 'pick'; w.path = [CHEF_JOBS[w.job].pick().clone()]; continue;
+    }
+    const j = CHEF_JOBS[w.job];
+    if (w.state === 'pick') {
+      if (w.items.length < ST.serverCarry[lv] && tick('srvPick' + w.id, ST.serverIv[lv], dt) && j.take()) { w.items.push(j.item); renderCarry(w); }
+      if (w.items.length >= ST.serverCarry[lv] || (w.items.length && !j.has())) {
+        w.state = 'drop'; w.path = w.job === 'steak' ? [P.serverWay.clone(), P.counterStand.clone()] : [j.drop().clone()];
+      } else if (!w.items.length && !j.has()) w.state = 'idle';
     } else {
-      const t = w.items[w.items.length - 1];
-      if (t && S.counter[t] < T.max.counter && tick('srvDrop' + w.id, ST.serverIv[lv], dt)) { w.items.pop(); S.counter[t]++; renderCarry(w); }
-      if (!w.items.length) { w.state = 'toGrill'; w.path = [P.serverWay.clone(), P.serverGrill.clone()]; }
+      if (w.items.length && j.room() > 0 && tick('srvDrop' + w.id, ST.serverIv[lv], dt)) { w.items.pop(); j.give(); renderCarry(w); }
+      if (!w.items.length) w.state = 'idle';
     }
   }
 }
@@ -835,7 +906,7 @@ function addFisher() {
   const carry = new THREE.Group(); carry.position.z = -.5; p.g.add(carry);
   for (let i = 0; i < 10; i++) { const m = itemMesh('fish'); m.position.y = 1.1 + i * .2; m.visible = false; carry.add(m); }
   const hole = P.holes[fishers.length % P.holes.length];
-  const f = { ...p, carry, n: 0, t: 0, hole, x: P.fishIn.x, z: P.fishIn.z + 1, path: [V(hole.x + 1, 0, hole.z)], state: 'toHole' };
+  const f = { ...p, carry, n: 0, t: 0, hole, x: P.fishCrate.x, z: P.fishCrate.z + 1, path: [V(hole.x + 1, 0, hole.z)], state: 'toHole' };
   p.g.position.set(f.x, 0, f.z); fishers.push(f);
 }
 function updateFishers(dt) {
@@ -846,10 +917,10 @@ function updateFishers(dt) {
     if (f.state === 'toHole') {
       f.g.rotation.y = -Math.PI / 2; f.body.rotation.x = Math.sin(performance.now() / 300) * .05;
       if ((f.t += dt) >= ST.fisherCatch[S.lv.fisher]) { f.t = 0; f.n++; burst(f.hole.x, .3, f.hole.z, 0xbfe3f5, 5, { spd: 2, up: 4, life: .4 }); }
-      if (f.n >= ST.fisherCarry[S.lv.fisher]) { f.state = 'toShop'; f.path = [V(P.fishIn.x, 0, P.fishIn.z + 1.2)]; }
+      if (f.n >= ST.fisherCarry[S.lv.fisher]) { f.state = 'toShop'; f.path = [V(P.fishCrate.x + 1.2, 0, P.fishCrate.z)]; }
     } else {
-      const k = Math.min(f.n, T.max.fishRaw - S.fishRaw);
-      if (k > 0) { S.fishRaw += k; f.n -= k; fly('fish', V(f.x, 1.2, f.z), V(P.fishIn.x, .5, P.fishIn.z)); }
+      const k = Math.min(f.n, T.max.fishCrate - S.fishCrate);
+      if (k > 0) { S.fishCrate += k; f.n -= k; fly('fish', V(f.x, 1.2, f.z), V(P.fishCrate.x, .5, P.fishCrate.z)); }
       if (f.n === 0) { f.state = 'toHole'; f.path = [V(f.hole.x + 1, 0, f.hole.z)]; }
     }
   });
@@ -860,7 +931,7 @@ const customers = [];
 const SHOPS = {
   main: { item: 'steak', icon: '🍖', front: V(5.8, 0, -11.2), dir: V(-1, 0, 0), side: V(0, 0, -.4), face: 0, from: V(-22, 0, -12.6), exit: V(-22, 0, -12.8), at: P.counter, coat: 0x5fc3c9,
     open: () => true, stock: () => S.counter.steak, take: () => S.counter.steak--, stat: 'sold' },
-  fish: { item: 'sfish', icon: '🐟', front: V(10.9, 0, -11.2), dir: V(1, 0, 0), side: V(0, 0, -.4), face: 0, from: V(22, 0, -12.6), exit: V(22, 0, -12.8), at: P.fishShop, coat: 0x7fb3e0,
+  fish: { item: 'sfish', icon: '🐟', front: V(10.6, 0, -11.2), dir: V(1, 0, 0), side: V(0, 0, -.4), face: 0, from: V(22, 0, -12.6), exit: V(22, 0, -12.8), at: P.fishShop, coat: 0x7fb3e0, clerk: 'fishClerk',
     open: () => S.stage >= 2, stock: () => S.fishStock, take: () => S.fishStock--, stat: 'soldFish' },
   leather: { item: 'leather', icon: '👜', front: V(17.3, 0, TAN.out.z - 1.1), dir: V(0, 0, 1), side: V(.4, 0, 0), face: -Math.PI / 2, from: V(22, 0, 9), exit: V(22, 0, 9), at: TAN.out, coat: 0xc9a06b,
     open: () => S.lv.artisan > 0 && hidesOn() && S.stage >= 2, stock: () => S.leather, take: () => S.leather--, stat: 'soldLeather' },
@@ -881,9 +952,9 @@ function drawBubble(c) {
   c.b.draw((ctx, w, h) => bubble(ctx, w, h, c.state === 'leave' ? (c.need ? '😠' : '😋') : cold ? '🥶' : `${SHOPS[c.shop].icon}×${c.need}`));
 }
 function updateCustomers(dt) {
-  const serveN = ST.clerkSlots[S.lv.clerk];
   for (const [key, sh] of Object.entries(SHOPS)) {
     if (!sh.open()) continue;
+    const ck = S.lv[sh.clerk || 'clerk'], serveN = ST.clerkSlots[ck];
     const queue = customers.filter(c => c.shop === key && c.state === 'queue');
     const maxQ = key === 'main' ? 6 + 2 * S.lv.cabin : 5, iv = key === 'main' ? 3.2 - .6 * S.lv.cabin : 5;
     if (queue.length < maxQ && S.warmth >= 35 && S.started && tick('spawn' + key, iv, dt)) spawnCustomer(key);
@@ -896,7 +967,7 @@ function updateCustomers(dt) {
       if (!there || i >= serveN) return;
       c.g.rotation.y = sh.face; c.wait += dt;
       if (c.wait > 30 && !sh.stock()) { c.state = 'leave'; drawBubble(c); toast('😠 기다리다 지친 손님이 떠났어요'); return; }
-      if (sh.stock() > 0 && tick('serve' + key + i, ST.clerkIv[S.lv.clerk], dt)) {
+      if (sh.stock() > 0 && tick('serve' + key + i, ST.clerkIv[ck], dt)) {
         sh.take(); c.need--; c.wait = 0; S.coinPile += T.price[sh.item]; S.stat[sh.stat]++;
         fly(sh.item, V(sh.at.x, 1, sh.at.z), V(c.x, 1.2, c.z), .25);
         if (c.need <= 0) { c.state = 'leave'; S.served++; }
@@ -933,10 +1004,11 @@ const hpBarGeo = new THREE.PlaneGeometry(1.2, .14);
 const outlineMat = new THREE.MeshBasicMaterial({ color: 0x2b3440, side: THREE.BackSide });
 function makeBear(raider, boss = false) {
   const g = new THREE.Group(); scene.add(g);
+  const body = new THREE.Group(); g.add(body);
   const fur = new THREE.MeshLambertMaterial({ color: boss ? 0xdcd3f0 : raider ? 0xc3cad8 : 0xfffaf0 });
   const m = (geo, x, y, z, material = fur) => {
-    const o = mesh(geo, material, x, y, z); g.add(o);
-    if (material === fur) { const ol = new THREE.Mesh(geo, outlineMat); ol.position.copy(o.position); ol.scale.setScalar(1.09); g.add(ol); }
+    const o = mesh(geo, material, x, y, z); body.add(o);
+    if (material === fur) { const ol = new THREE.Mesh(geo, outlineMat); ol.position.copy(o.position); ol.scale.setScalar(1.09); body.add(ol); }
     return o;
   };
   m(new THREE.BoxGeometry(1.15, .95, 1.8), 0, 1.0, 0);
@@ -954,7 +1026,7 @@ function makeBear(raider, boss = false) {
   bar.visible = false; bar.renderOrder = 11; fill.renderOrder = 12;
   if (boss) { m(new THREE.ConeGeometry(.32, .45, 5), 0, 1.9, 1.05, mat(0xffc83d, { emissive: 0x664400 })); g.scale.setScalar(1.7); }
   const hp = boss ? 30 + 10 * S.stat.boss : T.bearHp + Math.floor(S.storms / 2);
-  return { g, fur, bar, fill, raider, boss, hp, maxHp: hp, x: 0, z: 0, tx: 0, tz: 0, cd: 0, flash: 0, squash: 0, wander: 0, eatT: 0 };
+  return { g, body, fur, bar, fill, raider, boss, hp, maxHp: hp, x: 0, z: 0, tx: 0, tz: 0, cd: 0, flash: 0, squash: 0, recoil: 0, stagger: 0, wander: 0, eatT: 0 };
 }
 function spawnFieldBear() {
   const b = makeBear(false);
@@ -964,10 +1036,11 @@ function spawnFieldBear() {
 for (let i = 0; i < T.fieldBears; i++) spawnFieldBear();
 function makeWolf() {
   const g = new THREE.Group(); scene.add(g);
+  const body = new THREE.Group(); g.add(body);
   const fur = new THREE.MeshLambertMaterial({ color: 0x8e98a8 });
   const m = (geo, x, y, z, material = fur) => {
-    const o = mesh(geo, material, x, y, z); g.add(o);
-    if (material === fur) { const ol = new THREE.Mesh(geo, outlineMat); ol.position.copy(o.position); ol.rotation.copy(o.rotation); ol.scale.setScalar(1.12); g.add(ol); }
+    const o = mesh(geo, material, x, y, z); body.add(o);
+    if (material === fur) { const ol = new THREE.Mesh(geo, outlineMat); ol.position.copy(o.position); ol.rotation.copy(o.rotation); ol.scale.setScalar(1.12); body.add(ol); }
     return o;
   };
   m(new THREE.BoxGeometry(.55, .5, 1.1), 0, .72, 0);
@@ -984,7 +1057,7 @@ function makeWolf() {
   const fill = new THREE.Mesh(hpBarGeo, new THREE.MeshBasicMaterial({ color: 0xe5484d, depthTest: false })); fill.position.z = .01; bar.add(fill);
   bar.visible = false; bar.renderOrder = 11; fill.renderOrder = 12;
   const hp = 2 + Math.floor(S.storms / 3);
-  return { g, fur, bar, fill, wolf: true, raider: false, boss: false, hp, maxHp: hp, x: 0, z: 0, tx: 0, tz: 0, cd: 0, flash: 0, squash: 0, wander: 0 };
+  return { g, body, fur, bar, fill, wolf: true, raider: false, boss: false, hp, maxHp: hp, x: 0, z: 0, tx: 0, cd: 0, flash: 0, squash: 0, recoil: 0, stagger: 0, wander: 0 };
 }
 function spawnPack() {
   const x = rand(-10, 10), z = rand(15, 22);
@@ -1060,10 +1133,10 @@ function spawnRaid() {
   }
 }
 function bearHurt(b, dmg, src = pl) {
-  b.hp -= dmg; b.flash = .12; b.squash = .18; b.bar.visible = true;
+  b.hp -= dmg; b.flash = .2; b.squash = .22; b.recoil = .28; b.stagger = .2; b.bar.visible = true;
   const dx = b.x - src.x, dz = b.z - src.z, d = Math.hypot(dx, dz) || 1, kb = b.boss ? .15 : .45;
   b.x += dx / d * kb; b.z += dz / d * kb;
-  if (b.hp > 0) { if (Math.random() < .3) play('growl', 400); return false; }
+  if (b.hp > 0) { play('pain', 130); return false; }
   scene.remove(b.g); bears.splice(bears.indexOf(b), 1);
   disposeActor(b.g, hpBarGeo);
   b.fur.dispose(); b.bar.children.forEach(o => o.material.dispose());
@@ -1117,7 +1190,8 @@ function updateBears(dt) {
     if (b.wolf && !chase && !chaseH) sp = 1.6;
     if (chase) { b.tx = pl.x; b.tz = pl.z; sp = (b.wolf ? 3.4 : 2.5) + .8 * S.stormK; }
     const dx = b.tx - b.x, dz = b.tz - b.z, d = Math.hypot(dx, dz);
-    if (d > (chase || chaseH ? 1.3 : .1)) {
+    b.stagger = Math.max(0, b.stagger - dt);
+    if (b.stagger <= 0 && d > (chase || chaseH ? 1.3 : .1)) {
       b.x += dx / d * Math.min(d, sp * dt); b.z += dz / d * Math.min(d, sp * dt);
       b.g.rotation.y = lerpAngle(b.g.rotation.y, Math.atan2(dx, dz), dt * 8);
     }
@@ -1128,11 +1202,16 @@ function updateBears(dt) {
       if (sd < 1.6 && sd > 0) { b.x += sx / sd * (1.6 - sd) * .5; b.z += sz / sd * (1.6 - sd) * .5; }
     }
     b.cd -= dt;
-    if (dist < 1.7 && b.cd <= 0 && pl.stunFree && S.hurtCd <= 0) { b.cd = 1.3; hurtPlayer(b); }
-    for (const h of hunters) if (h.down <= 0 && b.cd <= 0 && Math.hypot(h.x - b.x, h.z - b.z) < 1.7) { b.cd = 1.3; hurtHunter(h, b); }
+    if (b.stagger <= 0 && dist < 1.7 && b.cd <= 0 && pl.stunFree && S.hurtCd <= 0) { b.cd = 1.3; hurtPlayer(b); }
+    for (const h of hunters) if (b.stagger <= 0 && h.down <= 0 && b.cd <= 0 && Math.hypot(h.x - b.x, h.z - b.z) < 1.7) { b.cd = 1.3; hurtHunter(h, b); }
     b.squash -= dt;
-    const sq = Math.max(0, b.squash) / .18, bs = b.boss ? 1.7 : 1;
+    const sq = Math.max(0, b.squash) / .22, bs = b.boss ? 1.7 : 1;
     b.g.scale.set(bs * (1 + .25 * sq), bs * (1 - .22 * sq), bs * (1 + .25 * sq));
+    b.recoil = Math.max(0, b.recoil - dt);
+    const pain = Math.sin(Math.PI * b.recoil / .28);
+    b.body.rotation.x = -.35 * pain;
+    b.body.rotation.z = .16 * pain;
+    b.body.position.y = .2 * pain;
     b.flash -= dt;
     b.fur.emissive.setHex(b.flash > 0 ? 0xff4040 : 0x000000);
     b.g.position.set(b.x, Math.abs(Math.sin(performance.now() / 160 + b.x)) * (d > .2 ? .06 : 0), b.z);
@@ -1170,11 +1249,16 @@ addEventListener('keyup', e => { keys[e.key.toLowerCase()] = false; });
 const joyEl = document.getElementById('joy'), knob = document.getElementById('knob');
 let joyId = null, jx0 = 0, jy0 = 0, jdx = 0, jdy = 0;
 const cv = renderer.domElement;
-let tapT = 0;
+const tapStarts = new Map();
 const ray = new THREE.Raycaster(), groundPlane = new THREE.Plane(V(0, 1, 0), 0), tapNdc = new THREE.Vector2();
 const tapMark = new THREE.Mesh(new THREE.RingGeometry(.35, .5, 20).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ color: 0xffc83d, transparent: true, opacity: .9 }));
 tapMark.position.y = .05; tapMark.visible = false; scene.add(tapMark);
-cv.addEventListener('pointerdown', e => { tapT = performance.now(); joyId = e.pointerId; jx0 = e.clientX; jy0 = e.clientY; jdx = jdy = 0; joyEl.style.display = 'block'; joyEl.style.left = jx0 + 'px'; joyEl.style.top = jy0 + 'px'; knob.style.transform = ''; });
+cv.addEventListener('pointerdown', e => {
+  tapStarts.set(e.pointerId, { x: e.clientX, y: e.clientY, t: performance.now() });
+  if (joyId !== null) return;
+  joyId = e.pointerId; jx0 = e.clientX; jy0 = e.clientY; jdx = jdy = 0;
+  joyEl.style.display = 'block'; joyEl.style.left = jx0 + 'px'; joyEl.style.top = jy0 + 'px'; knob.style.transform = '';
+});
 addEventListener('pointermove', e => {
   if (e.pointerId !== joyId) return;
   let dx = e.clientX - jx0, dy = e.clientY - jy0; const d = Math.hypot(dx, dy), R = 50;
@@ -1184,10 +1268,27 @@ addEventListener('pointermove', e => {
 function setTapTarget(e) {
   tapNdc.set(e.clientX / innerWidth * 2 - 1, -(e.clientY / innerHeight) * 2 + 1);
   ray.setFromCamera(tapNdc, camera);
+  let hitBear = null, nearest = Infinity;
+  for (const b of bears) {
+    const hit = ray.intersectObject(b.body, true)[0];
+    if (hit && hit.distance < nearest) { hitBear = b; nearest = hit.distance; }
+  }
+  if (hitBear && S.started) {
+    pl.focus = hitBear; pl.manual = Math.min(4, pl.manual + 1);
+    pl.target = { enemy: hitBear, t: 6 };
+    tapMark.position.set(hitBear.x, .05, hitBear.z); tapMark.visible = true;
+    return;
+  }
+  pl.focus = null; pl.manual = 0;
   const hit = ray.ray.intersectPlane(groundPlane, V(0, 0, 0));
   if (hit) { pl.target = { x: hit.x, z: hit.z, t: 6 }; tapMark.position.set(hit.x, .05, hit.z); tapMark.visible = true; }
 }
-const joyEnd = e => { if (e.pointerId === joyId) { if (Math.hypot(jdx, jdy) < .2 && performance.now() - tapT < 350) setTapTarget(e); joyId = null; jdx = jdy = 0; joyEl.style.display = 'none'; } };
+function joyEnd(e) {
+  const tap = tapStarts.get(e.pointerId);
+  if (e.type === 'pointerup' && tap && Math.hypot(e.clientX - tap.x, e.clientY - tap.y) < 18 && performance.now() - tap.t < 350) setTapTarget(e);
+  tapStarts.delete(e.pointerId);
+  if (e.pointerId === joyId) { joyId = null; jdx = jdy = 0; joyEl.style.display = 'none'; }
+}
 addEventListener('pointerup', joyEnd); addEventListener('pointercancel', joyEnd);
 
 function collide() {
@@ -1218,6 +1319,8 @@ function updatePlayer(dt) {
   S.hurtCd = Math.max(0, S.hurtCd - dt);
   if ((pl.comboT -= dt) <= 0) pl.combo = 0;
   pl.stunFree = S.stun <= 0;
+  if (!pl.stunFree) { pl.manual = 0; pl.focus = null; }
+  if (pl.focus && !bears.includes(pl.focus)) { pl.manual = 0; pl.focus = null; }
   let ix = Math.hypot(jdx, jdy) < .2 ? 0 : jdx, iz = Math.hypot(jdx, jdy) < .2 ? 0 : jdy;
   if (keys.a || keys.arrowleft) ix -= 1; if (keys.d || keys.arrowright) ix += 1;
   if (keys.w || keys.arrowup) iz -= 1; if (keys.s || keys.arrowdown) iz += 1;
@@ -1225,8 +1328,15 @@ function updatePlayer(dt) {
   if (il > 1) { ix /= il; iz /= il; }
   if (il > .1) { pl.target = null; tapMark.visible = false; }
   else if (pl.target) {
-    const dx = pl.target.x - pl.x, dz = pl.target.z - pl.z, d = Math.hypot(dx, dz);
-    if (d < .25 || (pl.target.t -= dt) <= 0 || !pl.stunFree) { pl.target = null; tapMark.visible = false; } else { ix = dx / d; iz = dz / d; il = 1; }
+    const enemy = pl.target.enemy;
+    if (enemy && !bears.includes(enemy)) { pl.target = null; pl.focus = null; pl.manual = 0; tapMark.visible = false; }
+    else {
+      const tx = enemy ? enemy.x : pl.target.x, tz = enemy ? enemy.z : pl.target.z;
+      const dx = tx - pl.x, dz = tz - pl.z, d = Math.hypot(dx, dz);
+      if (enemy) tapMark.position.set(tx, .05, tz);
+      if (d < (enemy ? 1.8 : .25) || (pl.target.t -= dt) <= 0 || !pl.stunFree) { pl.target = null; tapMark.visible = false; }
+      else { ix = dx / d; iz = dz / d; il = 1; }
+    }
   }
   pl.moving = il > .1 && pl.stunFree;
   if (pl.moving) {
@@ -1242,13 +1352,21 @@ function updatePlayer(dt) {
   stackG.rotation.x = pl.moving ? -.06 : 0;
 
   // combat beats chopping
-  let target = null, best = 2.1;
-  for (const b of bears) { const d = Math.hypot(b.x - pl.x, b.z - pl.z) - (b.boss ? .8 : 0); if (d < best) { best = d; target = b; } }
+  const manual = pl.manual > 0 && pl.focus && bears.includes(pl.focus);
+  let target = manual ? pl.focus : null, best = manual ? T.combat.tapRange : 2.1;
+  if (!manual) for (const b of bears) { const d = Math.hypot(b.x - pl.x, b.z - pl.z) - (b.boss ? .8 : 0); if (d < best) { best = d; target = b; } }
+  if (manual && Math.hypot(target.x - pl.x, target.z - pl.z) - (target.boss ? .8 : 0) > best) target = null;
   if (target && pl.stunFree) {
-    if (!pl.moving) pl.rot = lerpAngle(pl.rot, Math.atan2(target.x - pl.x, target.z - pl.z), dt * 14);
-    if ((!pl.sw || pl.sw.hit) && tick('atk', .45, dt)) {
-      const power = pl.combo % 4 === 3;
-      startSwing(power ? .45 : .3, () => { if (power) powerSlam(); else if (bears.includes(target)) playerHit(target); }, power);
+    if (manual || !pl.moving) pl.rot = lerpAngle(pl.rot, Math.atan2(target.x - pl.x, target.z - pl.z), dt * 20);
+    if (manual) {
+      resetTick('atk');
+      if (!pl.sw) {
+        pl.manual--;
+        const power = pl.combo % T.combat.slamEvery === T.combat.slamEvery - 1;
+        startSwing(power ? .36 : T.combat.manualSwing, () => { if (power) powerSlam(); else if (bears.includes(target)) playerHit(target, true); }, power);
+      }
+    } else if (!pl.sw && tick('atk', T.combat.autoInterval, dt)) {
+      startSwing(.38, () => { if (bears.includes(target)) playerHit(target, false); });
     }
   } else {
     resetTick('atk');
@@ -1274,8 +1392,12 @@ function updatePlayer(dt) {
   if (near(P.meatTile, 1.35) && S.meat < T.max.meat && stackHas('meat')) {
     if (tick('dropMeat', .07, dt)) { stackTake('meat'); S.meat++; S.meatIn++; fly('meat', backPos(), V(P.meatTile.x, .5, P.meatTile.z), .2); play('pop', 60); }
   }
-  if (S.stage >= 2 && near(P.fishIn, 1.35) && S.fishRaw < T.max.fishRaw && stackHas('fish')) {
-    if (tick('dropFish', .07, dt)) { stackTake('fish'); S.fishRaw++; fly('fish', backPos(), V(P.fishIn.x, .5, P.fishIn.z), .2); play('pop', 60); }
+  if (S.stage >= 2) {
+    if (near(P.ovenFish, 1.35) && S.fishRaw < T.max.fishRaw && stackHas('fish') && tick('dropFish', .07, dt)) { stackTake('fish'); S.fishRaw++; fly('fish', backPos(), V(P.ovenFish.x, .5, P.ovenFish.z), .2); play('pop', 60); }
+    if (near(P.fishCrate, 1.35) && S.fishCrate < T.max.fishCrate && stackHas('fish') && tick('dropCrate', .07, dt)) { stackTake('fish'); S.fishCrate++; fly('fish', backPos(), V(P.fishCrate.x, .5, P.fishCrate.z), .2); play('pop', 60); }
+    if (near(P.ovenWood, 1.35) && S.ovenWood < T.max.ovenWood && stackHas('log') && tick('dropOvenWood', .07, dt)) { stackTake('log'); S.ovenWood++; fly('log', backPos(), V(P.ovenWood.x, .5, P.ovenWood.z), .2); }
+    if (near(P.ovenOut, 1.2) && S.fishSmoked > 0 && stack.length < bagCap() && tick('pickSmoked', .08, dt)) { S.fishSmoked--; stackAdd('sfish'); play('pop', 40); }
+    if (near(P.fishStand, 1.2) && S.fishStock < T.max.fishStock && stackHas('sfish') && tick('dropSmoked', .07, dt)) { stackTake('sfish'); S.fishStock++; fly('sfish', backPos(), V(P.fishShop.x, 1, P.fishShop.z), .2); }
   }
   if (S.lv.fishing && stack.length < bagCap() && pl.stunFree) for (const h of P.holes) if (near(h, 1.4)) {
     if (tick('fishing', 1.3, dt)) { stackAdd('fish'); fly('fish', V(h.x, .2, h.z), backPos(), .35); burst(h.x, .3, h.z, 0xbfe3f5, 8, { spd: 2.5, up: 5, life: .5 }); play('splash'); buzz(15); }
@@ -1306,7 +1428,8 @@ function updatePlayer(dt) {
     if (!p.on) continue;
     const u = UP[p.key], lv = S.lv[p.key];
     if (p.lock) { if (!near(p, 1.3)) p.lock = false; continue; }
-    if (padHidden(p) || !near(p, 1.0) || S.coins <= 0) continue;
+    if (padHidden(p) || !near(p, 1.0) || S.coins <= 0 || pl.moving) { p.dwell = 0; continue; }
+    if ((p.dwell = (p.dwell || 0) + dt) < T.padDwell) continue;
     if (!tick('pad', .03, dt)) continue;
     const cost = u.costs[lv], k = Math.min(S.coins, cost - p.paid, Math.max(1, Math.ceil(cost / 25)));
     S.coins -= k; p.paid += k; play('coin', 45);
@@ -1367,16 +1490,20 @@ function powerSlam() {
   popText(pl.x, 3.4, pl.z, hits > 1 ? `💥 강타 ×${hits}` : '💥 강타!', '#ffd36b', true);
   S.hitstop = .16; shakeK(.6); play('crit'); play('kill'); buzz([30, 20, 110]);
 }
-function playerHit(b) {
-  pl.combo++; pl.comboT = 1.6;
-  if (pl.combo >= 2) popText(pl.x - .6, 2.4, pl.z, pl.combo % 4 === 3 ? '⚡ 강타 준비' : `${pl.combo} 콤보`, '#ffb347');
-  const crit = Math.random() < .15, dmg = val('axe') * (crit ? 2 : 1), by = b.boss ? 4 : 2.6;
+function playerHit(b, manual) {
+  if (manual) {
+    pl.combo++; pl.comboT = T.combat.comboWindow;
+    if (pl.combo >= 2) popText(pl.x - .6, 2.4, pl.z, pl.combo % T.combat.slamEvery === T.combat.slamEvery - 1 ? '⚡ 강타 준비' : `${pl.combo} 콤보`, '#ffb347');
+  }
+  const crit = manual && Math.random() < T.combat.critChance;
+  const dmg = val('axe') * (crit ? 2 : 1), by = b.boss ? 4 : 2.6;
   const killed = bearHurt(b, dmg, pl);
   popText(b.x, by, b.z, crit ? `${dmg}!` : `${dmg}`, crit ? '#ffd36b' : '#ffffff', crit);
-  burst(b.x, 1.3, b.z, 0xffffff, crit ? 10 : 6, { spd: 5, up: 5, life: .45, size: .9 });
-  burst(b.x, 1.3, b.z, 0xe5484d, crit ? 5 : 2, { spd: 4, up: 4, life: .35, size: .7 });
-  S.hitstop = crit ? .09 : .055; shakeK(crit ? .35 : .2);
-  play(crit ? 'crit' : 'hit'); buzz(crit ? [25, 20, 45] : 30);
+  burst(b.x, 1.3, b.z, 0xffffff, crit ? 14 : manual ? 9 : 4, { spd: 5, up: 5, life: .45, size: .9 });
+  if (manual) burst(b.x, 1.3, b.z, 0xe5484d, crit ? 7 : 4, { spd: 4, up: 4, life: .35, size: .7 });
+  S.hitstop = manual ? crit ? .12 : .075 : .025;
+  shakeK(manual ? crit ? .4 : .26 : .08);
+  play(crit ? 'crit' : 'hit'); buzz(manual ? crit ? [25, 20, 55] : 35 : 10);
   if (killed) {
     S.hitstop = .14; shakeK(.5); play('kill'); buzz([40, 30, 90]);
     burst(b.x, 1, b.z, 0xffffff, 18, { spd: 6, up: 7, life: .7, size: 1.2 });
@@ -1393,12 +1520,12 @@ function levelUp(key) {
   if (key === 'cabin') buildCabin(S.lv.cabin - 1);
   if (key === 'fishing') { S.stage = 2; applyStage(true); }
   if (key === 'hunter' && S.lv.hunter === 3) setTimeout(() => toast('🏹 숙련 사냥꾼! 이제 가죽도 모아 와요 → 동쪽에 가죽 공방'), 2600);
-  if (key === 'clerk') syncClerks();
+  if (key === 'clerk' || key === 'fishClerk') syncClerks();
   if (key === 'artisan') addArtisan();
   if (key === 'fisher') addFisher();
   const pad = pads.find(p => p.key === key);
   burst(pad.x, .5, pad.z, 0xffc83d, 14, { spd: 4, up: 7, life: .8 }); play('up'); buzz([20, 40, 20]);
-  const msg = { bag: `가방 용량 ${bagCap()}`, axe: `공격력·벌목 속도 ↑`, boots: `이동 속도 ↑`, gate: `습격 곰 −${val('gate')}마리`, helper: `나무꾼 Lv${S.lv.helper}: 장작 ${ST.helperCarry[S.lv.helper]}개씩`, server: `서빙 직원 Lv${S.lv.server}: 한 번에 ${ST.serverCarry[S.lv.server]}개`, hunter: `사냥꾼 Lv${S.lv.hunter}: 공격력 ${ST.hunterDmg[S.lv.hunter]}`, cabin: `손님이 더 많이, 더 자주 옵니다`, fishing: `2단계 확장!`, clerk: `판매 점원 Lv${S.lv.clerk}: 손님 ${ST.clerkSlots[S.lv.clerk]}명 동시 응대`, artisan: S.lv.artisan === 1 ? `가죽 공방 가동! 가죽 제품을 팔아요` : `가죽 제품을 더 빨리 만들어요`, fisher: `낚시꾼 Lv${S.lv.fisher}: 훈제장에 생선을 채웁니다` }[key];
+  const msg = { bag: `가방 용량 ${bagCap()}`, axe: `공격력·벌목 속도 ↑`, boots: `이동 속도 ↑`, gate: `습격 곰 −${val('gate')}마리`, helper: `나무꾼 Lv${S.lv.helper}: 장작 ${ST.helperCarry[S.lv.helper]}개씩`, server: `서빙 직원 Lv${S.lv.server}: 한 번에 ${ST.serverCarry[S.lv.server]}개`, hunter: `사냥꾼 Lv${S.lv.hunter}: 공격력 ${ST.hunterDmg[S.lv.hunter]}`, cabin: `손님이 더 많이, 더 자주 옵니다`, fishing: `2단계 확장!`, clerk: `판매 점원 Lv${S.lv.clerk}: 손님 ${ST.clerkSlots[S.lv.clerk]}명 동시 응대`, artisan: S.lv.artisan === 1 ? `가죽 공방 가동! 가죽 제품을 팔아요` : `가죽 제품을 더 빨리 만들어요`, fisher: `낚시꾼 Lv${S.lv.fisher}: 생선 상자를 채웁니다`, fishClerk: `생선 점원 Lv${S.lv.fishClerk}: 손님 ${ST.clerkSlots[S.lv.fishClerk]}명 동시 응대` }[key];
   if (key !== 'fishing') toast(`${u.icon} ${u.name} 업그레이드! ${msg}`);
 }
 
@@ -1516,7 +1643,7 @@ function updateHud(dt) {
   if (!cur && S.phase === 'storm' && bears.some(b => b.raider)) obj = '🐻 마을에 들어온 곰을 쫓아내세요!';
   if (!cur && S.warmth < 35 && S.phase !== 'storm') obj = '🥶 마을이 얼고 있어요. 모닥불에 장작을!';
   const onPad = pads.find(p => p.on && !padHidden(p) && near(p, 1.0));
-  if (onPad) obj = descOf(onPad.key) + (onPad.lock && S.lv[onPad.key] < UP[onPad.key].costs.length ? ' · 칸 밖으로 나갔다 오면 다음 레벨' : '');
+  if (onPad) obj = descOf(onPad.key) + (onPad.lock && S.lv[onPad.key] < UP[onPad.key].costs.length ? ' · 칸 밖으로 나갔다 오면 다음 레벨' : pl.moving ? ' · 멈춰 서면 구매' : '');
   setText(objEl, obj);
   arrow.visible = !!cur;
   if (cur) { const p = cur.at(); arrow.position.set(p.x, 3 + Math.sin(performance.now() / 200) * .3, p.z); }
@@ -1534,6 +1661,7 @@ const GOALS = [
   { text: '늑대 5마리 사냥', cur: () => S.stat.wolves, n: 5, reward: 80 },
   { text: '2단계: 낚시터 해금', cur: () => S.stage >= 2 ? 1 : 0, n: 1, reward: 200 },
   { text: '낚시꾼 고용', cur: () => S.lv.fisher, n: 1, reward: 150 },
+  { text: '생선 점원 고용', cur: () => S.lv.fishClerk, n: 1, reward: 150 },
   { text: '훈제 생선 15마리 판매', cur: () => S.stat.soldFish, n: 15, reward: 200 },
   { text: '숙련 사냥꾼 (Lv3)', cur: () => S.lv.hunter, n: 3, reward: 200 },
   { text: '가죽 장인 고용', cur: () => S.lv.artisan, n: 1, reward: 150 },
@@ -1554,7 +1682,7 @@ const SAVE_KEY = 'winter-rush-v1';
 function save() {
   try {
     const counter = { ...S.counter };
-    const keys = ['coins', 'coinPile', 'wood', 'meat', 'fuel', 'warmth', 'grillItems', 'lv', 'storms', 'stat', 'goal', 'tut', 'woodIn', 'meatIn', 'steakIn', 'served', 'bought', 'hide', 'fishRaw', 'fishStock', 'smokeFuel', 'leather', 'stage', 'petCount', 'petHits', 'tanT', 'hp', 'phase', 'phaseT', 'stormFireOut'];
+    const keys = ['coins', 'coinPile', 'wood', 'meat', 'fuel', 'warmth', 'grillItems', 'lv', 'storms', 'stat', 'goal', 'tut', 'woodIn', 'meatIn', 'steakIn', 'served', 'bought', 'hide', 'fishCrate', 'fishRaw', 'ovenWood', 'fishSmoked', 'fishStock', 'smokeFuel', 'tanFuel', 'leather', 'stage', 'petCount', 'petHits', 'tanT', 'hp', 'phase', 'phaseT', 'stormFireOut'];
     const data = Object.fromEntries(keys.map(k => [k, S[k]]));
     data.counter = counter; data.paid = pads.map(p => p.paid);
     data.player = { x: pl.x, z: pl.z };
@@ -1602,10 +1730,10 @@ function frame(now) {
   if (S.hitstop > 0) { S.hitstop -= dt; g = dt * .08; }
   if (S.started) {
     updatePhase(g); updatePlayer(g); updateFire(g); updateBears(g);
-    updateCustomers(g); updateHelpers(g); updateServers(g); updateHunters(g); updateShots(g); updatePets(g); updateTannery(g); updateFishers(g); updateSmoker(g);
+    updateCustomers(g); updateHelpers(g); updateServers(g); updateHunters(g); updateShots(g); updatePets(g); updateTannery(g); updateFishers(g); updateOven(g);
   }
   updateTrees(g); updateFlyers(g); updateParts(g); updatePops(dt); updateShock(dt); updateCabins(dt); updateSnow(dt); updateHud(dt);
-  woodPile.set(S.wood); meatPile.set(S.meat); fishShopPile.set(S.fishStock); renderGrill();
+  woodPile.set(S.wood); meatPile.set(S.meat); renderGrill();
   counterPile.set(S.counter.steak);
   coinPileV.set(Math.min(72, Math.ceil(S.coinPile / 5)));
   updatePads(dt);
@@ -1636,16 +1764,18 @@ $('vib').addEventListener('click', e => { SND.vib = !SND.vib; e.currentTarget.cl
 function footprints() {
   const box = (n, x, z, w, d) => [n, x - w / 2, x + w / 2, z - d / 2, z + d / 2];
   const two = S.stage >= 2, f = [];
-  pads.filter(p => p.on || REVEAL[p.key]() || true).forEach(p => { if (!padHidden(p) || S.lv[p.key] < UP[p.key].costs.length) f.push(box('pad:' + p.key, p.x, p.z, 1.9, 1.9)); });
+  const stage2Only = ['fisher', 'artisan', 'fishClerk'];
+  pads.forEach(p => { if (S.lv[p.key] < UP[p.key].costs.length && (two || !stage2Only.includes(p.key))) f.push(box('pad:' + p.key, p.x, p.z, 1.9, 1.9)); });
   f.push(box('woodTile', P.woodTile.x, P.woodTile.z, 1.9, 1.9), box('meatTile', P.meatTile.x, P.meatTile.z, 1.9, 1.9));
   f.push(box('fire', P.fire.x, P.fire.z, two ? 2.6 : 2.2, two ? 2.6 : 2.2), ['grill', grillBox.x1, grillBox.x2, grillBox.z1, grillBox.z2], ['counter', counterBox.x1, counterBox.x2, counterBox.z1, counterBox.z2]);
   f.push(box('counterStand', P.counterStand.x, P.counterStand.z, 1.2, 1.2), box('coinPile', P.coinPile.x, P.coinPile.z, 1.3, 1.3));
   if (S.lv.clerk) f.push(box('clerk', 6.6, -8.7, .8, .8));
+  if (two) f.push(box('fishClerk', 9.6, -8.8, .8, .8), box('artisanSpot', TAN.home.x, TAN.home.z, .8, .8));
   if (two) {
-    f.push(box('fishShop', P.fishShop.x, P.fishShop.z, 2.6, 1.1), box('fishIn', P.fishIn.x, P.fishIn.z, 1.9, 1.9), box('smoker', P.smoker.x, P.smoker.z, 1.4, 1.4));
-    f.push(box('pond', 12, -1, 6, 6), box('tanIn', TAN.in.x, TAN.in.z, 1.9, 1.9), box('leatherShop', TAN.out.x, TAN.out.z, 1.1, 2.6));
+    f.push(box('fishShop', P.fishShop.x, P.fishShop.z, 2.6, 1.1), box('oven', P.oven.x, P.oven.z - .3, 1.4, 1.85), box('ovenWood', P.ovenWood.x, P.ovenWood.z, 1.9, 1.9), box('ovenFish', P.ovenFish.x, P.ovenFish.z, 1.9, 1.9), box('fishCrate', P.fishCrate.x, P.fishCrate.z, 1.9, 1.9));
+    f.push(box('tanFire', TAN.fire.x, TAN.fire.z, .9, .9), box('pond', 12.5, .6, 4.8, 4.8), box('tanIn', TAN.in.x, TAN.in.z, 1.9, 1.9), box('leatherShop', TAN.out.x, TAN.out.z, 1.1, 2.6));
   }
   return f;
 }
-window.__winter = { footprints, spawnPup, addPet, pets, fishers, SHOPS, P, S, pl, stack, bears, trees, customers, pads, helpers, servers, hunters, T, save, levelUp };
+window.__winter = { footprints, spawnPup, addPet, pets, fishers, SHOPS, P, S, pl, stack, bears, trees, customers, pads, helpers, servers, hunters, camera, T, save, levelUp };
 })();

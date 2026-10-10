@@ -4,7 +4,9 @@ window.WinterRushData = {
     cook: { steak: 2.5 }, burn: 35,
     price: { steak: 10, sfish: 18, leather: 25, hide: 4 },
     burnGrow: .15, burnMax: 2.2,   // fire burns faster each blizzard survived (×1 → ×2.2)
-    smoke: { time: 2.2, fishPerLog: 2 },  // stage 2 smokehouse: 1 log smokes 2 fish
+    smoke: { time: 2.2, fishPerLog: 2 },  // stage 2 fish oven: 1 log smokes 2 fish
+    tanPerLog: 2,                  // artisan's small fire: 1 log tans 2 hides
+    padDwell: .5,                  // seconds standing still on a pad before it starts taking coins
     tanTime: [0, 3, 1.6],          // seconds per leather good by artisan level
     staff: {                       // one worker per job; levels raise mastery
       helperCarry: [0, 4, 8, 12], helperSpeed: [0, 3.4, 4, 4.8], helperChop: [0, .8, .6, .45],
@@ -13,12 +15,13 @@ window.WinterRushData = {
       clerkSlots: [1, 2, 2, 3], clerkIv: [.35, .28, .2, .14],
       fisherCatch: [0, 2.2, 1.4], fisherCarry: [0, 6, 10],
     },
+    combat: { autoInterval: .75, manualSwing: .24, comboWindow: 1.6, critChance: .15, slamEvery: 4, tapRange: 2.7 },
     pet: { hits: [0, 15, 40, 80, 140], dmg: [1, 2, 3, 4, 6], cd: [1, .9, .8, .7, .6], scale: [.55, .65, .78, .9, 1.05] },
     calmTime: 70, firstCalm: 80, warnTime: 8, stormTime: 25,
     stormBurn: 2.5, stormSlow: .35,
     fieldBears: 3, maxFieldBears: 6, bearHp: 4, bossEvery: 4,
     wolfPackSize: 2, maxWolves: 6, wolfSpawn: 20, hurtGrace: .8,
-    max: { wood: 40, meat: 30, grill: 18, counter: 16, hide: 20, fishRaw: 20, fishStock: 20, leather: 16 },
+    max: { wood: 40, meat: 30, grill: 18, counter: 16, hide: 20, fishCrate: 20, fishRaw: 12, ovenWood: 12, fishSmoked: 12, fishStock: 20, leather: 16, tanFuel: 8 },
   },
   UP: {
     bag:     { name: '가방',      icon: '🎒', costs: [30, 60, 120, 240], vals: [8, 12, 16, 22, 30] },
@@ -33,5 +36,6 @@ window.WinterRushData = {
     clerk:   { name: '판매 점원',  icon: '🧑‍💼', costs: [200, 400, 700],    vals: [0, 1, 2, 3] },
     artisan: { name: '가죽 장인',  icon: '🧵', costs: [150, 350],         vals: [0, 1, 2] },
     fisher:  { name: '낚시꾼',    icon: '🪝', costs: [250, 500],         vals: [0, 1, 2] },
+    fishClerk: { name: '생선 점원', icon: '🧑‍💼', costs: [200, 400, 700],  vals: [0, 1, 2, 3], stage: [2, 2, 2] },
   },
 };
