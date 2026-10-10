@@ -3,7 +3,7 @@ window.WinterRushData = {
     logFuel: 6,                   // seconds of fire per log (before hearth levels)
     cook: { steak: 2.5 }, burn: 35,
     meatPerSteak: [1, 2, 2], grillFeed: .45,   // by village stage: raw meat per steak; seconds between grill loads
-    price: { steak: 12, sfish: 18, leather: 32, hide: 4, meat: 2, pizza: 100 },
+    price: { steak: 12, sfish: 18, leather: 32, hide: 4, meat: 2, pizza: 100, sushi: 150 },
     guard: { baseCost: 600, costPerStorm: 200, max: 3 },
     burnGrow: .15, burnMax: 2.2,   // fire burns faster each blizzard survived (×1 → ×2.2)
     smoke: { time: 3.5, fishPerLog: 1, stormUse: 1.5 },   // oven: 1 log per fish, 1.5 logs in a blizzard
@@ -35,6 +35,10 @@ window.WinterRushData = {
     powerHp: { bear: .6, wolf: .34, alpha: 1, boss: 2 },
     beasts: {
       every: 25, coinsPer: 3,
+      penguin: { name: '난폭한 펭귄', power: 0, hp: 3, hpPer: .4, dmg: 1, spd: 3.6, scale: 1, meat: 0, coins: 8, hides: 0, max: 15 },
+      seal:    { name: '바다표범', power: 0, hp: 10, hpPer: 1, dmg: 1, spd: 3, scale: 1, meat: 2, coins: 20, hides: 0, max: 2, blubber: 2 },
+      walrus:  { name: '바다코끼리 대장', power: 0, hp: 60, hpPer: 4, dmg: 3, spd: 2.2, scale: 1, meat: 6, coins: 300, hides: 0, max: 1, blubber: 3, trophy: 'tusk' },
+      orca:    { name: '범고래', power: 0, hp: 90, hpPer: 5, dmg: 3, spd: 4.2, scale: 1, meat: 0, coins: 500, hides: 0, max: 1, blubber: 4 },
       chief:   { name: '대장 곰', power: 4,  hp: 20, hpPer: 3, dmg: 2, spd: 2.8, scale: 1.45, meat: 6,  coins: 60,  hides: 1, max: 1 },
       saber:   { name: '검치호',  power: 7,  hp: 12, hpPer: 2, dmg: 2, spd: 4.4, scale: 1.1,  meat: 4,  coins: 50,  hides: 1, max: 2, trophy: 'pelt' },
       mammoth: { name: '매머드',  power: 11, hp: 45, hpPer: 4, dmg: 3, spd: 2.2, scale: 1,    meat: 10, coins: 160, hides: 2, max: 1, trophy: 'tusk' },
@@ -43,7 +47,7 @@ window.WinterRushData = {
     legend: { coatBlock: [0, .08, .16], coatHp: [0, 2, 4], axeDmg: [0, 5, 12], slamR: [0, .8, 1.6] },
     tower: { cd: [1.2, .9, .6], dmg: [2, 4, 7], range: 11 },   // gate Lv4-6
     // stage 3 (큰 화로): garden → veg, veg + meat + logs → pizza, smith processes beast trophies
-    garden: { grow: 12 },          // seconds for a plot to ripen
+    garden: { grow: 16 },          // seconds for a plot to ripen
     pizzaTime: [3.2, 2.4, 1.7],    // seconds per pizza batch by pizza oven level (1 log per batch)
     pizzaRecipe: { veg: 2, meat: 4, fish: 3 },   // per pizza
     smithTime: [0, 8, 4],          // seconds per trophy processed by smith level
@@ -51,9 +55,19 @@ window.WinterRushData = {
     courier: { carry: [0, 8, 12, 16], speed: [0, 4.6, 5.3, 6] },   // delivery trucks
     fireLv: .25,                  // each hearth level: a log burns 25% longer
     wage: { every: 60, per: 8, interest: .005, maxInterest: 50 },   // per staff each payday (stage 3)
-    staffHouse: .15,               // staff speed bonus per house
+    staffHouse: .15,               // staff speed bonus per heated house
+    houseLogEvery: 15,             // each staff house burns a warehouse log this often; unheated houses give no bonus
+    // stage 4 (빙하 항구): boats, tuna, sushi, sea animals, sea fog
+    harbor: {
+      boatTime: [0, 9, 8, 7], boatFish: [0, 6, 10, 8], boatTuna: [0, 0, 1, 4], craneMul: 1.5,   // by boat tier: 쪽배 / 그물배 / 원양선
+      dockCap: [20, 40, 70], sushiTime: [0, 3, 2], chefCarry: 6,
+      fogEvery: 110, fogDur: [30, 20, 12],   // sea fog, shortened by the lighthouse
+      penguinEvery: 45, penguinPack: 5, sealEvery: 30, walrusEvery: 180, blubberFuel: 18,
+      harpoon: .7, schoolSize: 4,
+      sushiRecipe: { tuna: 1, fish: 1, veg: 2 }, boatLogs: [0, 1, 2, 3], lighthouseLogEvery: 8,   // log sinks: boat fuel per trip, lighthouse lamp
+    },
     armor: { boots: [0, .04, .08, .12], coat: [0, .08, .16, .24] },   // chance to block a hit
-    max: { vegCrate: 20, pzVeg: 12, pzMeat: 24, pzFish: 16, pzWood: 12, pizza: 16, forgeRaw: 10, tanWood: 16, wood: 40, meat: 30, grill: 18, counter: 16, hide: 20, fishCrate: 20, fishRaw: 30, ovenWood: 12, fishSmoked: 12, fishStock: 20, leather: 16, tanFuel: 8 },
+    max: { suTuna: 10, suFish: 10, suVeg: 10, sushi: 16, blubber: 10, vegCrate: 20, pzVeg: 12, pzMeat: 24, pzFish: 16, pzWood: 12, pizza: 16, forgeRaw: 10, tanWood: 16, wood: 40, meat: 30, grill: 18, counter: 16, hide: 20, fishCrate: 20, fishRaw: 30, ovenWood: 12, fishSmoked: 12, fishStock: 20, leather: 16, tanFuel: 8 },
   },
   UP: {
     bag:     { name: '가방',      icon: '🎒', costs: [30, 60, 120, 240, 500], vals: [10, 16, 22, 30, 40, 50] },
@@ -92,6 +106,14 @@ window.WinterRushData = {
     wall:      { name: '돌담', icon: '🧱', costs: [1500, 3000], vals: [0, 1, 2], stage: [3, 3] },   // −1 raider per level
     bank:      { name: '은행', icon: '🏦', costs: [1200], vals: [0, 1], stage: [3] },
     staffHouse: { name: '직원 숙소', icon: '🏘️', costs: [1000, 2000, 3500], vals: [0, 1, 2, 3], stage: [3, 3, 3] },
+    harbor:    { name: '빙하 항구', icon: '⚓', costs: [6000], vals: [0, 1], stage: [3] },   // → stage 4
+    boat:      { name: '어선', icon: '🚤', costs: [1500, 3000, 6000], vals: [0, 1, 2, 3], stage: [4, 4, 4] },
+    boat2:     { name: '어선 2', icon: '🚤', costs: [4000], vals: [0, 1], stage: [4] },
+    crane:     { name: '부두 크레인', icon: '🏗️', costs: [2500], vals: [0, 1], stage: [4] },
+    freezer:   { name: '냉동 창고', icon: '🧊', costs: [2000, 4000], vals: [0, 1, 2], stage: [4, 4] },
+    lighthouse: { name: '등대', icon: '🗼', costs: [2000, 4500], vals: [0, 1, 2], stage: [4, 4] },
+    sushiChef: { name: '초밥 쉐프', icon: '🍣', costs: [2500, 5000], vals: [0, 1, 2], stage: [4, 4] },
+    sushiClerk: { name: '초밥 점원', icon: '🧑‍💼', costs: [1500, 3000, 5000], vals: [0, 1, 2, 3], stage: [4, 4, 4] },
     fishClerk: { name: '생선 점원', icon: '🧑‍💼', costs: [200, 500, 1000],  vals: [0, 1, 2, 3], stage: [2, 2, 2] },
   },
 };
