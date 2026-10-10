@@ -2724,13 +2724,60 @@ function updatePlayer(dt) {
   }
   if (inCamp() && S.hp < S.maxHp && tick('regen', 2.5, dt)) S.hp++;
 }
-function startSwing(dur, onHit, power = false) { pl.sw = { t: 0, dur, onHit, hit: false, power }; play('swing', 80); }
+function startSwing(dur, onHit, power = false) { const style = power ? slamStyle() : null; pl.sw = { t: 0, dur: power ? SLAM_DUR[style] : dur, onHit, hit: false, power, style }; play('swing', 80); }
+// the ultimate (4th-hit slam) moves differently for each weapon family
+const SLAM_DUR = { spin: .36, leap: .6, sword: .55, halberd: .6, trident: .6, lance: .55 };
+function slamStyle() {
+  const w = weaponLook();
+  return w.shape === 'double' ? 'leap' : w.shape === 'sword' ? 'sword' : w.shape === 'halberd' ? 'halberd' : w.shape === 'trident' ? 'trident' : w.shape === 'lance' ? 'lance' : 'spin';
+}
+function slamMotion(s, k, b, dt) {
+  const ease = e => e * e * (3 - 2 * e);
+  switch (s.style) {
+    case 'leap': {   // jump high with the axe overhead, crash straight down
+      if (k < .45) { const e = ease(k / .45); b.position.y = 1.7 * Math.sin(e * Math.PI / 2); axe.rotation.x = -3 * e; b.rotation.x = -.35 * e; }
+      else if (k < .6) { const e = (k - .45) / .15; b.position.y = 1.7 * (1 - e * e); axe.rotation.x = -3 + 4.8 * e; b.rotation.x = -.35 + .7 * e; swoosh.visible = true; swoosh.material.opacity = .9; }
+      else { const e = (k - .6) / .4; b.position.y = 0; axe.rotation.x = 1.8 * (1 - e); b.rotation.x = .35 * (1 - e); swoosh.visible = false; }
+      return .58;
+    }
+    case 'sword': {   // crouch, then rise in a double (aurora: triple) spin with the blade held level
+      const turns = S.lv.axe >= 8 ? 3 : 2;
+      if (k < .2) { const e = k / .2; b.position.y = -.15 * e; axe.rotation.x = -1.2 * e; }
+      else if (k < .78) { const e = (k - .2) / .58; b.rotation.y = e * Math.PI * 2 * turns; b.position.y = .6 * Math.sin(e * Math.PI); axe.rotation.x = 1.57; swoosh.visible = true; swoosh.material.opacity = .9; swoosh.rotation.y = b.rotation.y; }
+      else { const e = (k - .78) / .22; b.rotation.y = 0; b.position.y = 0; axe.rotation.x = 1.57 * (1 - e); swoosh.visible = false; }
+      return .7;
+    }
+    case 'halberd': {   // twirl the halberd overhead, then bring it down
+      if (k < .5) { const e = k / .5; axe.rotation.x = -1.6; axe.rotation.z = e * Math.PI * 4; b.position.y = .45 * e; }
+      else if (k < .65) { const e = (k - .5) / .15; axe.rotation.z = 0; axe.rotation.x = -1.6 + 3.3 * e; b.position.y = .45 * (1 - e); swoosh.visible = true; swoosh.material.opacity = .9; }
+      else { const e = (k - .65) / .35; axe.rotation.x = 1.7 * (1 - e); b.position.y = 0; swoosh.visible = false; }
+      return .62;
+    }
+    case 'trident': {   // raise the trident to the sky while turning, then drive it into the ground
+      if (k < .45) { const e = ease(k / .45); axe.rotation.x = -2.6 * e; b.position.y = .8 * e; b.rotation.y = e * Math.PI * 2; }
+      else if (k < .6) { const e = (k - .45) / .15; axe.rotation.x = -2.6 + 4.4 * e; b.position.y = .8 * (1 - e); b.rotation.y = 0; swoosh.visible = true; swoosh.material.opacity = .9; }
+      else { const e = (k - .6) / .4; axe.rotation.x = 1.8 * (1 - e); b.position.y = 0; swoosh.visible = false; }
+      return .58;
+    }
+    case 'lance': {   // lean back, dash forward lance-first, then a full sweeping turn
+      if (k < .25) { const e = k / .25; b.rotation.x = -.25 * e; axe.rotation.x = 1.2 * e; }
+      else if (k < .55) { b.rotation.x = .2; axe.rotation.x = 1.57; const st = 9 * dt; pl.x += Math.sin(pl.rot) * st; pl.z += Math.cos(pl.rot) * st; swoosh.visible = true; swoosh.material.opacity = .9; }
+      else if (k < .85) { const e = (k - .55) / .3; b.rotation.x = .2 * (1 - e); b.rotation.y = e * Math.PI * 2; swoosh.rotation.y = b.rotation.y; }
+      else { b.rotation.y = 0; axe.rotation.x = 1.57 * (1 - (k - .85) / .15); swoosh.visible = false; }
+      return .6;
+    }
+  }
+  return -1;
+}
 function updateSwing(dt) {
   const s = pl.sw, b = player.body;
   axeHead.material.emissive.setHex(pl.combo % 4 === 3 ? 0xff7a00 : axeLook().glow);
-  if (!s) { axe.rotation.x *= .75; b.rotation.y *= .75; b.position.z *= .75; swoosh.visible = false; return; }
+  if (!s) { axe.rotation.x *= .75; axe.rotation.z *= .75; b.rotation.y *= .75; b.rotation.x *= .75; b.position.z *= .75; if (b.position.y > .05) b.position.y *= .75; swoosh.visible = false; return; }
   s.t += dt; const k = s.t / s.dur;
-  if (s.power) {
+  if (s.power && s.style && s.style !== 'spin') {
+    const hitAt = slamMotion(s, k, b, dt);
+    if (!s.hit && k >= hitAt) { s.hit = true; s.onHit(); }
+  } else if (s.power) {
     if (k < .45) { const e = k / .45; axe.rotation.x = -2.9 * e * e; b.rotation.y = -.6 * e; b.position.y = -.12 * e; }
     else if (k < .7) {
       const e = (k - .45) / .25; axe.rotation.x = 1.3; b.rotation.y = -.6 + e * (Math.PI * 2 + .6); b.position.y = .35 * Math.sin(e * Math.PI);
@@ -3188,5 +3235,5 @@ function footprints() {
   }
   return f;
 }
-window.__winter = { spawnSea, boats, schools, syncBoats, HB, powerSlam, payday, get clerkNpc() { return clerkNpc; }, get farmer() { return farmer; }, couriers, whPut, PLOTS, bearHurt, spawnBeast, dropPickup, pickups, footprints, spawnPup, addPet, spawnPack, applyPetLook, pups, stackAdd, pets, fishers, SHOPS, P, S, pl, stack, bears, trees, customers, pads, helpers, servers, hunters, camera, T, save, levelUp };
+window.__winter = { startSwing, spawnSea, boats, schools, syncBoats, HB, powerSlam, payday, get clerkNpc() { return clerkNpc; }, get farmer() { return farmer; }, couriers, whPut, PLOTS, bearHurt, spawnBeast, dropPickup, pickups, footprints, spawnPup, addPet, spawnPack, applyPetLook, pups, stackAdd, pets, fishers, SHOPS, P, S, pl, stack, bears, trees, customers, pads, helpers, servers, hunters, camera, T, save, levelUp };
 })();
