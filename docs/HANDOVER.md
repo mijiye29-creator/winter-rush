@@ -53,3 +53,4 @@
 - v2.1.5: 칸 배치는 유형별 묶음(`makePad` 블록 주석 참고). 저장이 칸 이름 키라 호출 순서는 무관. `PAD_POS3`는 비어 있음(단계 이동 없음). `fishing`과 `hearth`는 같은 자리를 차례로 씀
 - v2.1.6: `MENUS`(모닥불 레벨별 메뉴), `spotlight()`/`SPOT_PADS`(해금 확대 연출, `#spot` 카드), `crowd()`. `UP.gate`·`UP.courier`는 옛 저장용으로만 남고 칸 없음, `courierCount() = S.lv.warehouse`. 물류: `SOURCES`/`fetch` 상태, `sinkFor()`, `sellSurplus()`. `woodSpot()`은 자리가 없으면 null
 - v2.1.7: 배달 직원은 `c.cargo`(품목별 수량)와 `c.stops`(정류장 목록: load/take/give/reap/pick/stash/sell). `planTrip()`이 경로를 짜고(`routeOrder` 최근접 순서), `runStop()`이 실행. 다른 배달 직원이 맡은 칸·상자·줍기 대상은 `claimed()`로 건너뜀
+- v2.1.9: 알림은 `ALERTS`(id·조건·문구·위치) 목록, `updateAlerts()`가 1초마다 검사. 탭하면 `pl.target`에 `next` 경유지(정문)를 넣어 이동. 어선 연료 부족은 `HB.noFuelAt`
