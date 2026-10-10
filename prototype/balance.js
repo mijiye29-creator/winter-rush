@@ -4,7 +4,7 @@ window.WinterRushData = {
     cook: { steak: 2.5 }, burn: 35,
     price: { steak: 10, sfish: 18, leather: 25, hide: 4 },
     burnGrow: .15, burnMax: 2.2,   // fire burns faster each blizzard survived (×1 → ×2.2)
-    smoke: { time: 2.2, fishPerLog: 2 },  // stage 2 fish oven: 1 log smokes 2 fish
+    smoke: { time: 3.5, fishPerLog: 2 },  // stage 2 fish oven: slow roast on the oven top, 1 log cooks 2 fish
     tanPerLog: 2,                  // artisan's small fire: 1 log tans 2 hides
     padDwell: .5,                  // seconds standing still on a pad before it starts taking coins
     tanTime: [0, 3, 1.6],          // seconds per leather good by artisan level
@@ -36,6 +36,8 @@ window.WinterRushData = {
     clerk:   { name: '판매 점원',  icon: '🧑‍💼', costs: [200, 400, 700],    vals: [0, 1, 2, 3] },
     artisan: { name: '가죽 장인',  icon: '🧵', costs: [150, 350],         vals: [0, 1, 2] },
     fisher:  { name: '낚시꾼',    icon: '🪝', costs: [250, 500],         vals: [0, 1, 2] },
+    helper2: { name: '나무꾼 2', icon: '👷', costs: [350], vals: [0, 1], stage: [2] },
+    hunter2: { name: '사냥꾼 2', icon: '🏹', costs: [450], vals: [0, 1], stage: [2] },
     fishClerk: { name: '생선 점원', icon: '🧑‍💼', costs: [200, 400, 700],  vals: [0, 1, 2, 3], stage: [2, 2, 2] },
   },
 };
