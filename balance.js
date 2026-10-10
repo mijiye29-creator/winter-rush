@@ -54,6 +54,7 @@ window.WinterRushData = {
     warehouse: { cap: [0, 800, 1200, 1600, 2000, 2400] },   // slots per warehouse level
     courier: { carry: [0, 20, 24, 28, 32, 36], speed: [0, 5.5, 5.8, 6.1, 6.4, 6.7] },   // delivery workers, by warehouse level: mixed loads up to this many items
     fireLv: .25,                  // each hearth level: a log burns 25% longer
+    econ: { cost: [1, 1.5, 2.2, 3], sale: [1, 1.5, 2.2, 3] },   // by village stage 1-4: upgrade/hire prices and every sale (shops, wages, traders, surplus) scale together
     wage: { every: 60, per: 8, interest: .005, maxInterest: 50 },   // per staff each payday (stage 3)
     staffHouse: .15,               // staff speed bonus per heated house
     houseLogEvery: 15,             // each staff house burns a warehouse log this often; unheated houses give no bonus
