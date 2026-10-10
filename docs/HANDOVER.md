@@ -22,3 +22,9 @@
 - 새 수치는 `prototype/balance.js`에 둔다. 새 게임 상태를 저장해야 하면 `prototype/game.js`의 `save()`와 `load()`를 함께 확인한다.
 - 사용자 보고는 짧게 한다. 토큰·컨텍스트가 부족하거나 인수인계 지시가 오면 이 형식으로 최신 브랜치와 다음 명령을 남긴다.
 - Unity 이식 시 설정은 ScriptableObject, 전역 상태는 GameManager 싱글톤, 기능은 독립 C# 스크립트로 설계한다.
+
+## 2026-10-10 상점·직원 개편 (Claude, `game.js`·`balance.js`)
+- 가게는 `SHOPS`(main 스테이크 / fish 생선 / leather 가죽 제품)로 일반화. 손님은 `c.shop`을 갖고, 앞에서부터 `val('clerk')`명이 동시에 응대됨
+- 새 업그레이드: `clerk`(판매 점원), `artisan`(가죽 장인, `T.tanTime`), `fisher`(낚시꾼, `updateFishers`). 털 장비와 `cur:'fur'` 결제 제거
+- 생선 굽기 제거: 생선은 `S.fishStock` → 생선 가게. 가죽 → `S.leather` → 가죽 가게
+- 사냥꾼은 `h.hides`를 들고 와 가죽 공방에 넣음. 펫은 1마리, `S.petHits`로 `T.pet` 레벨 성장
