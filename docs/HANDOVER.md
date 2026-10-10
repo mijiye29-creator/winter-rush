@@ -48,3 +48,4 @@
 - v1.4: 창고는 `S.wh`(품목별)·`whOn()`/`whPut()`/`whRoom()`, 배달 `couriers`/`updateCourier`(`DELIVER` 목록, `collect`/`stash` 상태, `viaGate`). 공방 칸 `TAN.in`이 가죽·장작·전리품 공용, 대장장이는 `updateSmith`(`updateTannery`에서 호출). 피자 `T.pizzaRecipe`. 무기 `WEAPONS`/`buildWeapon()`(`axeHead`는 현재 칼날). `logFuel()`은 `UP.fire` 반영
 - v1.4.1: Codex 병합. `guardPad`(큰 화로 칸 재사용), `S.paydayT`, 저장 `paid`는 칸 이름 키(옛 배열 저장은 버전별 칸 순서로 복원). `whCap()`·`courierCount()`가 `S.lv.fire` 반영. 전리품 픽업은 `beamGeo`/`ringGeo` 자식 메시
 - v1.4.3: 창고·은행은 남서쪽 구석. `PAD_POS3`가 3단계 진입 때 칸 4개를 옮김. 겹침 검사는 같은 세션에서 1→2→3단계 순서로 해야 이동이 반영됨
+- v2.0 4단계: 코드는 `HB`/`seaG` 블록(`updateHarbor`, `updateRowboat`, `updateSushiChef`, `boats`/`syncBoats`, `schools`, `SEA_AI`/`spawnSea`/`seaClamp`). 바다 동물은 `bears` 안에서 `b.ai`·`b.sea`로 동작하고 사냥꾼은 무시. 바다는 `WALLS4`의 큰 상자로 막고, 배를 타면 `collide()` 대신 바다 범위로 고정(`pl.boat`). 안개는 `applySeaFog()`가 날씨 업데이트 뒤에 적용
