@@ -911,6 +911,9 @@ function updateCourier(c, dt) {
     c.n -= k; c.job = null; if (c.n) { c.state = 'stash'; c.path = viaGate(c, V(P.whIn.x, 0, P.whIn.z - 1.3)); return; } c.state = 'idle';   // leftovers go back to the warehouse (or on to another tile)
   }
   if (!whOn()) return;
+  if (whRoom() > 0 && S.fishCrate >= T.max.fishCrate && fishers.some(f => f.state === 'toShop' && f.n > 0) && !couriers.some(o => o !== c && o.state === 'haul' && o.haulKey === 'fishCrate')) {
+    c.state = 'haul'; c.haulKey = 'fishCrate'; c.item = 'fish'; c.path = viaGate(c, V(P.fishCrate.x - 1.3, 0, P.fishCrate.z)); return;
+  }
   let best = null, br = .6;
   for (const t of DELIVER) {
     if ((t.on && !t.on()) || S.wh[t.item] <= 0 || couriers.some(o => o !== c && o.job === t)) continue;
@@ -1259,23 +1262,35 @@ function updateHarbor(dt) {
   if (S.started && tick('seals', T.harbor.sealEvery, dt)) for (const [hx, hz] of [[39, -6.4], [39.6, 1.6]]) if (!bears.some(b => b.kind === 'seal' && b.homeX === hx)) { spawnSea('seal', hx, hz, { homeX: hx, homeZ: hz }); break; }
   if (S.started && tick('walrus', T.harbor.walrusEvery, dt) && !bears.some(b => b.kind === 'walrus')) { spawnSea('walrus', 44, -2); toast('🦭 바다코끼리 대장이 부두에 올라왔어요!'); play('growl'); buzz([60, 40, 60]); }
 }
-// stage 4: a trade ship calls at the pier and buys warehouse surplus above a working stock
+// trade: from stage 3 a merchant wagon comes to the south gate, from stage 4 a ship docks at the pier; both buy warehouse surplus
 const tradeShip = new THREE.Group(); tradeShip.visible = false; scene.add(tradeShip);
 tradeShip.add(mesh(new THREE.BoxGeometry(2.4, 1, 6), mat(0x3a4f7a), 0, .5, 0), mesh(new THREE.BoxGeometry(2, .2, 5.6), mat(0xe8dcc0), 0, 1.05, 0), mesh(new THREE.BoxGeometry(1.4, 1.2, 1.4), mat(0xffffff), 0, 1.7, -1.8));
 tradeShip.add(mesh(new THREE.CylinderGeometry(.08, .08, 4, 6), mat(0x5a3a28), 0, 3, .8), mesh(new THREE.PlaneGeometry(1.8, 2.2), new THREE.MeshLambertMaterial({ color: 0xf4f4f4, side: THREE.DoubleSide }), 0, 3.2, .85));
+const wagon = new THREE.Group(); wagon.visible = false; scene.add(wagon);
+wagon.add(mesh(new THREE.BoxGeometry(1.6, .8, 2.4), mat(0x8a5a3a), 0, .8, 0), mesh(new THREE.CylinderGeometry(.9, .9, 2.4, 12, 1, false, 0, Math.PI).rotateZ(Math.PI / 2).rotateY(Math.PI / 2), mat(0xf2e8d0), 0, 1.2, 0));
+for (const [x, z] of [[-.85, .8], [.85, .8], [-.85, -.8], [.85, -.8]]) wagon.add(mesh(new THREE.CylinderGeometry(.38, .38, .1, 12).rotateZ(Math.PI / 2), mat(0x5a3a28), x, .38, z));
+const merchant = makePerson(0x6a3fa0, 0x3a2a22); scene.remove(merchant.g); merchant.g.position.set(0, 0, 1.7); wagon.add(merchant.g);
 function updateTrade(dt) {
-  if (S.stage < 4 || !whOn()) { tradeShip.visible = false; return; }
+  const ship = S.stage >= 4;
+  if (S.stage < 3 || !whOn()) { tradeShip.visible = wagon.visible = false; return; }
+  if ((S.tradeT || 0) < T.trade.every - 20 && whTotal() >= whCap() * T.trade.rush) S.tradeT = T.trade.every - 20;   // warehouse nearly full: traders hurry over
   S.tradeT = (S.tradeT || 0) + dt;
-  const x = S.tradeT < 8 ? 70 - (70 - 47) * S.tradeT / 8 : S.tradeT < 20 ? 47 : 47 + (S.tradeT - 20) * 4;
-  tradeShip.visible = S.tradeT < 32; tradeShip.position.set(x, Math.sin(performance.now() / 500) * .08, -5.5);
-  if (S.tradeT >= 8 && !S.traded) {
-    S.traded = true; let left = T.trade.max, coins = 0; const sold = [];
-    for (const [it, pr] of Object.entries(T.trade.price).sort((a, b) => S.wh[b[0]] - S.wh[a[0]])) {
-      const k = Math.min(left, Math.max(0, S.wh[it] - T.trade.keep)); if (!k) continue;
-      S.wh[it] -= k; left -= k; coins += k * pr; sold.push(`${WH_ICON[it]}${k}`);
+  const t = S.tradeT - (T.trade.every - 20);   // arrive 20 s before the cycle ends
+  const arriving = t > 0 && t < 8, docked = t >= 8 && t < 16, leaving = t >= 16 && t < 20;
+  tradeShip.visible = ship && (arriving || docked || leaving); wagon.visible = !ship && (arriving || docked || leaving);
+  if (ship) tradeShip.position.set(arriving ? 70 - 23 * t / 8 : docked ? 47 : 47 + (t - 16) * 6, Math.sin(performance.now() / 500) * .08, -5.5);
+  else wagon.position.set(arriving ? 3 + (8 - t) * 2 : docked ? 3 : 3 - (t - 16) * 4, 0, 8.5);
+  if (docked && !S.traded) {
+    S.traded = true; let coins = 0; const sold = [];
+    const surplus = Object.keys(T.trade.price).map(it => [it, Math.max(0, S.wh[it] - T.trade.keep)]), total = surplus.reduce((n, [, k]) => n + k, 0);
+    const share = Math.min(1, T.trade.max[S.stage] / Math.max(1, total));   // buy from every overstocked item in proportion
+    for (const [it, k0] of surplus) {
+      const k = Math.ceil(k0 * share); if (!k) continue;
+      S.wh[it] -= k; coins += k * T.trade.price[it]; sold.push(`${WH_ICON[it]}${k}`);
     }
-    if (coins) { S.coinPile += coins; toast(`🚢 교역선이 남는 재료를 사갔어요 ${sold.join(' ')} → 🪙${coins}`); burst(47, 2, -5.5, 0xffd36b, 16, { spd: 3, up: 5, life: .7 }); }
-    else toast('🚢 교역선이 들렀지만 창고에 남는 재료가 없어요');
+    const who = ship ? '🚢 교역선' : '🛻 상인 마차', at = ship ? V(47, 2, -5.5) : V(3, 2, 8.5);
+    if (coins) { S.coinPile += coins; toast(`${who}이 남는 재료를 사갔어요 ${sold.join(' ')} → 🪙${coins}`); burst(at.x, at.y, at.z, 0xffd36b, 16, { spd: 3, up: 5, life: .7 }); }
+    else toast(`${who}이 들렀지만 창고에 남는 재료가 없어요`);
   }
   if (S.tradeT >= T.trade.every) { S.tradeT = 0; S.traded = false; }
 }

@@ -52,7 +52,7 @@ window.WinterRushData = {
     pizzaRecipe: { veg: 2, meat: 4, fish: 3 },   // per pizza
     smithTime: [0, 8, 4],          // seconds per trophy processed by smith level
     warehouse: { cap: [0, 800, 800], perFire: 200 },   // +200 slots per hearth level
-    courier: { carry: [0, 8, 12, 16], speed: [0, 4.6, 5.3, 6] },   // delivery trucks
+    courier: { carry: [0, 12, 14, 16], speed: [0, 5.5, 5.8, 6.2] },   // delivery trucks
     fireLv: .25,                  // each hearth level: a log burns 25% longer
     wage: { every: 60, per: 8, interest: .005, maxInterest: 50 },   // per staff each payday (stage 3)
     staffHouse: .15,               // staff speed bonus per heated house
@@ -67,7 +67,7 @@ window.WinterRushData = {
       sushiRecipe: { tuna: 1, fish: 1, veg: 2, log: 1 }, boatLogs: [0, 1, 2, 3], lighthouseLogEvery: 8,   // log sinks: boat fuel per trip, lighthouse lamp
     },
     craftTime: 5,                  // walrus ivory (smith) / walrus hide (artisan) → 🏺 craft goods sold at the leather stall
-    trade: { every: 120, max: 40, keep: 20, price: { log: 2, veg: 3, meat: 3, fish: 4, hide: 6 } },   // stage 4 trade ship buys warehouse surplus above `keep`
+    trade: { every: 90, rush: .85, max: [0, 0, 0, 250, 500], keep: 15, price: { log: 2, veg: 3, meat: 3, fish: 4, hide: 6, tuna: 12, blubber: 5 } },   // stage 3 wagon / stage 4 ship buy warehouse surplus above `keep`; a near-full warehouse (rush) calls them early
     feast: { every: 180, dur: 60, need: { meat: 15, veg: 15, fish: 10, log: 10 }, saleMul: 1.3, staffMul: 1.2 },   // stage 3+ village feast
     staffBurn: .04,                // the main hearth burns 4% faster per staff member
     armor: { boots: [0, .04, .08, .12, .16, .2], coat: [0, .08, .16, .24, .3, .36] },   // chance to block a hit
