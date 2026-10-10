@@ -30,7 +30,7 @@ window.WinterRushData = {
     wolfPackSize: 3, maxWolves: 10, wolfSpawn: 14, wolfStartSold: 8, hurtGrace: .8,
     hideChance: { bear: .6, wolf: .35 },   // hides drop only sometimes; bosses/alpha/beasts always drop theirs
     leatherShop: { iv: 3.5, maxQ: 5, slots: 2 },   // customers only come while there is stock (leather + hides) to serve them
-    axeChop: [.42, .34, .27, .21, .19, .17, .15],   // seconds per chop by axe level
+    axeChop: [.42, .34, .27, .21, .19, .17, .15, .13, .12],   // seconds per chop by axe level
     // hero power = axe + boots + coat + cape levels; field animals get tougher and new beasts appear
     powerHp: { bear: .6, wolf: .34, alpha: 1, boss: 2 },
     beasts: {
@@ -64,17 +64,17 @@ window.WinterRushData = {
       fogEvery: 110, fogDur: [30, 20, 12],   // sea fog, shortened by the lighthouse
       penguinEvery: 45, penguinPack: 5, sealEvery: 30, walrusEvery: 180, blubberFuel: 18,
       harpoon: .7, schoolSize: 4,
-      sushiRecipe: { tuna: 1, fish: 1, veg: 2 }, boatLogs: [0, 1, 2, 3], lighthouseLogEvery: 8,   // log sinks: boat fuel per trip, lighthouse lamp
+      sushiRecipe: { tuna: 1, fish: 1, veg: 2, log: 1 }, boatLogs: [0, 1, 2, 3], lighthouseLogEvery: 8,   // log sinks: boat fuel per trip, lighthouse lamp
     },
-    armor: { boots: [0, .04, .08, .12], coat: [0, .08, .16, .24] },   // chance to block a hit
-    max: { suTuna: 10, suFish: 10, suVeg: 10, sushi: 16, blubber: 10, vegCrate: 20, pzVeg: 12, pzMeat: 24, pzFish: 16, pzWood: 12, pizza: 16, forgeRaw: 10, tanWood: 16, wood: 40, meat: 30, grill: 18, counter: 16, hide: 20, fishCrate: 20, fishRaw: 30, ovenWood: 12, fishSmoked: 12, fishStock: 20, leather: 16, tanFuel: 8 },
+    armor: { boots: [0, .04, .08, .12, .16, .2], coat: [0, .08, .16, .24, .3, .36] },   // chance to block a hit
+    max: { suWood: 10, suTuna: 10, suFish: 10, suVeg: 10, sushi: 16, blubber: 10, vegCrate: 20, pzVeg: 12, pzMeat: 24, pzFish: 16, pzWood: 12, pizza: 16, forgeRaw: 10, tanWood: 16, wood: 40, meat: 30, grill: 18, counter: 16, hide: 20, fishCrate: 20, fishRaw: 30, ovenWood: 12, fishSmoked: 12, fishStock: 20, leather: 16, tanFuel: 8 },
   },
   UP: {
     bag:     { name: '가방',      icon: '🎒', costs: [30, 60, 120, 240, 500], vals: [10, 16, 22, 30, 40, 50] },
-    axe:     { name: '무기',      icon: '⚔️', costs: [40, 90, 200, 450, 900, 1600], vals: [1, 2, 3, 4, 6, 8, 11], stage: [1, 1, 1, 2, 2, 2] },
-    boots:   { name: '장화',      icon: '🥾', costs: [30, 80, 200],      vals: [5, 5.8, 6.6, 7.4] },
-    cape:    { name: '망토',      icon: '🦸', costs: [100, 300, 700, 1200], vals: [5, 6, 7, 8, 9], stage: [1, 1, 2, 2] },   // max HP
-    coat:    { name: '외투',      icon: '🧥', costs: [60, 180, 400],     vals: [0, 1, 2, 3] },
+    axe:     { name: '무기',      icon: '⚔️', costs: [40, 90, 200, 450, 900, 1600, 3500, 7000], vals: [1, 2, 3, 4, 6, 8, 11, 15, 20], stage: [1, 1, 1, 2, 2, 2, 4, 4] },   // Lv8-9: glacier trident, aurora greatsword
+    boots:   { name: '장화',      icon: '🥾', costs: [30, 80, 200, 2000, 4000], vals: [5, 5.8, 6.6, 7.4, 8.2, 9], stage: [1, 1, 1, 4, 4] },
+    cape:    { name: '망토',      icon: '🦸', costs: [100, 300, 700, 1200, 3000, 6000], vals: [5, 6, 7, 8, 9, 11, 13], stage: [1, 1, 2, 2, 4, 4] },   // max HP
+    coat:    { name: '외투',      icon: '🧥', costs: [60, 180, 400, 2500, 5000], vals: [0, 1, 2, 3, 4, 5], stage: [1, 1, 1, 4, 4] },
     gate:    { name: '정문 강화',  icon: '🛡️', costs: [80, 200, 450, 900, 1800, 3200], vals: [0, 1, 2, 3, 3, 3, 3], stage: [1, 1, 1, 2, 2, 2] },   // Lv4+ watchtowers
     helper:  { name: '나무꾼',    icon: '👷', costs: [100, 220, 450],    vals: [0, 1, 2, 3] },
     server:  { name: '서빙 직원',  icon: '🧑‍🍳', costs: [150, 300, 600],    vals: [0, 1, 2, 3] },
