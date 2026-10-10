@@ -42,3 +42,4 @@
 - v0.8.1: 사냥꾼 `collect` 상태, `campPickup(h)`로 마을 안 픽업 탐색
 - v0.9: 칸 위치는 `makePad` 호출 순서 = 저장(`paid`) 순서라 새 칸은 맨 뒤에 추가. 장비 외형 `GEAR`/`applyGear()`(전용 재질 `gmat`, `mat()` 캐시 공유 금지), 막기 `blockChance()`/`T.armor`
 - v1.0: `COIN_PILES`(S.coinPile/coinFish/coinLeather, `SHOPS.*.coin`), `WOOD_SPOTS`/`woodSpot()`(나무꾼 `deliver` 상태), `S.tanWood`, `heroLv()`, `makeBeast(kind)`/`spawnBeast()`(`T.beasts`, 몹 객체 `kind`/`sc`/`dmg`/`reach`/`big`), `AXE_LOOKS`, 망토 `capeG`
+- v1.1: 재료 `S.mats`(pelt/tusk), 업그레이드 `UP.*.mats`(`matsNeed`/`matsOk`, 레벨업 시 차감), `axeDmg()`/`maxHpOf()`, 감시탑 `TOWERS`/`updateTowers`(`shots`의 `dmg` 덮어쓰기), 동상 `buildStatue()`
