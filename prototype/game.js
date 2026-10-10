@@ -3159,18 +3159,46 @@ const setText = (el, t) => { if (el.textContent !== t) el.textContent = t; };
 // ───────── shortage alerts: what is missing where; tap the bar and the hero runs there ─────────
 const alertEl = document.createElement('button'); alertEl.id = 'alert'; document.body.appendChild(alertEl);
 const padPos = k => { const p = pads.find(q => q.key === k); return p && p.on && !padHidden(p) ? V(p.x, 0, p.z) : null; };
-const missing = (have, need) => Object.entries(need).filter(([k]) => have[k] < need[k]).map(([k]) => ({ tuna: '🍣참치', fish: '🐟생선', veg: '🥬채소', log: '🪵장작', meat: '🥩고기' })[k]).join(' ');
+const ING = { tuna: '🍣참치', fish: '🐟생선', veg: '🥬채소', log: '🪵장작', meat: '🥩고기' };
+const missingKeys = (have, need) => Object.keys(need).filter(k => have[k] < need[k]);
+const missing = (have, need) => missingKeys(have, need).map(k => ING[k]).join(' ');
+// where a missing ingredient comes from: what to build or hire first, else where to go get it yourself
+const BOAT_NAMES = ['', '쪽배', '그물배', '원양선'];
+function howToGet(item) {
+  const pad = k => padPos(k), first = T.harbor.boatTuna.findIndex(n => n > 0);
+  if (whOn() && S.wh[item] > 0 && (S.lv.warehouse || 0) > 0) return { hint: `창고에 ${S.wh[item]}개 있어요: 배달 직원이 곧 가져와요`, at: P.whIn };
+  if (item === 'tuna') {
+    if (!S.lv.boat) return { hint: '어선을 사면 바다에서 참치를 잡아와요', at: pad('boat') || P.dockCrate };
+    if (!T.harbor.boatTuna[S.lv.boat]) return { hint: `참치는 ${BOAT_NAMES[first]}(어선 Lv${first})부터 잡아요: 어선을 업그레이드하세요`, at: pad('boat') || P.dockCrate };
+    return { hint: '어선이 잡아오는 중 · 부두 끝 🚣 칸에서 배를 타고 작살로 직접 잡을 수도 있어요', at: HB.boardSpot };
+  }
+  if (item === 'fish') {
+    if (!S.lv.fisher) return { hint: '낚시꾼을 고용하세요', at: pad('fisher') || V(POND.x, 0, POND.z) };
+    if (S.stage >= 4 && !S.lv.boat) return { hint: '어선을 사면 생선이 더 들어와요', at: pad('boat') || P.dockCrate };
+    return { hint: '얼음 낚시터에서 직접 낚아도 돼요', at: V(POND.x + 2.4, 0, POND.z) };
+  }
+  if (item === 'veg') return !S.lv.farmer ? { hint: '농부를 고용하세요', at: pad('farmer') || PLOTS[0] } : { hint: '텃밭에서 자라는 중이에요', at: PLOTS[0] };
+  if (item === 'meat') return !S.lv.hunter ? { hint: '사냥꾼을 고용하거나 정문 밖에서 곰을 사냥하세요', at: pad('hunter') || V(0, 0, 8.5) } : { hint: '정문 밖에서 곰을 사냥하세요', at: V(0, 0, 8.5) };
+  return !S.lv.helper ? { hint: '나무꾼을 고용하세요', at: pad('helper') || V(-9.8, 0, -4) } : { hint: '숲에서 나무를 베어 오세요', at: V(-9.8, 0, -4) };
+}
+// "X shortage: item → how to get it", pointing at where to fix the first missing item
+function shortage(label, have, need, fallback) {
+  const ks = missingKeys(have, need); if (!ks.length) return null;
+  const h = howToGet(ks[0]);
+  return { text: `${label} 재료 부족: ${ks.map(k => ING[k]).join(' ')} → ${h.hint}`, at: h.at || fallback };
+}
+const sushiShort = () => shortage('🍣 초밥', { tuna: S.suTuna, fish: S.suFish, veg: S.suVeg, log: S.suWood }, T.harbor.sushiRecipe, P.sushiIn);
+const pizzaShort = () => shortage('🍕 피자', { veg: S.pzVeg, meat: S.pzMeat, fish: S.pzFish, log: S.pzWood + S.pzFuel }, { ...(S.stage >= 4 ? T.pizzaRecipeHarbor : T.pizzaRecipe), log: 1 }, P.pizzaIn);
 const ALERTS = [
   { id: 'fire', on: () => S.wood <= 0 && S.warmth < 60, text: () => '🔥 모닥불 장작이 떨어졌어요! 나무를 가져오세요', at: () => P.woodTile },
   { id: 'strike', on: () => S.strike, text: () => '😤 월급이 모자라 직원들이 태업 중이에요: 은행에 돈을 모으세요', at: () => P.bank },
   { id: 'sushiChef', on: () => S.stage >= 4 && !S.lv.sushiChef && padPos('sushiChef'), text: () => '🍣 초밥집에 쉐프가 없어요', at: () => padPos('sushiChef') },
-  { id: 'sushiIng', on: () => S.lv.sushiChef > 0 && S.sushi <= 0 && !!missing({ tuna: S.suTuna, fish: S.suFish, veg: S.suVeg, log: S.suWood }, T.harbor.sushiRecipe), text: () => `🍣 초밥 재료 부족: ${missing({ tuna: S.suTuna, fish: S.suFish, veg: S.suVeg, log: S.suWood }, T.harbor.sushiRecipe)}`, at: () => P.sushiIn },
+  { id: 'sushiIng', on: () => S.lv.sushiChef > 0 && S.sushi <= 0 && !!sushiShort(), text: () => sushiShort().text, at: () => (sushiShort() || {}).at || P.sushiIn },
   { id: 'boatFuel', on: () => S.stage >= 4 && performance.now() - (HB.noFuelAt || -1e9) < 4000, text: () => `🚤 어선이 장작이 없어 출항을 못 해요 (출항마다 🪵${T.harbor.boatLogs[Math.max(1, S.lv.boat)]}개): 창고에 장작을 넣어 주세요`, at: () => P.whIn },
   { id: 'boat', on: () => S.stage >= 4 && !S.lv.boat && padPos('boat'), text: () => '🚤 아직 어선이 없어요: 부두에서 어선을 사세요', at: () => padPos('boat') },
   { id: 'light', on: () => S.lv.lighthouse > 0 && !S.lightLit, text: () => '🗼 등대에 넣을 장작이 없어요: 창고에 장작을 넣어 주세요', at: () => P.whIn },
   { id: 'pizzaChef', on: () => S.stage >= 3 && !S.lv.pizzaChef && padPos('pizzaChef'), text: () => '🍕 피자 가게에 쉐프가 없어요', at: () => padPos('pizzaChef') },
-  { id: 'pizzaIng', on: () => { const PR = S.stage >= 4 ? T.pizzaRecipeHarbor : T.pizzaRecipe; return S.lv.pizzaChef > 0 && S.pizza <= 0 && !!missing({ veg: S.pzVeg, meat: S.pzMeat, fish: S.pzFish, log: S.pzWood + S.pzFuel }, { ...PR, log: 1 }); },
-    text: () => { const PR = S.stage >= 4 ? T.pizzaRecipeHarbor : T.pizzaRecipe; return `🍕 피자 재료 부족: ${missing({ veg: S.pzVeg, meat: S.pzMeat, fish: S.pzFish, log: S.pzWood + S.pzFuel }, { ...PR, log: 1 })}`; }, at: () => P.pizzaIn },
+  { id: 'pizzaIng', on: () => S.lv.pizzaChef > 0 && S.pizza <= 0 && !!pizzaShort(), text: () => pizzaShort().text, at: () => (pizzaShort() || {}).at || P.pizzaIn },
   { id: 'farmer', on: () => S.stage >= 3 && !S.lv.farmer && padPos('farmer'), text: () => '🧑‍🌾 텃밭에 농부가 없어요: 채소가 안 모여요', at: () => padPos('farmer') },
   { id: 'artisan', on: () => hidesOn() && !S.lv.artisan && padPos('artisan'), text: () => '🧵 가죽 공방에 장인이 없어요', at: () => padPos('artisan') },
   { id: 'tanWood', on: () => S.lv.artisan > 0 && S.hide > 0 && S.tanWood <= 0 && S.tanFuel <= 0, text: () => '🧵 가죽 공방 장작이 떨어졌어요', at: () => TAN.in },
