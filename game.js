@@ -652,22 +652,51 @@ function carrier(coat, hair, types, x, z) {
 }
 function showCarry(w) { w.carry.children.forEach(m => (m.visible = m.userData.t === w.item && m.userData.i < w.n)); }
 function addFarmer() { if (!farmer) { farmer = carrier(0x6b9e3a, 0x8a5a2a, ['veg'], 17.4, -1.4); farmer.body.add(mesh(new THREE.CylinderGeometry(.5, .5, .05, 12), mat(0xe8c86a), 0, 1.68, 0)); } }
-// couriers drive small delivery trucks (driver in a reflective delivery vest), cargo rides in the bed
+// couriers: inside the fence a courier in a delivery vest pulls a hand cart; outside it drives a white box truck
 function addCourier() {
   while (couriers.length < courierCount()) {
-    const c = carrier(0x2b4f8a, 0x3a2a22, WH_ITEMS, P.whIn.x - couriers.length * 1.4, P.whIn.z - 1.6);
-    const driver = c.body, truck = new THREE.Group(); c.g.add(truck);
-    driver.add(mesh(new THREE.CylinderGeometry(.37, .46, .55, 10), mat(0x2f7fe0), 0, .75, 0), mesh(new THREE.TorusGeometry(.42, .05, 5, 14).rotateX(Math.PI / 2), mat(0xe8ff6a, { emissive: 0x556600 }), 0, .62, 0));   // vest + reflective stripe
-    driver.add(mesh(new THREE.SphereGeometry(.3, 10, 6, 0, Math.PI * 2, 0, Math.PI / 2), mat(0x2f7fe0), 0, 1.55, -.02));   // cap
-    c.g.remove(driver); truck.add(driver); driver.position.set(0, .45, .55); driver.scale.setScalar(.72);
-    truck.add(mesh(new THREE.BoxGeometry(1.15, .45, 2.1), mat(0x2f7fe0), 0, .55, 0), mesh(new THREE.BoxGeometry(1.1, .65, .7), mat(0xf4f4f4), 0, 1.05, .62));
-    truck.add(mesh(new THREE.BoxGeometry(1.0, .3, .05), mat(0x9fd8ff), 0, 1.15, .98));   // windshield
-    for (const [x, z] of [[-.6, .65], [.6, .65], [-.6, -.65], [.6, -.65]]) truck.add(mesh(new THREE.CylinderGeometry(.24, .24, .16, 10).rotateZ(Math.PI / 2), mat(0x2b2f3a), x, .25, z));
-    c.carry.position.set(0, 0, -.45); c.g.remove(c.carry); truck.add(c.carry);
-    c.carry.children.forEach(m => { const i = m.userData.i; m.position.set((i % 3 - 1) * .36, .82 + Math.floor(i / 3) * ITEM_H[m.userData.t], 0); });   // spread over the bed
-    c.body = truck; couriers.push(c);
+    const c = carrier(0x2b4f8a, 0x3a2a22, WH_ITEMS, P.whIn.x + couriers.length * 1.2, P.whIn.z - 1.6);
+    const person = c.body, vis = new THREE.Group(), walker = new THREE.Group(), truck = new THREE.Group();
+    c.g.add(vis); vis.add(walker, truck); c.g.remove(person); walker.add(person); c.g.remove(c.carry); walker.add(c.carry);
+    person.add(mesh(new THREE.CylinderGeometry(.37, .46, .55, 10), mat(0x2f7fe0), 0, .75, 0), mesh(new THREE.TorusGeometry(.42, .05, 5, 14).rotateX(Math.PI / 2), mat(0xe8ff6a, { emissive: 0x556600 }), 0, .62, 0));   // vest + reflective stripe
+    person.add(mesh(new THREE.SphereGeometry(.3, 10, 6, 0, Math.PI * 2, 0, Math.PI / 2), mat(0x2f7fe0), 0, 1.55, -.02));   // cap
+    // hand cart behind the courier
+    walker.add(mesh(new THREE.BoxGeometry(.9, .12, .9), mat(0x8a5a3a), 0, .45, -1.1), mesh(new THREE.BoxGeometry(.06, .06, .7), mat(0x5a3a28), -.3, .6, -.55), mesh(new THREE.BoxGeometry(.06, .06, .7), mat(0x5a3a28), .3, .6, -.55));
+    for (const x of [-.5, .5]) walker.add(mesh(new THREE.CylinderGeometry(.22, .22, .08, 10).rotateZ(Math.PI / 2), mat(0x2b2f3a), x, .22, -1.1));
+    c.carry.position.set(0, 0, -1.1);
+    c.carry.children.forEach(m => { const i = m.userData.i; m.position.set((i % 3 - 1) * .28, .52 + Math.floor(i / 3) * ITEM_H[m.userData.t], 0); });
+    // white box truck with a blue stripe (generic delivery look)
+    truck.add(mesh(new THREE.BoxGeometry(1.25, 1.2, 1.7), mat(0xf7f8fa), 0, 1.0, -.35));   // cargo box
+    truck.add(mesh(new THREE.BoxGeometry(1.27, .16, 1.72), mat(0x2f7fe0), 0, .72, -.35), mesh(new THREE.BoxGeometry(1.27, .06, 1.72), mat(0xffc83d), 0, .84, -.35));
+    truck.add(mesh(new THREE.BoxGeometry(1.2, .85, .8), mat(0xf7f8fa), 0, .8, .85), mesh(new THREE.BoxGeometry(1.05, .35, .05), mat(0x9fd8ff), 0, 1.0, 1.26));
+    truck.add(mesh(new THREE.BoxGeometry(1.3, .3, 2.6), mat(0x3a3f4a), 0, .32, 0));
+    for (const [x, z] of [[-.62, .8], [.62, .8], [-.62, -.75], [.62, -.75]]) truck.add(mesh(new THREE.CylinderGeometry(.26, .26, .2, 12).rotateZ(Math.PI / 2), mat(0x1b1b22), x, .26, z));
+    Object.assign(c, { body: vis, walker, truck, inside: true }); truck.visible = false;
+    couriers.push(c);
   }
 }
+// a passing courier takes raw supplies off the hero's back or a hunter's hands and hauls them to the warehouse
+function courierPickup(c, dt) {
+  const cap = T.courier.carry[S.lv.courier];
+  if (!whOn() || c.n >= cap || c.state === 'drop' || (c.n && c.state !== 'stash' && c.state !== 'collect') || !tick('handoff' + couriers.indexOf(c), .06, dt)) return;
+  const take = (type, from) => {
+    if (c.n && c.item !== type) return false;
+    if (!c.n) { c.item = type; c.job = null; c.target = null; }
+    c.n++; fly(type, from, V(c.x, 1.2, c.z), .2);
+    if (c.state !== 'stash') { c.state = 'stash'; c.path = viaGate(c, V(P.whIn.x, 0, P.whIn.z - 1.3)); popText(c.x, 2.4, c.z, '🛵 대신 가져갈게요!', '#9fd8ff'); }
+    return true;
+  };
+  if (Math.hypot(pl.x - c.x, pl.z - c.z) < 1.6) {
+    const t = (c.n ? [c.item] : WH_ITEMS).find(k => stackHas(k));
+    if (t && take(t, backPos())) { stackTake(t); return; }
+  }
+  for (const h of hunters) {
+    if (Math.hypot(h.x - c.x, h.z - c.z) > 1.6) continue;
+    if (h.n > 0 && take('meat', V(h.x, 1.3, h.z))) { h.n--; if (!h.n && !h.hides && h.state === 'home') huntOut(h); return; }
+    if (h.hides > 0 && take('hide', V(h.x, 1.3, h.z))) { h.hides--; if (!h.n && !h.hides && h.state === 'home') huntOut(h); return; }
+  }
+}
+const inVillage = w => w.x > CAMP.x1 - .3 && w.x < CAMP.x2 + .3 && w.z > CAMP.z1 - .3 && w.z < CAMP.z2 + .3;
 const viaGate = (from, to) => from.z > 6.5 && to.z < 6 ? [GATE_OUT.clone(), GATE_IN.clone(), to] : from.z < 6 && to.z > 6.5 ? [GATE_IN.clone(), GATE_OUT.clone(), to] : [to];
 function nearestPickup(c, type) {
   let best = null, bd = 1e9;
@@ -772,8 +801,10 @@ const DELIVER = [
 ];
 function updateCourier(c, dt) {
   const lv = S.lv.courier;
+  c.inside = inVillage(c); c.walker.visible = c.inside; c.truck.visible = !c.inside;   // cart in the village, truck outside
   showCarry(c);
-  if (!walkPath(c, dt, T.courier.speed[lv])) return;
+  courierPickup(c, dt);
+  if (!walkPath(c, dt, T.courier.speed[lv] * (c.inside ? 1 : 1.6))) return;
   if (c.state === 'collect') {   // scoop up meat / hides / trophies lying around and haul them to the warehouse
     for (let i = pickups.length - 1; i >= 0; i--) {
       const pk = pickups[i];
