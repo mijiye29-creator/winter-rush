@@ -251,7 +251,7 @@ const P = {
   grill: V(2, 0, -5.4), counter: V(4.6, 0, -8.9), counterStand: V(4.6, 0, -7.6),
   coinPile: V(6.9, 0, -7.2), gate: V(0, 0, 6), queueFront: V(3.6, 0, -11.2),
   fishShop: V(11.6, 0, -8.9), oven: V(14, 0, -8.9), ovenOut: V(14, 0, -7.2),
-  ovenWood: V(12, 0, -4.8), fishCrate: V(9.3, 0, -2), serverGrill: V(.3, 0, -5.4), serverWay: V(.3, 0, -7.1),
+  ovenWood: V(12, 0, -4.8), fishCrate: V(14.2, 0, -4.8), serverGrill: V(.3, 0, -5.4), serverWay: V(.3, 0, -7.1),
   holes: [V(11.7, 0, 0), V(13.4, 0, 1.4)],
 };
 const BOUNDS = { x1: -21, x2: 18, z1: -15, z2: 24 };
@@ -1037,10 +1037,10 @@ function spawnFieldBear() {
   bears.push(b);
 }
 for (let i = 0; i < T.fieldBears; i++) spawnFieldBear();
-function makeWolf() {
+function makeWolf(alpha = false) {
   const g = new THREE.Group(); scene.add(g);
   const body = new THREE.Group(); g.add(body);
-  const fur = new THREE.MeshLambertMaterial({ color: 0x8e98a8 });
+  const fur = new THREE.MeshLambertMaterial({ color: alpha ? 0x2b2f3a : 0x8e98a8 });
   const m = (geo, x, y, z, material = fur) => {
     const o = mesh(geo, material, x, y, z); body.add(o);
     if (material === fur) { const ol = new THREE.Mesh(geo, outlineMat); ol.position.copy(o.position); ol.rotation.copy(o.rotation); ol.scale.setScalar(1.12); body.add(ol); }
@@ -1059,12 +1059,22 @@ function makeWolf() {
   bar.add(new THREE.Mesh(hpBarGeo, new THREE.MeshBasicMaterial({ color: 0x13253d, depthTest: false })));
   const fill = new THREE.Mesh(hpBarGeo, new THREE.MeshBasicMaterial({ color: 0xe5484d, depthTest: false })); fill.position.z = .01; bar.add(fill);
   bar.visible = false; bar.renderOrder = 11; fill.renderOrder = 12;
-  const hp = 2 + Math.floor(S.storms / 3);
-  return { g, body, fur, bar, fill, wolf: true, raider: false, boss: false, hp, maxHp: hp, x: 0, z: 0, tx: 0, cd: 0, flash: 0, squash: 0, recoil: 0, stagger: 0, wander: 0 };
+  if (alpha) {
+    m(new THREE.TorusGeometry(.3, .1, 6, 14).rotateX(Math.PI / 2), 0, 1.0, .5, mat(0xd9e3ee));
+    for (const s of [-1, 1]) m(new THREE.BoxGeometry(.08, .07, .05), s * .11, 1.04, .95, mat(0xff3030, { emissive: 0xaa0000 }));
+    g.scale.setScalar(1.5);
+  }
+  const hp = alpha ? T.alpha.hp + 2 * Math.floor(S.storms / 2) : 2 + Math.floor(S.storms / 3);
+  return { g, body, fur, bar, fill, wolf: true, alpha, raider: false, boss: false, hp, maxHp: hp, x: 0, z: 0, tx: 0, cd: 0, flash: 0, squash: 0, recoil: 0, stagger: 0, wander: 0 };
 }
 function spawnPack() {
   const x = rand(-10, 10), z = rand(15, 22);
-  for (let i = 0; i < T.wolfPackSize; i++) { const w = makeWolf(); w.x = x + rand(-1.2, 1.2); w.z = z + rand(-1.2, 1.2); w.tx = w.x; w.tz = w.z; bears.push(w); }
+  S.packs = (S.packs || 0) + 1;
+  const alpha = S.storms >= 2 && S.packs % T.alpha.every === 0 && !bears.some(b => b.alpha);
+  for (let i = 0; i < T.wolfPackSize + (alpha ? 1 : 0); i++) {
+    const w = makeWolf(alpha && i === 0); w.x = x + rand(-1.2, 1.2); w.z = z + rand(-1.2, 1.2); w.tx = w.x; w.tz = w.z; bears.push(w);
+  }
+  if (alpha) { toast('🐺 대장 늑대가 나타났다!'); play('growl'); buzz([40, 30, 60]); }
 }
 
 // wolf pups → tamed pets (fight beside the player, +4 bag each)
@@ -1072,24 +1082,51 @@ const pets = [], pups = [];
 function petModel(color, scale) {
   const w = makeWolf(); w.bar.visible = false; w.fur.color.setHex(color); w.g.scale.setScalar(scale); return w;
 }
+// each pet level gets its own coat and gear so growth is visible at a glance
+const PET_LOOKS = [
+  { fur: 0xc9ced8, scarf: 0xe5484d },
+  { fur: 0xd9c3a0, scarf: 0xe5484d },
+  { fur: 0xa8875f, scarf: 0x3a9ad9, stripe: 0x4a3020 },
+  { fur: 0x6f7a8a, collar: 0x3b2a20, spikes: 0xd9e3ee, plates: 0x8a8f99 },
+  { fur: 0xf4f6fa, mane: 0xffc83d, crown: 0xffc83d, glow: true },
+];
+function applyPetLook(w) {
+  const L = PET_LOOKS[w.lv] || PET_LOOKS[0];
+  w.fur.color.setHex(L.fur);
+  if (w.look) { w.body.remove(w.look); disposeActor(w.look); }
+  const g = w.look = new THREE.Group(); w.body.add(g);
+  if (L.scarf) g.add(mesh(new THREE.TorusGeometry(.26, .07, 6, 12).rotateX(Math.PI / 2), mat(L.scarf), 0, .98, .5));
+  if (L.stripe) g.add(mesh(new THREE.BoxGeometry(.2, .06, 1.0), mat(L.stripe), 0, .99, 0));
+  if (L.collar) {
+    g.add(mesh(new THREE.TorusGeometry(.27, .08, 6, 12).rotateX(Math.PI / 2), mat(L.collar), 0, .98, .5));
+    for (let i = 0; i < 6; i++) { const a = i / 6 * Math.PI * 2, sp = mesh(new THREE.ConeGeometry(.05, .16, 4), mat(L.spikes), Math.cos(a) * .3, .98, .5 + Math.sin(a) * .3); sp.rotation.z = -Math.cos(a) * 1.4; sp.rotation.x = Math.sin(a) * 1.4; g.add(sp); }
+    for (const s of [-1, 1]) g.add(mesh(new THREE.BoxGeometry(.12, .3, .5), mat(L.plates), s * .32, .85, .1));
+  }
+  if (L.mane) g.add(mesh(new THREE.TorusGeometry(.32, .13, 6, 14).rotateX(Math.PI / 2), mat(L.mane, { emissive: 0x664400 }), 0, 1.0, .5));
+  if (L.crown) g.add(mesh(new THREE.ConeGeometry(.14, .22, 5), mat(L.crown, { emissive: 0x664400 }), 0, 1.3, .7));
+  if (L.glow) g.add(mesh(new THREE.SphereGeometry(.5, 10, 8), new THREE.MeshBasicMaterial({ color: 0x9fd6ff, transparent: true, opacity: .15, depthWrite: false }), 0, .8, 0, false));
+}
 function spawnPup(x, z) {
-  const u = petModel(0xc9ced8, .6); u.x = x; u.z = z; u.t = 40; u.g.position.set(x, 0, z);
-  const b = sprite(160, 120, 1.6, 1.2); b.sp.position.y = 2.6; u.g.add(b.sp); b.draw((c, w, h) => bubble(c, w, h, '🥩?'));
+  const u = petModel(0xc9ced8, .6); u.x = x; u.z = z; u.t = 60; u.fed = 0; u.g.position.set(x, 0, z);
+  const b = sprite(180, 120, 1.8, 1.2); b.sp.position.y = 2.6; u.g.add(b.sp); b.draw((c, w, h) => bubble(c, w, h, `🥩 0/${T.pet.tameMeat}`));
   u.bub = b; pups.push(u);
-  toast('🐺 새끼 늑대! 고기를 들고 다가가면 길들일 수 있어요');
+  toast(`🐺 새끼 늑대! 고기 ${T.pet.tameMeat}개를 먹이면 길들일 수 있어요`);
 }
 const petLv = () => T.pet.hits.filter(h => S.petHits >= h).length - 1;
 function addPet() {
-  const w = petModel(0xd9c3a0, T.pet.scale[petLv()]); w.lv = petLv();
-  w.g.add(mesh(new THREE.TorusGeometry(.26, .07, 6, 12).rotateX(Math.PI / 2), mat(0xe5484d), 0, .98, .5));
+  const w = petModel(0xd9c3a0, T.pet.scale[petLv()]); w.lv = petLv(); applyPetLook(w);
   w.x = pl.x - 1; w.z = pl.z; w.cd = 0; pets.push(w); S.petCount = pets.length;
 }
 function removeWolfModel(u) { scene.remove(u.g); disposeActor(u.g, hpBarGeo); u.fur.dispose(); if (u.bub) { u.bub.tex.dispose(); u.bub.sp.material.dispose(); } }
 function updatePets(dt) {
   for (let i = pups.length - 1; i >= 0; i--) {
     const u = pups[i]; u.t -= dt; u.g.position.y = Math.abs(Math.sin(performance.now() / 200 + i)) * .06;
-    if (Math.hypot(u.x - pl.x, u.z - pl.z) < 1.6 && stackHas('meat') && pets.length < 1) {
-      stackTake('meat'); removeWolfModel(u); pups.splice(i, 1); addPet();
+    if (Math.hypot(u.x - pl.x, u.z - pl.z) < 1.6 && stackHas('meat') && pets.length < 1 && tick('feedPup', .35, dt)) {
+      stackTake('meat'); u.fed++; u.t = 60; play('pop', 60);
+      fly('meat', backPos(), V(u.x, .6, u.z), .2);
+      u.bub.draw((c, w, h) => bubble(c, w, h, `🥩 ${u.fed}/${T.pet.tameMeat}`));
+      if (u.fed < T.pet.tameMeat) continue;
+      removeWolfModel(u); pups.splice(i, 1); addPet();
       toast('🐺 늑대를 길들였어요! 함께 싸우며 점점 자랍니다 (가방 +4)'); play('up'); buzz([20, 30, 20]);
       burst(pl.x, 1, pl.z, 0xffc83d, 12, { spd: 3, up: 5, life: .6 });
     } else if (u.t <= 0) { removeWolfModel(u); pups.splice(i, 1); }
@@ -1112,7 +1149,7 @@ function updatePets(dt) {
       const dmg = T.pet.dmg[w.lv];
       S.petHits++;
       if (petLv() > w.lv) {
-        w.lv = petLv(); popText(w.x, 2.4, w.z, `🐺 Lv${w.lv + 1}!`, '#ffd36b', true);
+        w.lv = petLv(); applyPetLook(w); popText(w.x, 2.4, w.z, `🐺 Lv${w.lv + 1}!`, '#ffd36b', true);
         burst(w.x, 1, w.z, 0xffc83d, 14, { spd: 3, up: 6, life: .7 }); play('up'); toast(`🐺 늑대가 자랐어요! Lv${w.lv + 1} (공격력 ${T.pet.dmg[w.lv]})`);
       }
       popText(tgt.x, 2.3, tgt.z, `${dmg}`, '#ffd9a0'); burst(tgt.x, 1, tgt.z, 0xffffff, 4, { spd: 3, up: 3, life: .3, size: .6 });
@@ -1144,8 +1181,9 @@ function bearHurt(b, dmg, src = pl) {
   disposeActor(b.g, hpBarGeo);
   b.fur.dispose(); b.bar.children.forEach(o => o.material.dispose());
   if (!b.wolf) S.stat.kills++;
-  const meat = b.wolf ? 1 : b.boss ? 8 : 3, hides = hidesOn() && S.stage >= 2 ? (b.boss ? 3 : 1) : 0;
-  if (b.wolf) { S.stat.wolves++; if (Math.random() < .15 && pets.length + pups.length < 1) spawnPup(b.x, b.z); }
+  const meat = b.alpha ? T.alpha.meat : b.wolf ? 1 : b.boss ? 8 : 3, hides = hidesOn() && S.stage >= 2 ? (b.boss ? 3 : b.alpha ? 2 : 1) : 0;
+  if (b.wolf) { S.stat.wolves++; if (Math.random() < (b.alpha ? T.alpha.pupChance : .15) && pets.length + pups.length < 1) spawnPup(b.x, b.z); }
+  if (b.alpha) { S.coinPile += T.alpha.coins; toast(`🐺 대장 늑대 처치! 보너스 🪙${T.alpha.coins}`); }
   if (src !== pl && src.carry) { src.n = Math.min(6, src.n + meat); src.hides = Math.min(4, src.hides + hides); }
   else {
     for (let i = 0; i < meat; i++) dropPickup('meat', b.x + rand(-1.2, 1.2), b.z + rand(-1.2, 1.2));
@@ -1191,7 +1229,7 @@ function updateBears(dt) {
       }
     }
     if (b.wolf && !chase && !chaseH) sp = 1.6;
-    if (chase) { b.tx = pl.x; b.tz = pl.z; sp = (b.wolf ? 3.4 : 2.5) + .8 * S.stormK; }
+    if (chase) { b.tx = pl.x; b.tz = pl.z; sp = (b.alpha ? 3.8 : b.wolf ? 3.4 : 2.5) + .8 * S.stormK; }
     const dx = b.tx - b.x, dz = b.tz - b.z, d = Math.hypot(dx, dz);
     b.stagger = Math.max(0, b.stagger - dt);
     if (b.stagger <= 0 && d > (chase || chaseH ? 1.3 : .1)) {
@@ -1208,7 +1246,7 @@ function updateBears(dt) {
     if (b.stagger <= 0 && dist < 1.7 && b.cd <= 0 && pl.stunFree && S.hurtCd <= 0) { b.cd = 1.3; hurtPlayer(b); }
     for (const h of hunters) if (b.stagger <= 0 && h.down <= 0 && b.cd <= 0 && Math.hypot(h.x - b.x, h.z - b.z) < 1.7) { b.cd = 1.3; hurtHunter(h, b); }
     b.squash -= dt;
-    const sq = Math.max(0, b.squash) / .22, bs = b.boss ? 1.7 : 1;
+    const sq = Math.max(0, b.squash) / .22, bs = b.boss ? 1.7 : b.alpha ? 1.5 : 1;
     b.g.scale.set(bs * (1 + .25 * sq), bs * (1 - .22 * sq), bs * (1 + .25 * sq));
     b.recoil = Math.max(0, b.recoil - dt);
     const pain = Math.sin(Math.PI * b.recoil / .28);
@@ -1234,7 +1272,7 @@ function dropPickup(type, x, z) {
 
 // ───────────────────────── player ─────────────────────────
 function hurtPlayer(b) {
-  S.hp -= b.boss ? 2 : 1; S.hurtCd = T.hurtGrace; play('hurt'); buzz(150);
+  S.hp -= b.boss || b.alpha ? 2 : 1; S.hurtCd = T.hurtGrace; play('hurt'); buzz(150);
   const dx = pl.x - b.x, dz = pl.z - b.z, d = Math.hypot(dx, dz) || 1;
   pl.x += dx / d * 1.1; pl.z += dz / d * 1.1;
   hurtEl.style.opacity = 1; setTimeout(() => (hurtEl.style.opacity = 0), 220);
@@ -1683,7 +1721,7 @@ const SAVE_KEY = 'winter-rush-v1';
 function save() {
   try {
     const counter = { ...S.counter };
-    const keys = ['coins', 'coinPile', 'wood', 'meat', 'fuel', 'warmth', 'grillItems', 'lv', 'storms', 'stat', 'goal', 'tut', 'woodIn', 'meatIn', 'steakIn', 'served', 'bought', 'hide', 'fishCrate', 'fishRaw', 'ovenWood', 'fishSmoked', 'fishStock', 'smokeFuel', 'tanFuel', 'leather', 'stage', 'petCount', 'petHits', 'tanT', 'hp', 'phase', 'phaseT', 'stormFireOut'];
+    const keys = ['coins', 'coinPile', 'wood', 'meat', 'fuel', 'warmth', 'grillItems', 'lv', 'storms', 'stat', 'goal', 'tut', 'woodIn', 'meatIn', 'steakIn', 'served', 'bought', 'hide', 'fishCrate', 'fishRaw', 'ovenWood', 'fishSmoked', 'fishStock', 'smokeFuel', 'tanFuel', 'leather', 'stage', 'petCount', 'petHits', 'packs', 'tanT', 'hp', 'phase', 'phaseT', 'stormFireOut'];
     const data = Object.fromEntries(keys.map(k => [k, S[k]]));
     data.counter = counter; data.paid = pads.map(p => p.paid);
     data.player = { x: pl.x, z: pl.z };
@@ -1778,5 +1816,5 @@ function footprints() {
   }
   return f;
 }
-window.__winter = { footprints, spawnPup, addPet, pets, fishers, SHOPS, P, S, pl, stack, bears, trees, customers, pads, helpers, servers, hunters, camera, T, save, levelUp };
+window.__winter = { footprints, spawnPup, addPet, spawnPack, applyPetLook, pups, stackAdd, pets, fishers, SHOPS, P, S, pl, stack, bears, trees, customers, pads, helpers, servers, hunters, camera, T, save, levelUp };
 })();
