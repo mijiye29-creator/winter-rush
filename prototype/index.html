@@ -616,12 +616,15 @@ function makePerson(coat, hair) {
 
 const player = makePerson(0x3a9ad9, 0x3a9ad9);
 player.body.add(mesh(new THREE.SphereGeometry(.38, 10, 8, 0, Math.PI * 2, 0, 1.2), mat(0xffffff), 0, 1.5, -.06));
+const axeHead = mesh(new THREE.BoxGeometry(.06, .25, .3), new THREE.MeshLambertMaterial({ color: 0xc7ccd6 }), 0, .52, .12);
 const axe = new THREE.Group(); axe.position.set(.45, .8, .15); player.body.add(axe);
-axe.add(mesh(new THREE.CylinderGeometry(.04, .04, .8, 5), mat(0x5a3a28), 0, .2, 0), mesh(new THREE.BoxGeometry(.06, .25, .3), mat(0xc7ccd6), 0, .52, .12));
+axe.add(mesh(new THREE.CylinderGeometry(.04, .04, .8, 5), mat(0x5a3a28), 0, .2, 0), axeHead);
+const shock = new THREE.Mesh(new THREE.RingGeometry(.85, 1, 48).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ color: 0xffe08a, transparent: true, depthWrite: false }));
+shock.visible = false; scene.add(shock);
 const swoosh = new THREE.Mesh(new THREE.RingGeometry(.7, 1.35, 18, 1, -Math.PI * .8, Math.PI * .6).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0, side: THREE.DoubleSide, depthWrite: false }));
 swoosh.position.y = .95; swoosh.visible = false; player.g.add(swoosh);
 const stackG = new THREE.Group(); stackG.position.set(0, 0, -.5); player.g.add(stackG);
-const pl = { x: 0, z: 0, rot: Math.PI, swing: 0, moving: false };
+const pl = { combo: 0, comboT: 0, x: 0, z: 0, rot: Math.PI, swing: 0, moving: false };
 player.g.position.set(0, 0, 0);
 const stack = [];
 function layoutStack() {
@@ -737,7 +740,7 @@ function addHunter() {
   const bow = mesh(new THREE.TorusGeometry(.35, .04, 5, 12, Math.PI), mat(0x6b3d1f), -.45, .9, .1); bow.rotation.y = Math.PI / 2; p.body.add(bow);
   const carry = new THREE.Group(); carry.position.z = -.5; p.g.add(carry);
   for (let i = 0; i < 6; i++) { const m = itemMesh('meat'); m.position.y = 1.1 + i * .27; m.visible = false; carry.add(m); }
-  const h = { ...p, carry, n: 0, hp: 5, down: 0, cd: 0, x: P.meatTile.x - hunters.length, z: P.meatTile.z + 1.4, path: [], state: 'out', prey: null };
+  const h = { ...p, carry, n: 0, hp: 8, down: 0, cd: 0, x: P.meatTile.x - hunters.length, z: P.meatTile.z + 1.4, path: [], state: 'out', prey: null };
   p.g.position.set(h.x, 0, h.z); hunters.push(h); huntOut(h);
 }
 function huntOut(h) { h.state = 'out'; h.prey = null; h.path = h.z < 6 ? [GATE_IN.clone(), GATE_OUT.clone()] : []; }
@@ -748,7 +751,7 @@ function huntHome(h) {
 function hurtHunter(h, b) {
   h.hp -= b.boss ? 2 : 1;
   burst(h.x, 1.2, h.z, 0xe5484d, 4, { spd: 3, up: 3, life: .4, size: .7 });
-  if (h.hp <= 0) { h.down = 5; h.n = 0; h.state = 'down'; toast('🏹 사냥꾼이 곰에게 쓰러졌어요'); }
+  if (h.hp <= 0) { h.down = 3; h.n = 0; h.state = 'down'; toast('🏹 사냥꾼이 곰에게 쓰러졌어요'); }
 }
 function shoot(h, b) {
   const m = new THREE.Mesh(arrowGeo, mat(0x5a3a28)); scene.add(m);
@@ -762,8 +765,8 @@ function updateShots(dt) {
     scene.remove(s.m); shots.splice(i, 1);
     if (!bears.includes(s.b)) continue;
     burst(s.b.x, 1.3, s.b.z, 0xffffff, 4, { spd: 3, up: 3, life: .35, size: .7 });
-    popText(s.b.x, 2.5, s.b.z, '1', '#c9f29b');
-    if (bearHurt(s.b, 1, s.h)) burst(s.b.x, 1, s.b.z, 0xffffff, 10, { spd: 5, up: 6, life: .6 });
+    popText(s.b.x, 2.5, s.b.z, '2', '#c9f29b');
+    if (bearHurt(s.b, 2, s.h)) burst(s.b.x, 1, s.b.z, 0xffffff, 10, { spd: 5, up: 6, life: .6 });
   }
 }
 function updateHunters(dt) {
@@ -771,7 +774,7 @@ function updateHunters(dt) {
     h.carry.children.forEach((m, i) => (m.visible = i < h.n));
     if (h.down > 0) {
       h.down -= dt; h.body.rotation.z = Math.PI / 2.3;
-      if (h.down <= 0) { h.body.rotation.z = 0; h.hp = 5; huntHome(h); }
+      if (h.down <= 0) { h.body.rotation.z = 0; h.hp = 8; huntHome(h); }
       continue;
     }
     h.cd -= dt;
@@ -783,15 +786,16 @@ function updateHunters(dt) {
       if (h.n === 0) huntOut(h);
       continue;
     }
-    if (h.n >= 3) { huntHome(h); continue; }
+    if (h.n >= 6) { huntHome(h); continue; }
+    if (h.hp < 8 && tick('hReg' + hunters.indexOf(h), 2, dt)) h.hp++;
     if (!h.prey || !bears.includes(h.prey) || h.prey.raider) {
       h.prey = null; let bd = 1e9;
       for (const b of bears) if (!b.raider && !b.boss) { const d = Math.hypot(b.x - h.x, b.z - h.z); if (d < bd) { bd = d; h.prey = b; } }
       if (!h.prey) { h.body.position.y = 0; continue; }
     }
     const b = h.prey, d = Math.hypot(b.x - h.x, b.z - h.z);
-    if (d > 3.2) move(h, b.x, b.z, 3.2 * (1 - .3 * S.stormK), dt);
-    else { h.g.rotation.y = Math.atan2(b.x - h.x, b.z - h.z); h.body.position.y = 0; if (h.cd <= 0) { h.cd = .9; shoot(h, b); } }
+    if (d > 4.5) move(h, b.x, b.z, 3.4 * (1 - .3 * S.stormK), dt);
+    else { h.g.rotation.y = Math.atan2(b.x - h.x, b.z - h.z); h.body.position.y = 0; if (h.cd <= 0) { h.cd = .6; shoot(h, b); } }
     h.z = Math.max(h.z, 7.5); h.g.position.set(h.x, 0, h.z);
   }
 }
@@ -1051,6 +1055,7 @@ const inCamp = () => pl.x > CAMP.x1 && pl.x < CAMP.x2 && pl.z > CAMP.z1 && pl.z 
 
 function updatePlayer(dt) {
   S.stun = Math.max(0, S.stun - dt);
+  if ((pl.comboT -= dt) <= 0) pl.combo = 0;
   pl.stunFree = S.stun <= 0;
   let ix = Math.hypot(jdx, jdy) < .2 ? 0 : jdx, iz = Math.hypot(jdx, jdy) < .2 ? 0 : jdy;
   if (keys.a || keys.arrowleft) ix -= 1; if (keys.d || keys.arrowright) ix += 1;
@@ -1080,7 +1085,10 @@ function updatePlayer(dt) {
   for (const b of bears) { const d = Math.hypot(b.x - pl.x, b.z - pl.z) - (b.boss ? .8 : 0); if (d < best) { best = d; target = b; } }
   if (target && pl.stunFree) {
     if (!pl.moving) pl.rot = lerpAngle(pl.rot, Math.atan2(target.x - pl.x, target.z - pl.z), dt * 14);
-    if (tick('atk', .45, dt)) startSwing(.3, () => { if (bears.includes(target)) playerHit(target); });
+    if (tick('atk', .45, dt)) {
+      const power = pl.combo % 4 === 3;
+      startSwing(power ? .45 : .3, () => { if (power) powerSlam(); else if (bears.includes(target)) playerHit(target); }, power);
+    }
   } else {
     resetTick('atk');
     let tree = null, tb = 1.75;
@@ -1141,23 +1149,60 @@ function updatePlayer(dt) {
   }
   if (inCamp() && S.hp < S.maxHp && tick('regen', 2.5, dt)) S.hp++;
 }
-function startSwing(dur, onHit) { pl.sw = { t: 0, dur, onHit, hit: false }; play('swing', 80); }
+function startSwing(dur, onHit, power = false) { pl.sw = { t: 0, dur, onHit, hit: false, power }; play('swing', 80); }
 function updateSwing(dt) {
   const s = pl.sw, b = player.body;
+  axeHead.material.emissive.setHex(pl.combo % 4 === 3 ? 0xff7a00 : 0);
   if (!s) { axe.rotation.x *= .75; b.rotation.y *= .75; b.position.z *= .75; swoosh.visible = false; return; }
   s.t += dt; const k = s.t / s.dur;
-  if (k < .4) { const e = k / .4; axe.rotation.x = -2.4 * e * e; b.rotation.y = -.4 * e; b.position.z = -.1 * e; }
-  else if (k < .55) {
-    const e = (k - .4) / .15; axe.rotation.x = -2.4 + 4.2 * e; b.rotation.y = -.4 + .75 * e; b.position.z = -.1 + .35 * e;
-    swoosh.visible = true; swoosh.material.opacity = .85; swoosh.rotation.y = .7 - 1.4 * e;
+  if (s.power) {
+    if (k < .45) { const e = k / .45; axe.rotation.x = -2.9 * e * e; b.rotation.y = -.6 * e; b.position.y = -.12 * e; }
+    else if (k < .7) {
+      const e = (k - .45) / .25; axe.rotation.x = 1.3; b.rotation.y = -.6 + e * (Math.PI * 2 + .6); b.position.y = .35 * Math.sin(e * Math.PI);
+      swoosh.visible = true; swoosh.material.opacity = .9; swoosh.rotation.y = b.rotation.y;
+    } else { const e = (k - .7) / .3; axe.rotation.x = 1.3 * (1 - e); b.rotation.y = 0; swoosh.visible = false; }
+    if (!s.hit && k >= .62) { s.hit = true; s.onHit(); }
   } else {
-    const e = (k - .55) / .45; axe.rotation.x = 1.8 * (1 - e); b.rotation.y = .35 * (1 - e); b.position.z = .25 * (1 - e);
-    swoosh.material.opacity = .85 * Math.max(0, 1 - e * 2.5); swoosh.visible = e < .4;
+    if (k < .4) { const e = k / .4; axe.rotation.x = -2.4 * e * e; b.rotation.y = -.4 * e; b.position.z = -.1 * e; }
+    else if (k < .55) {
+      const e = (k - .4) / .15; axe.rotation.x = -2.4 + 4.2 * e; b.rotation.y = -.4 + .75 * e; b.position.z = -.1 + .35 * e;
+      swoosh.visible = true; swoosh.material.opacity = .85; swoosh.rotation.y = .7 - 1.4 * e;
+    } else {
+      const e = (k - .55) / .45; axe.rotation.x = 1.8 * (1 - e); b.rotation.y = .35 * (1 - e); b.position.z = .25 * (1 - e);
+      swoosh.material.opacity = .85 * Math.max(0, 1 - e * 2.5); swoosh.visible = e < .4;
+    }
+    if (!s.hit && k >= .5) { s.hit = true; s.onHit(); }
   }
-  if (!s.hit && k >= .5) { s.hit = true; s.onHit(); }
   if (k >= 1) pl.sw = null;
 }
+function updateShock(dt) {
+  if (!shock.visible) return;
+  shock.t += dt; const e = shock.t / .35;
+  shock.scale.setScalar(.5 + e * 3.2); shock.material.opacity = Math.max(0, 1 - e);
+  if (e >= 1) shock.visible = false;
+}
+function powerSlam() {
+  pl.combo = 0; pl.comboT = 0;
+  const dmg = val('axe') * 3, R = 3.4;
+  shock.position.set(pl.x, .12, pl.z); shock.t = 0; shock.visible = true;
+  burst(pl.x, .4, pl.z, 0xffffff, 24, { spd: 8, up: 4, life: .6, size: 1.1 });
+  let hits = 0;
+  for (const b of [...bears]) {
+    const d = Math.hypot(b.x - pl.x, b.z - pl.z) || .1;
+    if (d > R + (b.boss ? .8 : 0)) continue;
+    hits++;
+    const killed = bearHurt(b, dmg, pl);
+    if (!killed && !b.boss) { b.x += (b.x - pl.x) / d * 1.2; b.z += (b.z - pl.z) / d * 1.2; }
+    popText(b.x, b.boss ? 4 : 2.6, b.z, `${dmg}!`, '#ff9a3c', true);
+    burst(b.x, 1.3, b.z, 0xffffff, 10, { spd: 6, up: 6, life: .5 });
+    if (killed) popText(b.x, 3.4, b.z, b.boss ? '👑 처치!' : '🥩+3', '#ffd36b', true);
+  }
+  popText(pl.x, 3.4, pl.z, hits > 1 ? `💥 강타 ×${hits}` : '💥 강타!', '#ffd36b', true);
+  S.hitstop = .16; shakeK(.6); play('crit'); play('kill'); buzz([30, 20, 110]);
+}
 function playerHit(b) {
+  pl.combo++; pl.comboT = 1.6;
+  if (pl.combo >= 2) popText(pl.x - .6, 2.4, pl.z, pl.combo % 4 === 3 ? '⚡ 강타 준비' : `${pl.combo} 콤보`, '#ffb347');
   const crit = Math.random() < .15, dmg = val('axe') * (crit ? 2 : 1), by = b.boss ? 4 : 2.6;
   const killed = bearHurt(b, dmg, pl);
   popText(b.x, by, b.z, crit ? `${dmg}!` : `${dmg}`, crit ? '#ffd36b' : '#ffffff', crit);
@@ -1365,7 +1410,7 @@ function frame(now) {
     updatePhase(g); updatePlayer(g); updateFire(g); updateBears(g);
     updateCustomers(g); updateHelpers(g); updateServers(g); updateHunters(g); updateShots(g);
   }
-  updateTrees(g); updateFlyers(g); updateParts(g); updatePops(dt); updateCabins(dt); updateSnow(dt); updateHud(dt);
+  updateTrees(g); updateFlyers(g); updateParts(g); updatePops(dt); updateShock(dt); updateCabins(dt); updateSnow(dt); updateHud(dt);
   woodPile.set(S.wood); meatPile.set(S.meat); fishPile.set(S.fish); renderGrill();
   counterPiles.steak.set(S.counter.steak); counterPiles.fishc.set(S.counter.fishc);
   coinPileV.set(Math.min(72, Math.ceil(S.coinPile / 5)));
