@@ -1316,7 +1316,7 @@ function updateHarbor(dt) {
         const fuel = T.harbor.boatLogs[b.tier];
         if (S.wh.log >= fuel) { S.wh.log -= fuel; b.state = 'out'; b.tx = rand(50, 62); b.tz = rand(-12, 10); }
         else if (S.wood >= fuel) { S.wood -= fuel; b.state = 'out'; b.tx = rand(50, 62); b.tz = rand(-12, 10); }
-        else { b.t = 3; if (tick('boatFuelToast', 20, dt)) toast('🚤 어선 연료(장작)가 없어 출항하지 못해요'); }
+        else { b.t = 3; HB.noFuelAt = performance.now(); }   // the alert bar tells the player
       }
     } else {
       const tx = b.state === 'back' ? HB.boatDock.x + 1 + i * 1.6 : b.tx, tz = b.state === 'back' ? -2 + i * 1.8 : b.tz;
@@ -2670,7 +2670,8 @@ function updatePlayer(dt) {
       const tx = enemy ? enemy.x : pl.target.x, tz = enemy ? enemy.z : pl.target.z;
       const dx = tx - pl.x, dz = tz - pl.z, d = Math.hypot(dx, dz);
       if (enemy) tapMark.position.set(tx, .05, tz);
-      if (d < (enemy ? 1.8 : .25) || (pl.target.t -= dt) <= 0 || !pl.stunFree) { pl.target = null; tapMark.visible = false; }
+      if (!enemy && d < .25 && pl.target.next && pl.target.next.length) { const n = pl.target.next.shift(); pl.target.x = n.x; pl.target.z = n.z; }   // alert run: next waypoint (through the gate)
+      else if (d < (enemy ? 1.8 : .25) || (pl.target.t -= dt) <= 0 || !pl.stunFree) { pl.target = null; tapMark.visible = false; }
       else { ix = dx / d; iz = dz / d; il = 1; }
     }
   }
@@ -3155,7 +3156,51 @@ function showSpot(s) { spotEl.innerHTML = `<div class="ic">${s.icon}</div><b>${s
 addEventListener('pointerdown', () => { if (spot && spot.t > .6) spot.t = 99; });
 function toast(msg) { toastEl.textContent = msg; toastEl.classList.add('show'); toastT = 2.6; }
 const setText = (el, t) => { if (el.textContent !== t) el.textContent = t; };
+// ───────── shortage alerts: what is missing where; tap the bar and the hero runs there ─────────
+const alertEl = document.createElement('button'); alertEl.id = 'alert'; document.body.appendChild(alertEl);
+const padPos = k => { const p = pads.find(q => q.key === k); return p && p.on && !padHidden(p) ? V(p.x, 0, p.z) : null; };
+const missing = (have, need) => Object.entries(need).filter(([k]) => have[k] < need[k]).map(([k]) => ({ tuna: '🍣참치', fish: '🐟생선', veg: '🥬채소', log: '🪵장작', meat: '🥩고기' })[k]).join(' ');
+const ALERTS = [
+  { id: 'fire', on: () => S.wood <= 0 && S.warmth < 60, text: () => '🔥 모닥불 장작이 떨어졌어요! 나무를 가져오세요', at: () => P.woodTile },
+  { id: 'strike', on: () => S.strike, text: () => '😤 월급이 모자라 직원들이 태업 중이에요: 은행에 돈을 모으세요', at: () => P.bank },
+  { id: 'sushiChef', on: () => S.stage >= 4 && !S.lv.sushiChef && padPos('sushiChef'), text: () => '🍣 초밥집에 쉐프가 없어요', at: () => padPos('sushiChef') },
+  { id: 'sushiIng', on: () => S.lv.sushiChef > 0 && S.sushi <= 0 && !!missing({ tuna: S.suTuna, fish: S.suFish, veg: S.suVeg, log: S.suWood }, T.harbor.sushiRecipe), text: () => `🍣 초밥 재료 부족: ${missing({ tuna: S.suTuna, fish: S.suFish, veg: S.suVeg, log: S.suWood }, T.harbor.sushiRecipe)}`, at: () => P.sushiIn },
+  { id: 'boatFuel', on: () => S.stage >= 4 && performance.now() - (HB.noFuelAt || -1e9) < 4000, text: () => `🚤 어선이 장작이 없어 출항을 못 해요 (출항마다 🪵${T.harbor.boatLogs[Math.max(1, S.lv.boat)]}개): 창고에 장작을 넣어 주세요`, at: () => P.whIn },
+  { id: 'boat', on: () => S.stage >= 4 && !S.lv.boat && padPos('boat'), text: () => '🚤 아직 어선이 없어요: 부두에서 어선을 사세요', at: () => padPos('boat') },
+  { id: 'light', on: () => S.lv.lighthouse > 0 && !S.lightLit, text: () => '🗼 등대에 넣을 장작이 없어요: 창고에 장작을 넣어 주세요', at: () => P.whIn },
+  { id: 'pizzaChef', on: () => S.stage >= 3 && !S.lv.pizzaChef && padPos('pizzaChef'), text: () => '🍕 피자 가게에 쉐프가 없어요', at: () => padPos('pizzaChef') },
+  { id: 'pizzaIng', on: () => { const PR = S.stage >= 4 ? T.pizzaRecipeHarbor : T.pizzaRecipe; return S.lv.pizzaChef > 0 && S.pizza <= 0 && !!missing({ veg: S.pzVeg, meat: S.pzMeat, fish: S.pzFish, log: S.pzWood + S.pzFuel }, { ...PR, log: 1 }); },
+    text: () => { const PR = S.stage >= 4 ? T.pizzaRecipeHarbor : T.pizzaRecipe; return `🍕 피자 재료 부족: ${missing({ veg: S.pzVeg, meat: S.pzMeat, fish: S.pzFish, log: S.pzWood + S.pzFuel }, { ...PR, log: 1 })}`; }, at: () => P.pizzaIn },
+  { id: 'farmer', on: () => S.stage >= 3 && !S.lv.farmer && padPos('farmer'), text: () => '🧑‍🌾 텃밭에 농부가 없어요: 채소가 안 모여요', at: () => padPos('farmer') },
+  { id: 'artisan', on: () => hidesOn() && !S.lv.artisan && padPos('artisan'), text: () => '🧵 가죽 공방에 장인이 없어요', at: () => padPos('artisan') },
+  { id: 'tanWood', on: () => S.lv.artisan > 0 && S.hide > 0 && S.tanWood <= 0 && S.tanFuel <= 0, text: () => '🧵 가죽 공방 장작이 떨어졌어요', at: () => TAN.in },
+  { id: 'ovenWood', on: () => S.stage >= 2 && S.ovenWood <= 0 && S.fishCrate + S.fishRaw > 0 && S.fishStock <= 0, text: () => '🐟 생선 화덕 장작이 떨어졌어요', at: () => P.ovenWood },
+  { id: 'fisher', on: () => S.stage >= 2 && !S.lv.fisher && padPos('fisher'), text: () => '🪝 낚시꾼이 없어요: 생선이 안 잡혀요', at: () => padPos('fisher') },
+  { id: 'meat', on: () => S.meat <= 0 && !S.grillItems.length && S.counter.steak <= 0 && queuedNeed('main') > 0, text: () => '🥩 고기가 떨어졌어요! 정문 밖에서 곰을 사냥하세요', at: () => V(0, 0, 8.5) },
+  { id: 'whFull', on: () => whOn() && whRoom() <= 0, text: () => `🏚️ 창고가 가득 찼어요 (${whCap()}칸): 창고를 키우세요`, at: () => padPos('warehouse') || P.whIn },
+];
+let alertCur = null, alertT = 0; const alertCd = {};
+function hideAlert() { if (alertCur) alertCd[alertCur.id] = 25; alertCur = null; alertEl.classList.remove('show'); }
+function updateAlerts(dt) {
+  for (const k in alertCd) alertCd[k] -= dt;
+  if (alertCur && ((alertT -= dt) <= 0 || !alertCur.on())) hideAlert();
+  if (alertCur || spot || !S.started || !tick('alertScan', 1, dt)) return;
+  const a = ALERTS.find(a => !(alertCd[a.id] > 0) && a.on() && a.at());
+  if (!a) return;
+  alertCur = a; alertT = 8;
+  alertEl.innerHTML = `<b>${a.text()}</b><span>탭하면 그쪽으로 달려가요 ➜</span>`; alertEl.classList.add('show'); play('pop');
+}
+alertEl.addEventListener('pointerdown', e => {
+  e.preventDefault(); e.stopPropagation();
+  if (!alertCur) return;
+  const p = alertCur.at(); if (!p) return hideAlert();
+  const way = pl.boat ? [V(p.x, 0, p.z)] : viaGate(pl, V(p.x, 0, p.z + (p === P.whIn ? -1.3 : 0)));
+  const first = way.shift(); pl.target = { x: first.x, z: first.z, t: 25, next: way }; pl.focus = null;
+  tapMark.position.set(p.x, .05, p.z); tapMark.visible = true;
+  popText(pl.x, 2.6, pl.z, '달려갈게요!', '#ffd36b'); hideAlert();
+});
 function updateHud(dt) {
+  updateAlerts(dt);
   if (toastT > 0 && (toastT -= dt) <= 0) toastEl.classList.remove('show');
   if (S.timers.eatToast) S.timers.eatToast -= dt;
   if (S.timers.burnToast) S.timers.burnToast -= dt;
