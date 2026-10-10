@@ -50,3 +50,4 @@
 - v1.4.3: 창고·은행은 남서쪽 구석. `PAD_POS3`가 3단계 진입 때 칸 4개를 옮김. 겹침 검사는 같은 세션에서 1→2→3단계 순서로 해야 이동이 반영됨
 - v2.0 4단계: 코드는 `HB`/`seaG` 블록(`updateHarbor`, `updateRowboat`, `updateSushiChef`, `boats`/`syncBoats`, `schools`, `SEA_AI`/`spawnSea`/`seaClamp`). 바다 동물은 `bears` 안에서 `b.ai`·`b.sea`로 동작하고 사냥꾼은 무시. 바다는 `WALLS4`의 큰 상자로 막고, 배를 타면 `collide()` 대신 바다 범위로 고정(`pl.boat`). 안개는 `applySeaFog()`가 날씨 업데이트 뒤에 적용
 - v2.1.3: 오두막 업그레이드 삭제 → `crowd()`(단계-1, 최대 3)가 손님 수를 정함. 점원 칸 `REVEAL`은 `S.lv.bank > 0`. `updatePads`는 `padHidden`인 칸을 해금 알림하지 않음
+- v2.1.5: 칸 배치는 유형별 묶음(`makePad` 블록 주석 참고). 저장이 칸 이름 키라 호출 순서는 무관. `PAD_POS3`는 비어 있음(단계 이동 없음). `fishing`과 `hearth`는 같은 자리를 차례로 씀

@@ -1408,23 +1408,32 @@ function drawPad(p) {
     else c.fillText(maxed ? '완료' : `🪙 ${cost - p.paid}`, w / 2, 202);
   });
 }
-// pads sit next to what they upgrade and appear one by one
-// two 3x3 blocks either side of the gate path, rows z = -.2 / 2 / 4.2 (call order = save order, append new pads at the end)
-makePad('bag', -2.4, -.2); makePad('boots', -6.6, -.2);
-makePad('axe', -4.5, -.2); makePad('helper', -4.5, 2); makePad('helper2', -6.6, 2);
-makePad('gate', 2.4, 4.2); makePad('hunter', -2.4, 4.2); makePad('hunter2', -4.5, 4.2);
-makePad('server', 2.4, -.2); makePad('fishing', 2.4, 2);
-makePad('clerk', 4.5, -.2); makePad('artisan', 6.6, 4.2); makePad('fisher', 4.5, 4.2); makePad('fishClerk', 6.6, 2); makePad('oven', 4.5, 2);
-makePad('coat', -2.4, 2); makePad('cape', -6.6, 4.2);
-makePad('hearth', 6.6, -.2); makePad('fisher2', 8.7, 2);   // stage 2 column east of the right block
-makePad('farmer', 18, -.2); makePad('pizzaChef', 24.4, -.2); makePad('pizzaClerk', 22.3, -.2); makePad('smith', 8.7, -5.6); makePad('helper3', 22.3, 2); makePad('hunter3', 24.4, 2);   // stage 3 annex grid
-makePad('warehouse', -4.3, 2.5); makePad('wall', 24.4, 4.2); makePad('bank', -6.4, 4.7); makePad('staffHouse', 24.4, -2.6);   // the bank pad becomes the bank tile
-makePad('harbor', 21.6, -6.4);   // stage 3 → 4
-makePad('boat', 27.4, -8.2); makePad('boat2', 29.5, -8.2); makePad('crane', 31.6, -8.2); makePad('freezer', 27.4, -2.4); makePad('lighthouse', 29.5, -2.4); makePad('sushiChef', 31.6, -2.4); makePad('sushiClerk', 27.4, .6);   // stage 4 harbor grid
-makePad('courier', 20.2, -.2); makePad('pizzaOven', 20.2, 2); makePad('leatherClerk', 8.7, 4.2); makePad('fire', -.3, -7.8);
-makePad('saberCoat', -6.6, -7.8); makePad('tuskAxe', -4.5, -7.8); makePad('statue', -2.4, -7.8);   // legend row, north-west
+// pads sit next to what they upgrade, grouped by type (save is keyed by pad name, so order no longer matters)
+// west, by the forest: woodcutters (x -6.6) and the hero's gear (weapons / armour / boots+cape rows, bag below)
+makePad('helper', -6.6, -7.8); makePad('helper2', -6.6, -5.7); makePad('helper3', -6.6, -3.6);
+makePad('axe', -4.5, -7.8); makePad('tuskAxe', -2.4, -7.8); makePad('coat', -4.5, -5.7); makePad('saberCoat', -2.4, -5.7);
+makePad('boots', -4.5, -3.6); makePad('cape', -2.4, -3.6); makePad('bag', -4.5, -.2);
+makePad('statue', -.3, -7.8);   // right above the statue
+// hunting gate (x 0, south): hunters on its left, gate defences on its right
+makePad('hunter', -2.4, 4.2); makePad('hunter2', -2.4, 2); makePad('hunter3', -2.4, -.2);
+makePad('gate', 2.4, 4.2); makePad('wall', 2.4, 2);
+// in front of the hearth: serving, steak clerk, fire upgrade; the village expansion tile (fishing, then the big hearth)
+makePad('server', 2.4, -.2); makePad('clerk', 4.5, -.2); makePad('fire', 6.6, -.2);
+makePad('fishing', 4.5, 2); makePad('hearth', 4.5, 2);
+// toward the ice pond: fishers and the fish clerk; the fish oven pad sits by the oven's wood pile
+makePad('fisher', 8.7, -.2); makePad('fisher2', 8.7, 2); makePad('fishClerk', 6.6, 2); makePad('oven', 8.7, -5.6);
+// toward the tannery: smith, artisan, leather clerk in one row
+makePad('smith', 4.5, 4.2); makePad('artisan', 6.6, 4.2); makePad('leatherClerk', 8.7, 4.2);
+// stage 3 annex: farmer under the garden, pizza column toward the pizzeria, courier, staff houses (south), harbor (east, toward the sea)
+makePad('farmer', 18, -.2); makePad('courier', 20.2, -.2);
+makePad('pizzaChef', 24.4, -4.8); makePad('pizzaOven', 24.4, -2.6); makePad('pizzaClerk', 24.4, -.2);
+makePad('staffHouse', 22.3, 4.2); makePad('harbor', 24.4, 4.2);
+makePad('warehouse', -4.3, 2.5); makePad('bank', -6.4, 4.7);   // these pads become the warehouse drop tile and the bank tile
+// stage 4 harbor: dock row (boats, crane), storage row (freezer, lighthouse), sushi row
+makePad('boat', 27.4, -8.2); makePad('boat2', 29.5, -8.2); makePad('crane', 31.6, -8.2); makePad('freezer', 27.4, -2.4); makePad('lighthouse', 29.5, -2.4);
+makePad('sushiChef', 27.4, .6); makePad('sushiClerk', 29.5, .6);
 const PAD_POS2 = {};   // pads that move when the village grows
-const PAD_POS3 = { helper2: [18, 2], cape: [18, 4.2], hunter2: [20.2, 4.2], hunter: [22.3, 4.2], helper: [24.4, -4.8] };   // stage 3: clear the bottom-left corner for the warehouse and bank
+const PAD_POS3 = {};
 const REVEAL = {
   bag: () => true, axe: () => true,
   boots: () => true,
@@ -3014,7 +3023,7 @@ const TUT = [
   { text: '🐻 정문 밖 곰 옆에 서면 자동으로 공격합니다. 고기를 얻으세요', at: () => V(0, 0, 8.5), done: () => stackHas('meat') || S.meatIn > 0 },
   { text: '🥩 고기를 모닥불 오른쪽 칸에 내려놓으세요', at: () => P.meatTile, done: () => S.meatIn > 0 },
   { text: '🍖 구운 고기를 집어서 카운터로 옮기세요', at: () => (stackHas('steak') ? P.counterStand : P.grill), done: () => S.steakIn > 0 },
-  { text: '🪙 동전을 모아 바닥의 업그레이드 칸에 서세요', at: () => (S.coins > 0 ? pads[0] : P.coinPile), done: () => S.bought > 0 },
+  { text: '🪙 동전을 모아 바닥의 업그레이드 칸에 서세요', at: () => (S.coins > 0 && pads.find(p => p.on && !padHidden(p)) || P.coinPile), done: () => S.bought > 0 },
 ];
 const $ = id => document.getElementById(id);
 const coinsEl = $('coins'), stormEl = $('storm'), hpEl = $('hp'), warmEl = $('warm'), warmFill = $('warmFill'), objEl = $('obj'), bagEl = $('bag'), toastEl = $('toast'), frostEl = $('frost'), hurtEl = $('hurt'), goalEl = $('goal');
