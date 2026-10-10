@@ -51,8 +51,8 @@ window.WinterRushData = {
     pizzaTime: [3.2, 2.4, 1.7],    // seconds per pizza batch by pizza oven level (1 log per batch)
     pizzaRecipe: { veg: 2, meat: 4, fish: 3 }, pizzaRecipeHarbor: { veg: 1, meat: 4, fish: 3 },
     smithTime: [0, 8, 4],          // seconds per trophy processed by smith level
-    warehouse: { cap: [0, 800, 1200, 1600] },   // slots per warehouse level
-    courier: { carry: [0, 20, 26, 32], speed: [0, 5.5, 5.8, 6.2] },   // delivery workers, by warehouse level: mixed loads up to this many items
+    warehouse: { cap: [0, 800, 1200, 1600, 2000, 2400] },   // slots per warehouse level
+    courier: { carry: [0, 20, 24, 28, 32, 36], speed: [0, 5.5, 5.8, 6.1, 6.4, 6.7] },   // delivery workers, by warehouse level: mixed loads up to this many items
     fireLv: .25,                  // each hearth level: a log burns 25% longer
     wage: { every: 60, per: 8, interest: .005, maxInterest: 50 },   // per staff each payday (stage 3)
     staffHouse: .15,               // staff speed bonus per heated house
@@ -107,7 +107,7 @@ window.WinterRushData = {
     smith:     { name: '대장장이', icon: '⚒️', costs: [700, 1500], vals: [0, 1, 2], stage: [3, 3] },
     helper3:   { name: '나무꾼 3', icon: '👷', costs: [1200], vals: [0, 1], stage: [3] },
     hunter3:   { name: '사냥꾼 3', icon: '🏹', costs: [1500], vals: [0, 1], stage: [3] },
-    warehouse: { name: '큰 창고', icon: '🏚️', costs: [2000, 3500, 6000], vals: [0, 1, 2, 3], stage: [3, 3, 3] },   // each level: +1 courier, more room
+    warehouse: { name: '큰 창고', icon: '🏚️', costs: [2000, 3500, 6000, 9000, 13000], vals: [0, 1, 2, 3, 4, 5], stage: [3, 3, 3, 4, 4] },   // each level: +1 courier (up to 5), more room
     wall:      { name: '돌담', icon: '🧱', costs: [1500, 3000], vals: [0, 1, 2], stage: [3, 3] },   // −1 raider per level
     bank:      { name: '은행', icon: '🏦', costs: [1200], vals: [0, 1], stage: [3] },
     staffHouse: { name: '직원 숙소', icon: '🏘️', costs: [1000, 2000, 3500], vals: [0, 1, 2, 3], stage: [3, 3, 3] },
