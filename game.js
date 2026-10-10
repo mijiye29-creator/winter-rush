@@ -294,7 +294,7 @@ const P = {
   ovenWood: V(12, 0, -4.8), fishCrate: V(14.2, 0, -4.8), serverGrill: V(.3, 0, -5.4), serverWay: V(.3, 0, -7.1),
   fishCoin: V(11.4, 0, -7.2), tanCoin: V(12.3, 0, 3.4),
   pizzaOven: V(19, 0, -8.9), pizzaShop: V(21.8, 0, -8.9), pizzaIn: V(19, 0, -6.7), pizzaCoin: V(24.9, 0, -7.4),
-  wh: V(-6.2, 0, 4.5), whIn: V(-6.5, 0, 2.2), bank: V(-3.4, 0, 4.3), vault: V(-2.75, 0, 4.95),   // warehouse + bank side by side in the village's bottom-left corner, by the hunting gate
+  wh: V(-6.4, 0, 2.5), whIn: V(-4.3, 0, 2.5), bank: V(-6.4, 0, 4.7), vault: V(-5.75, 0, 5.2),   // bottom-left corner by the hunting gate: warehouse behind, bank in front, drop-off tile to the warehouse's right
   holes: [V(11.9, 0, -.4), V(13.4, 0, .8)],
 };
 const BOUNDS = { x1: -21, x2: 18, z1: -15, z2: 24 };
@@ -628,10 +628,11 @@ const pizzaPile = pile('pizza', T.max.pizza, V(P.pizzaShop.x, .9, P.pizzaShop.z)
 const pzSign = sprite(240, 100, 2.2, .92); pzSign.sp.position.set(P.pizzaOven.x, 2.4, P.pizzaOven.z); annexG.add(pzSign.sp);
 // the one big warehouse (south-east corner): every raw material ends up here, couriers hand it out
 const whG = new THREE.Group(); whG.position.copy(P.wh); whG.visible = false; scene.add(whG);
-whG.add(mesh(new THREE.BoxGeometry(2.6, 1.8, 2), mat(0x9a6a40), 0, .9, 0));
-whG.add(mesh(new THREE.CylinderGeometry(1.15, 1.15, 2.7, 12, 1, false, 0, Math.PI).rotateZ(Math.PI / 2).rotateY(Math.PI / 2), mat(0x8a2b2b), 0, 1.8, 0));
-whG.add(mesh(new THREE.BoxGeometry(1.1, 1.3, .05), mat(0x5a3420), 0, .65, -1.02));
+whG.add(mesh(new THREE.BoxGeometry(2.2, 1.8, 2), mat(0x9a6a40), 0, .9, 0));
+whG.add(mesh(new THREE.CylinderGeometry(1.05, 1.05, 1.9, 12, 1, false, 0, Math.PI).rotateZ(Math.PI / 2), mat(0x8a2b2b), 0, 1.8, 0));   // roof ridge runs north-south
+whG.add(mesh(new THREE.BoxGeometry(.05, 1.3, 1.1), mat(0x5a3420), 1.12, .65, 0));   // door faces the drop-off tile
 const whTile = tile(P.whIn, '📦'); whTile.g.visible = false;
+const whArrow = new THREE.Mesh(new THREE.ConeGeometry(.3, .6, 4).rotateX(Math.PI), new THREE.MeshBasicMaterial({ color: 0xffd36b })); whArrow.position.set(P.whIn.x, 1.6, P.whIn.z); whArrow.visible = false; scene.add(whArrow);   // bobbing marker over the drop-off
 const whLabel = sprite(360, 90, 3.4, .85); whLabel.sp.position.set(P.wh.x, 3.6, P.wh.z); whLabel.sp.visible = false; scene.add(whLabel.sp);
 let whShown = '';
 const WH_ITEMS = ['log', 'meat', 'fish', 'veg', 'hide', 'pelt', 'tusk'], WH_ICON = { log: '🪵', meat: '🥩', fish: '🐟', veg: '🥬', hide: '🟫', pelt: '🐯', tusk: '🦣' };
@@ -730,7 +731,8 @@ function updateAnnex(dt) {
   const PR = T.pizzaRecipe, canBake = n => S.pzVeg >= PR.veg * n && S.pzMeat >= PR.meat * n && S.pzFish >= PR.fish * n;
   pzInTile.setFull(canBake(1) && S.pzWood + S.pzFuel > 0);
   pzDome.scale.setScalar(1 + .15 * S.lv.pizzaOven);
-  whG.visible = whTile.g.visible = whLabel.sp.visible = whOn();
+  whG.visible = whTile.g.visible = whLabel.sp.visible = whArrow.visible = whOn();
+  if (whArrow.visible) { whArrow.position.y = 1.5 + Math.sin(performance.now() / 200) * .2; whArrow.rotation.y += dt * 2; }
   if (whOn()) {
     const t = WH_ITEMS.filter(k => S.wh[k]).map(k => `${WH_ICON[k]}${S.wh[k]}`).join(' ') || `📦 0/${whCap()}`;
     if (t !== whShown) { whShown = t; whLabel.draw((c, w, h) => bubble(c, w, h, t, '#ffffff')); }
@@ -1002,11 +1004,11 @@ makePad('clerk', 4.5, -.2); makePad('artisan', 6.6, 4.2); makePad('fisher', 4.5,
 makePad('coat', -2.4, 2); makePad('cape', -6.6, 4.2);
 makePad('hearth', 8.7, -.2); makePad('fisher2', 8.7, 2);   // stage 2 column east of the right block
 makePad('farmer', 18, -.2); makePad('pizzaChef', 24.4, -.2); makePad('pizzaClerk', 22.3, -.2); makePad('smith', 8.7, -5.6); makePad('helper3', 22.3, 2); makePad('hunter3', 24.4, 2);   // stage 3 annex grid
-makePad('warehouse', -6.5, 2.2); makePad('wall', 24.4, 4.2); makePad('bank', -3.4, 4.3); makePad('staffHouse', 24.4, -2.6);   // the bank pad becomes the bank tile
+makePad('warehouse', -4.3, 2.5); makePad('wall', 24.4, 4.2); makePad('bank', -6.4, 4.7); makePad('staffHouse', 24.4, -2.6);   // the bank pad becomes the bank tile
 makePad('courier', 20.2, -.2); makePad('pizzaOven', 20.2, 2); makePad('leatherClerk', 8.7, 4.2); makePad('fire', -.3, -7.8);
 makePad('saberCoat', -6.6, -7.8); makePad('tuskAxe', -4.5, -7.8); makePad('statue', -2.4, -7.8);   // legend row, north-west
 const PAD_POS2 = {};   // pads that move when the village grows
-const PAD_POS3 = { helper2: [18, 2], cape: [18, 4.2], hunter2: [20.2, 4.2], hunter: [22.3, 4.2] };   // stage 3: clear the bottom-left corner for the warehouse and bank
+const PAD_POS3 = { helper2: [18, 2], cape: [18, 4.2], hunter2: [20.2, 4.2], hunter: [22.3, 4.2], helper: [24.4, -4.8] };   // stage 3: clear the bottom-left corner for the warehouse and bank
 const REVEAL = {
   bag: () => true, axe: () => true,
   boots: () => S.bought >= 1,
@@ -2593,7 +2595,7 @@ function footprints() {
   if (three) {
     PLOTS.forEach((pp, i) => f.push(box('plot' + i, pp.x, pp.z, 1.6, 1.6)));
     f.push(box('pizzaIn', P.pizzaIn.x, P.pizzaIn.z, 1.9, 1.9), box('pizzaOven', P.pizzaOven.x, P.pizzaOven.z, 1.4, 1.4), box('pizzaShop', P.pizzaShop.x, P.pizzaShop.z, 2.6, 1.1), box('pizzaCoin', P.pizzaCoin.x, P.pizzaCoin.z, 1.3, 1.3), box('pizzaClerk', 23.8, -8.8, .8, .8));
-    f.push(box('wh', P.wh.x, P.wh.z, 2.6, 2), box('whIn', P.whIn.x, P.whIn.z, 1.9, 1.9), box('bank', P.bank.x, P.bank.z, 1.9, 1.9));
+    f.push(box('wh', P.wh.x, P.wh.z, 2.2, 2), box('whIn', P.whIn.x, P.whIn.z, 1.9, 1.9), box('bank', P.bank.x, P.bank.z, 1.9, 1.9));
   }
   return f;
 }
