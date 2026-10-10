@@ -339,12 +339,13 @@ function buildFence(segs, capColor, stone = 0) {
   im.castShadow = true; im.receiveShadow = true; g.add(im, caps); scene.add(g);
   return g;
 }
-const fence1 = buildFence([[-8, -10, 8, -10], [-8, 6, -1.9, 6], [1.9, 6, 8, 6], [-8, -10, -8, -6], [-8, -2, -8, 6], [8, -10, 8, 6]], 0xf2dcc0);
-const fence2 = buildFence([[-8, -10, 16, -10], [-8, 6, -1.9, 6], [1.9, 6, 16, 6], [-8, -10, -8, -6], [-8, -2, -8, 6], [16, -10, 16, 6]], 0xffd36b);
+// fences open where a shop counter stands (the invisible wall stays, the counter fills the gap)
+const fence1 = buildFence([[-8, -10, 3.2, -10], [6, -10, 8, -10], [-8, 6, -1.9, 6], [1.9, 6, 8, 6], [-8, -10, -8, -6], [-8, -2, -8, 6], [8, -10, 8, 6]], 0xf2dcc0);
+const fence2 = buildFence([[-8, -10, 3.2, -10], [6, -10, 10.2, -10], [13, -10, 16, -10], [-8, 6, -1.9, 6], [1.9, 6, 16, 6], [-8, -10, -8, -6], [-8, -2, -8, 6], [16, -10, 16, 2.2], [16, 4.8, 16, 6]], 0xffd36b);
 fence2.visible = false;
-const fence3 = buildFence([[-8, -10, 26, -10], [-8, 6, -1.9, 6], [1.9, 6, 16.3, 6], [18.3, 6, 26, 6], [-8, -10, -8, -6], [-8, -2, -8, 6], [26, -10, 26, 6]], 0xff8a3c);
+const FENCE3_SEGS = [[-8, -10, 3.2, -10], [6, -10, 10.2, -10], [13, -10, 26, -10], [-8, 6, -1.9, 6], [1.9, 6, 16.3, 6], [18.3, 6, 26, 6], [-8, -10, -8, -6], [-8, -2, -8, 6], [26, -10, 26, -6.7], [26, -4.1, 26, 6]];
+const fence3 = buildFence(FENCE3_SEGS, 0xff8a3c);
 fence3.visible = false;
-const FENCE3_SEGS = [[-8, -10, 26, -10], [-8, 6, -1.9, 6], [1.9, 6, 16.3, 6], [18.3, 6, 26, 6], [-8, -10, -8, -6], [-8, -2, -8, 6], [26, -10, 26, 6]];
 const stoneFence = [buildFence(FENCE3_SEGS, 0xffffff, 1), buildFence(FENCE3_SEGS, 0xffffff, 2)]; stoneFence.forEach(f => (f.visible = false));
 // gate doors (open), plus spikes added per gate level
 const gateGroup = new THREE.Group(); scene.add(gateGroup);
