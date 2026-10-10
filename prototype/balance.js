@@ -2,7 +2,8 @@ window.WinterRushData = {
   T: {
     logFuel: 8,
     cook: { steak: 2.5 }, burn: 35,
-    price: { steak: 10, sfish: 18, leather: 25, hide: 4, pizza: 70 },
+    price: { steak: 10, sfish: 18, leather: 25, hide: 4, meat: 2, pizza: 70 },
+    guard: { baseCost: 600, costPerStorm: 200, max: 3 },
     burnGrow: .15, burnMax: 2.2,   // fire burns faster each blizzard survived (×1 → ×2.2)
     smoke: { time: 3.5, fishPerLog: 1, stormUse: 1.5 },   // oven: 1 log per fish, 1.5 logs in a blizzard
     ovenTime: [3.5, 2.6, 1.8], ovenCap: [18, 24, 30],   // fish oven level: seconds per fish, fish stacked on top
@@ -45,10 +46,10 @@ window.WinterRushData = {
     pizzaTime: [3.2, 2.4, 1.7],    // seconds per pizza batch by pizza oven level (1 log per batch)
     pizzaRecipe: { veg: 1, meat: 3, fish: 2 },   // per pizza
     smithTime: [0, 8, 4],          // seconds per trophy processed by smith level
-    warehouse: { cap: [0, 300, 600] },
+    warehouse: { cap: [0, 300, 600], perFire: 100 },   // +100 slots per hearth level
     courier: { carry: [0, 8, 12, 16], speed: [0, 4.6, 5.3, 6] },   // delivery trucks
     fireLv: .25,                  // each hearth level: a log burns 25% longer
-    wage: { every: 60, per: 8, interest: .02, maxInterest: 200 },   // per staff each payday (stage 3)
+    wage: { every: 60, per: 8, interest: .005, maxInterest: 50 },   // per staff each payday (stage 3)
     staffHouse: .15,               // staff speed bonus per house
     armor: { boots: [0, .04, .08, .12], coat: [0, .08, .16, .24] },   // chance to block a hit
     max: { vegCrate: 20, pzVeg: 12, pzMeat: 24, pzFish: 16, pzWood: 12, pizza: 16, forgeRaw: 10, tanWood: 16, wood: 40, meat: 30, grill: 18, counter: 16, hide: 20, fishCrate: 20, fishRaw: 30, ovenWood: 12, fishSmoked: 12, fishStock: 20, leather: 16, tanFuel: 8 },
