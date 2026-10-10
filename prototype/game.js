@@ -13,7 +13,7 @@ const S = {
   phase: 'calm', phaseT: T.firstCalm, stormK: 0, storms: 0, stormFireOut: false,
   served: 0, bought: 0, tut: 0, woodIn: 0, meatIn: 0, steakIn: 0, goal: 0,
   stat: { soldPizza: 0, sold: 0, soldFish: 0, soldLeather: 0, kills: 0, held: 0, boss: 0, wolves: 0, hides: 0 },
-  timers: {}, started: false,
+  timers: {}, paydayT: 0, started: false,
 };
 const val = k => UP[k].vals[S.lv[k]];
 const bagCap = () => val('bag') + 4 * pets.length;
@@ -806,7 +806,10 @@ const RUNNERS = [
 function updateBank(dt) {
   const on = S.lv.bank > 0 && S.stage >= 3;
   bankTile.g.visible = bankPile.g.visible = vaultG.visible = bankLabel.sp.visible = on;
-  if (S.stage >= 3 && S.started && tick('payday', T.wage.every, dt)) payday();
+  if (S.stage >= 3 && S.started) {
+    S.paydayT += dt;
+    if (S.paydayT >= T.wage.every) { S.paydayT -= T.wage.every; payday(); }
+  }
   if (!on) return;
   bankPile.set(Math.min(72, Math.ceil(S.bank / 20))); bankTile.setFull(S.bank > 0);
   const t = `🏦 ${S.bank}`; if (t !== bankShown) { bankShown = t; bankLabel.draw((c, w, h) => bubble(c, w, h, t, '#ffd36b')); }
@@ -2358,9 +2361,9 @@ const SAVE_KEY = 'winter-rush-v1';
 function save() {
   try {
     const counter = { ...S.counter };
-    const keys = ['coins', 'guard', 'bank', 'strike', 'whWood', 'whMeat', 'mats', 'raw', 'forgeRaw', 'plots', 'vegCrate', 'pzVeg', 'pzMeat', 'pzWood', 'pzFuel', 'pzT', 'pizza', 'smithT', 'coinPizza', 'coinPile', 'coinFish', 'coinLeather', 'tanWood', 'wood', 'meat', 'fuel', 'warmth', 'grillItems', 'lv', 'storms', 'stat', 'goal', 'tut', 'woodIn', 'meatIn', 'steakIn', 'served', 'bought', 'hide', 'fishCrate', 'fishRaw', 'ovenWood', 'fishSmoked', 'fishStock', 'smokeFuel', 'tanFuel', 'leather', 'stage', 'petCount', 'petHits', 'packs', 'tanT', 'hp', 'phase', 'phaseT', 'stormFireOut'];
+    const keys = ['coins', 'guard', 'bank', 'strike', 'paydayT', 'whWood', 'whMeat', 'mats', 'raw', 'forgeRaw', 'plots', 'vegCrate', 'pzVeg', 'pzMeat', 'pzWood', 'pzFuel', 'pzT', 'pizza', 'smithT', 'coinPizza', 'coinPile', 'coinFish', 'coinLeather', 'tanWood', 'wood', 'meat', 'fuel', 'warmth', 'grillItems', 'lv', 'storms', 'stat', 'goal', 'tut', 'woodIn', 'meatIn', 'steakIn', 'served', 'bought', 'hide', 'fishCrate', 'fishRaw', 'ovenWood', 'fishSmoked', 'fishStock', 'smokeFuel', 'tanFuel', 'leather', 'stage', 'petCount', 'petHits', 'packs', 'tanT', 'hp', 'phase', 'phaseT', 'stormFireOut'];
     const data = Object.fromEntries(keys.map(k => [k, S[k]]));
-    data.counter = counter; data.paid = pads.map(p => p.paid);
+    data.counter = counter; data.paid = Object.fromEntries(pads.map(p => [p.key, p.paid]));
     data.player = { x: pl.x, z: pl.z };
     data.stackTypes = stack.map(i => i.type);
     data.raiders = bears.filter(b => b.raider || b.boss).map(b => ({ raider: b.raider, boss: b.boss, x: b.x, z: b.z, hp: b.hp }));
@@ -2373,7 +2376,12 @@ function load() {
   if (!d) return false;
   const { paid, lv, stat, counter, player: savedPlayer, stackTypes, raiders, ...rest } = d;
   Object.assign(S, rest); S.mats = Object.assign({ pelt: 0, tusk: 0 }, S.mats); S.raw = Object.assign({ pelt: 0, tusk: 0 }, S.raw); S.forgeRaw = Object.assign({ pelt: 0, tusk: 0 }, S.forgeRaw); Object.assign(S.lv, lv || {}); Object.assign(S.stat, stat || {}); Object.assign(S.counter, counter || {});
-  (paid || []).forEach((v, i) => { if (pads[i]) pads[i].paid = v; });
+  if (Array.isArray(paid)) {
+    const oldPads = paid.length === pads.length - 4 ? pads.filter(p => !['warehouse', 'wall', 'bank', 'staffHouse'].includes(p.key)) : pads;
+    paid.forEach((v, i) => { if (oldPads[i]) oldPads[i].paid = v; });
+  } else if (paid) {
+    pads.forEach(p => { if (Number.isFinite(paid[p.key])) p.paid = paid[p.key]; });
+  }
   for (let i = 0; i < 4; i++) addHelper();
   for (let i = 0; i < val('server'); i++) addServer();
   for (let i = 0; i < 4; i++) addHunter();
