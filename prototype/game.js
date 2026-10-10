@@ -643,7 +643,8 @@ for (const z of [-4, -2.2]) for (const x of [18.2, 20, 21.8]) {
   }
   PLOTS.push({ x, z, g, veg });
 }
-const plotRipe = i => S.plots[i] >= T.garden.grow;
+const plotGrow = () => S.stage >= 4 ? T.garden.harborGrow : T.garden.grow;
+const plotRipe = i => S.plots[i] >= plotGrow();
 // pizza: one ingredient tile (veg + meat + logs) in front of the oven, the counter on the north fence
 const pzInTile = tile(P.pizzaIn, '🍕'); annexG.add(pzInTile.g);
 const pzVegPile = pile('veg', T.max.pzVeg, V(P.pizzaIn.x - .5, .09, P.pizzaIn.z - .35), 2, 2, .42, .42); annexG.add(pzVegPile.g);
@@ -781,12 +782,12 @@ function addSmith() {
 function updateAnnex(dt) {
   const on = S.stage >= 3;
   for (let i = 0; i < PLOTS.length; i++) {
-    if (on) S.plots[i] = Math.min(T.garden.grow, S.plots[i] + dt);
-    const k = S.plots[i] / T.garden.grow, p0 = PLOTS[i];
+    if (on) S.plots[i] = Math.min(plotGrow(), S.plots[i] + dt);
+    const k = S.plots[i] / plotGrow(), p0 = PLOTS[i];
     p0.veg.scale.setScalar(.15 + .85 * k); p0.veg.position.y = plotRipe(i) ? Math.abs(Math.sin(performance.now() / 300 + i)) * .06 : 0;
   }
   pzWoodPile.set(S.pzWood); pzFishPile.set(S.pzFish); pzVegPile.set(S.pzVeg); pzMeatPile.set(S.pzMeat); pizzaPile.set(S.pizza);
-  const PR = T.pizzaRecipe, canBake = n => S.pzVeg >= PR.veg * n && S.pzMeat >= PR.meat * n && S.pzFish >= PR.fish * n;
+  const PR = S.stage >= 4 ? T.pizzaRecipeHarbor : T.pizzaRecipe, canBake = n => S.pzVeg >= PR.veg * n && S.pzMeat >= PR.meat * n && S.pzFish >= PR.fish * n;
   pzInTile.setFull(canBake(1) && S.pzWood + S.pzFuel > 0);
   pzDome.scale.setScalar(1 + .15 * S.lv.pizzaOven);
   whG.visible = whTile.g.visible = whLabel.sp.visible = whArrow.visible = whOn();
@@ -857,6 +858,7 @@ const DELIVER = [
   { item: 'log', at: () => P.woodTile, get: () => S.wood, max: () => T.max.wood, add: k => (S.wood += k) },
   { item: 'meat', at: () => P.meatTile, get: () => S.meat, max: () => T.max.meat, add: k => (S.meat += k) },
   { item: 'log', at: () => P.ovenWood, get: () => S.ovenWood, max: () => T.max.ovenWood, add: k => (S.ovenWood += k) },
+  { item: 'fish', at: () => P.ovenOut, get: () => S.fishRaw, max: () => ovenCap(), add: k => (S.fishRaw += k), on: () => S.stage >= 4 },
   { item: 'log', at: () => TAN.in, get: () => S.tanWood, max: () => T.max.tanWood, add: k => (S.tanWood += k), on: () => S.lv.artisan > 0 },
   { item: 'hide', at: () => TAN.in, get: () => S.hide, max: () => T.max.hide, add: k => (S.hide += k), on: () => S.lv.artisan > 0 },
   { item: 'pelt', at: () => TAN.in, get: () => S.forgeRaw.pelt, max: () => T.max.forgeRaw, add: k => (S.forgeRaw.pelt += k), on: () => S.lv.smith > 0 },
@@ -2949,7 +2951,7 @@ function updateFire(dt) {
   else if (S.fuel < 2 && S.wood > 0) { S.wood--; S.fuel += logFuel(); }
   S.fuel = Math.max(0, S.fuel - dt * burn);
   const lit = S.fuel > 0;
-  const mps = T.meatPerSteak[S.stage - 1];
+  const mps = T.meatPerSteak[Math.min(S.stage, T.meatPerSteak.length) - 1];
   if (lit && S.meat >= mps && S.grillItems.length < T.max.grill && (S.cookT += dt) >= T.grillFeed) {
     S.cookT = 0; S.meat -= mps;
     S.grillItems.push({ type: 'steak', t: 0 });

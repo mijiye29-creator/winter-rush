@@ -47,9 +47,9 @@ window.WinterRushData = {
     legend: { coatBlock: [0, .08, .16], coatHp: [0, 2, 4], axeDmg: [0, 5, 12], slamR: [0, .8, 1.6] },
     tower: { cd: [1.2, .9, .6], dmg: [2, 4, 7], range: 11 },   // gate Lv4-6
     // stage 3 (큰 화로): garden → veg, veg + meat + logs → pizza, smith processes beast trophies
-    garden: { grow: 16 },          // seconds for a plot to ripen
+    garden: { grow: 16, harborGrow: 8 },
     pizzaTime: [3.2, 2.4, 1.7],    // seconds per pizza batch by pizza oven level (1 log per batch)
-    pizzaRecipe: { veg: 2, meat: 4, fish: 3 },   // per pizza
+    pizzaRecipe: { veg: 2, meat: 4, fish: 3 }, pizzaRecipeHarbor: { veg: 1, meat: 4, fish: 3 },
     smithTime: [0, 8, 4],          // seconds per trophy processed by smith level
     warehouse: { cap: [0, 800, 800], perFire: 200 },   // +200 slots per hearth level
     courier: { carry: [0, 12, 14, 16], speed: [0, 5.5, 5.8, 6.2] },   // delivery trucks
@@ -59,12 +59,12 @@ window.WinterRushData = {
     houseLogEvery: 15,             // each staff house burns a warehouse log this often; unheated houses give no bonus
     // stage 4 (빙하 항구): boats, tuna, sushi, sea animals, sea fog
     harbor: {
-      boatTime: [0, 9, 8, 7], boatFish: [0, 6, 10, 8], boatTuna: [0, 0, 1, 4], craneMul: 1.5,   // by boat tier: 쪽배 / 그물배 / 원양선
+      boatTime: [0, 9, 8, 7], boatFish: [0, 5, 7, 5], boatTuna: [0, 0, 1, 4], craneMul: 1.5,   // by boat tier: 쪽배 / 그물배 / 원양선
       dockCap: [20, 40, 70], sushiTime: [0, 3, 2], chefCarry: 6,
       fogEvery: 110, fogDur: [30, 20, 12],   // sea fog, shortened by the lighthouse
       penguinEvery: 45, penguinPack: 5, sealEvery: 30, walrusEvery: 180, blubberFuel: 18,
       harpoon: .7, schoolSize: 4,
-      sushiRecipe: { tuna: 1, fish: 1, veg: 2, log: 1 }, boatLogs: [0, 1, 2, 3], lighthouseLogEvery: 8,   // log sinks: boat fuel per trip, lighthouse lamp
+      sushiRecipe: { tuna: 1, fish: 1, veg: 1, log: 1 }, boatLogs: [0, 1, 2, 3], lighthouseLogEvery: 8,   // log sinks: boat fuel per trip, lighthouse lamp
     },
     craftTime: 5,                  // walrus ivory (smith) / walrus hide (artisan) → 🏺 craft goods sold at the leather stall
     trade: { every: 90, rush: .85, max: [0, 0, 0, 250, 500], keep: 15, price: { log: 2, veg: 3, meat: 3, fish: 4, hide: 6, tuna: 12, blubber: 5 } },   // stage 3 wagon / stage 4 ship buy warehouse surplus above `keep`; a near-full warehouse (rush) calls them early
