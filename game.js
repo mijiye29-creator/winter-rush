@@ -32,6 +32,8 @@ const DESC = {
   fishing: () => `2단계! 마을 확장, 얼음 낚시터 + 훈제 생선 가게 개방`,
   clerk: (a, b) => `점원 숙련 Lv${b}: 동시 손님 ${ST.clerkSlots[a]} → ${ST.clerkSlots[b]}명, 판매 속도 ↑`,
   artisan: (a, b) => b === 1 ? `가죽 장인 고용: 가죽 → 가죽 제품 (${T.tanTime[1]}초)` : `제작 속도 ${T.tanTime[a]}초 → ${T.tanTime[b]}초`,
+  helper2: () => `두 번째 나무꾼 고용 (같은 숙련도로 장작 운반)`,
+  hunter2: () => `두 번째 사냥꾼 고용 (같은 숙련도로 사냥)`,
   fishClerk: (a, b) => a ? `생선 점원 숙련 Lv${b}: 동시 손님 ${ST.clerkSlots[a]} → ${ST.clerkSlots[b]}명` : `생선 가게 점원 고용 (판매 속도 ↑)`,
   fisher: (a, b) => a ? `낚시꾼 숙련 Lv${b}: 더 빨리, ${ST.fisherCarry[b]}마리씩` : `낚시꾼 고용 (생선 상자에 자동 공급)`,
 };
@@ -248,8 +250,8 @@ const P = {
   woodTile: V(-.4, 0, -3), fire: V(2, 0, -3), meatTile: V(4.4, 0, -3),
   grill: V(2, 0, -5.4), counter: V(4.6, 0, -8.9), counterStand: V(4.6, 0, -7.6),
   coinPile: V(6.9, 0, -7.2), gate: V(0, 0, 6), queueFront: V(3.6, 0, -11.2),
-  fishShop: V(11.6, 0, -8.9), fishStand: V(11.6, 0, -7.6), oven: V(14, 0, -8.9), ovenOut: V(14, 0, -7.2),
-  ovenWood: V(12, 0, -4.8), ovenFish: V(14.2, 0, -4.8), fishCrate: V(9.3, 0, -2), serverGrill: V(.3, 0, -5.4), serverWay: V(.3, 0, -7.1),
+  fishShop: V(11.6, 0, -8.9), oven: V(14, 0, -8.9), ovenOut: V(14, 0, -7.2),
+  ovenWood: V(12, 0, -4.8), fishCrate: V(9.3, 0, -2), serverGrill: V(.3, 0, -5.4), serverWay: V(.3, 0, -7.1),
   holes: [V(11.7, 0, 0), V(13.4, 0, 1.4)],
 };
 const BOUNDS = { x1: -21, x2: 18, z1: -15, z2: 24 };
@@ -432,11 +434,9 @@ ovenG.add(mesh(new THREE.BoxGeometry(.25, .9, .25), mat(0x6e6a72), .35, 1.1, -.3
 const ovenFire = new THREE.Mesh(new THREE.ConeGeometry(.22, .45, 6), new THREE.MeshBasicMaterial({ color: 0xff8a2a })); ovenFire.position.set(0, .3, .45); ovenG.add(ovenFire);
 const ovenWoodTile = tile(P.ovenWood, '🪵'); eastG.add(ovenWoodTile.g);
 const ovenWoodPile = pile('log', T.max.ovenWood, V(P.ovenWood.x, .09, P.ovenWood.z), 2, 3, .9, .42); eastG.add(ovenWoodPile.g);
-const ovenFishTile = tile(P.ovenFish, '🐟'); eastG.add(ovenFishTile.g);
-const fishRawPile = pile('fish', T.max.fishRaw, V(P.ovenFish.x, .09, P.ovenFish.z), 3, 3, .5, .45); eastG.add(fishRawPile.g);
+const fishRawPile = pile('fish', T.max.fishRaw, V(P.oven.x, .72, P.oven.z - .15), 3, 2, .38, .32); eastG.add(fishRawPile.g);   // raw fish stacked on the oven top
 const crateTile = tile(P.fishCrate, '📦'); eastG.add(crateTile.g);
 const fishCratePile = pile('fish', T.max.fishCrate, V(P.fishCrate.x, .09, P.fishCrate.z), 3, 3, .5, .45); eastG.add(fishCratePile.g);
-const smokedPile = pile('sfish', T.max.fishSmoked, V(P.oven.x, .7, P.oven.z + .55), 3, 1, .4, .3); eastG.add(smokedPile.g);
 const fishShopPile = pile('sfish', T.max.fishStock, V(P.fishShop.x, .9, P.fishShop.z), 4, 2, .55, .45); eastG.add(fishShopPile.g);
 const smokerSign = sprite(240, 100, 2.2, .92); smokerSign.sp.position.set(P.oven.x, 2.6, P.oven.z); eastG.add(smokerSign.sp);
 smokerSign.draw((c, w, h) => bubble(c, w, h, '🪵 장작 필요', '#ffd36b'));
@@ -504,16 +504,19 @@ function updateTannery(dt) {
 }
 // fish oven: uses only the logs stacked on its own wood tile
 function updateOven(dt) {
-  fishRawPile.set(S.fishRaw); fishCratePile.set(S.fishCrate); smokedPile.set(S.fishSmoked); fishShopPile.set(S.fishStock); ovenWoodPile.set(S.ovenWood);
-  ovenFishTile.setFull(S.fishRaw > 0); ovenWoodTile.setFull(S.ovenWood > 0); crateTile.setFull(S.fishCrate > 0);
+  fishRawPile.set(S.fishRaw); fishCratePile.set(S.fishCrate); fishShopPile.set(S.fishStock); ovenWoodPile.set(S.ovenWood);
+  ovenWoodTile.setFull(S.ovenWood > 0); crateTile.setFull(S.fishCrate > 0);
   if (S.stage < 2) return;
-  const need = S.fishRaw > 0 && S.fishSmoked < T.max.fishSmoked;
+  const need = S.fishRaw > 0 && S.fishStock < T.max.fishStock;
   if (need && S.smokeFuel <= 0 && S.ovenWood > 0) { S.ovenWood--; S.smokeFuel += T.smoke.fishPerLog; }
   smokerSign.sp.visible = need && S.smokeFuel <= 0;
   ovenFire.visible = S.smokeFuel > 0;
   if (ovenFire.visible) ovenFire.scale.setScalar(.8 + Math.sin(performance.now() / 60) * .2);
   if (!need || S.smokeFuel <= 0) return;
-  if ((S.smokeT += dt) >= T.smoke.time) { S.smokeT = 0; S.fishRaw--; S.fishSmoked++; S.smokeFuel--; }
+  if ((S.smokeT += dt) >= T.smoke.time) {   // a finished fish slides straight onto the shop counter next door
+    S.smokeT = 0; S.fishRaw--; S.fishStock++; S.smokeFuel--;
+    fly('sfish', V(P.oven.x, 1, P.oven.z), V(P.fishShop.x, 1, P.fishShop.z), .35);
+  }
   if (tick('smokePuff', .45, dt)) burst(P.oven.x + .35, 1.8, P.oven.z - .35, 0x9aa0aa, 2, { spd: .4, up: 1.2, grav: -1.5, life: 1.4, size: 1.4 });
 }
 
@@ -571,8 +574,8 @@ function drawPad(p) {
 }
 // pads sit next to what they upgrade and appear one by one
 makePad('bag', -3.6, 1.2); makePad('boots', -6.3, 1.3);
-makePad('axe', -6.2, -4); makePad('helper', -6, -8.2);
-makePad('gate', 3.6, 4.2); makePad('hunter', -3.6, 4.2);
+makePad('axe', -6.2, -4); makePad('helper', -6, -8.2); makePad('helper2', -3.8, -8.2);
+makePad('gate', 3.6, 4.2); makePad('hunter', -3.6, 4.2); makePad('hunter2', -6.2, 4);
 makePad('server', -1, -6.6); makePad('cabin', 6.6, -4.6); makePad('fishing', 6.4, -.4);
 makePad('clerk', 2, -8.3); makePad('artisan', 10.4, 3.8); makePad('fisher', 9.4, -4.8); makePad('fishClerk', 7.4, -5.2);
 const PAD_POS2 = { cabin: [9.4, -7.1] };   // pads that move when the village grows
@@ -589,6 +592,8 @@ const REVEAL = {
   artisan: () => hidesOn() && S.stage >= 2,
   fisher: () => S.stage >= 2,
   fishClerk: () => S.stage >= 2,
+  helper2: () => S.stage >= 2 && S.lv.helper >= 1,
+  hunter2: () => S.stage >= 2 && S.lv.hunter >= 1,
 };
 // a pad disappears at max level, and waits while its next level needs a later village stage
 const padHidden = p => { const u = UP[p.key], lv = S.lv[p.key]; return lv >= u.costs.length || (u.stage && S.stage < u.stage[lv]); };
@@ -698,11 +703,11 @@ const backPos = () => V(pl.x - Math.sin(pl.rot) * .5, 1.2 + stack.length * .25, 
 // helper lumberjacks
 const helpers = [];
 function addHelper() {
-  if (helpers.length) return;
+  if (helpers.length >= (S.lv.helper > 0) + S.lv.helper2) return;
   const p = makePerson(0xe0803a, 0x6b3d1f);
   const carry = new THREE.Group(); carry.position.z = -.5; p.g.add(carry);
   for (let i = 0; i < 12; i++) { const m = itemMesh('log'); m.position.set(i < 6 ? 0 : .5, 1.1 + (i % 6) * .4, 0); m.visible = false; carry.add(m); }
-  const h = { ...p, carry, n: 0, x: -6.5, z: -4, path: [], state: 'idle', tree: null, t: 0 };
+  const h = { ...p, carry, n: 0, x: -6.5, z: -4 + helpers.length, path: [], state: 'idle', tree: null, t: 0 };
   p.g.position.set(h.x, 0, h.z); helpers.push(h);
 }
 function helperToTree(h) {
@@ -777,16 +782,14 @@ function renderCarry(w) {
 const CHEF_JOBS = {
   steak:   { pick: () => P.serverGrill, drop: () => P.counterStand, has: () => S.grillItems.filter(isReady).length, room: () => T.max.counter - S.counter.steak,
              take: () => !!takeReady('steak'), give: () => S.counter.steak++, item: 'steak' },
-  fishIn:  { pick: () => P.fishCrate, drop: () => P.ovenFish, has: () => S.fishCrate, room: () => T.max.fishRaw - S.fishRaw,
+  fishIn:  { pick: () => P.fishCrate, drop: () => P.ovenOut, has: () => S.fishCrate, room: () => T.max.fishRaw - S.fishRaw,
              take: () => S.fishCrate > 0 && !!S.fishCrate--, give: () => S.fishRaw++, item: 'fish' },
-  fishOut: { pick: () => P.ovenOut, drop: () => P.fishStand, has: () => S.fishSmoked, room: () => T.max.fishStock - S.fishStock,
-             take: () => S.fishSmoked > 0 && !!S.fishSmoked--, give: () => S.fishStock++, item: 'sfish' },
 };
 function chooseChefJob() {
   let best = null, score = 0;
   for (const [k, j] of Object.entries(CHEF_JOBS)) {
     if (k !== 'steak' && S.stage < 2) continue;
-    const v = Math.min(j.has(), j.room()) * (k === 'fishOut' ? 1.3 : 1);
+    const v = Math.min(j.has(), j.room()) * (k === 'fishIn' ? 1.2 : 1);
     if (v > score) { score = v; best = k; }
   }
   return best;
@@ -819,7 +822,7 @@ const hunters = [], shots = [];
 const GATE_IN = V(0, 0, 4.5), GATE_OUT = V(0, 0, 8);
 const arrowGeo = new THREE.CylinderGeometry(.03, .03, .8, 4).rotateX(Math.PI / 2);
 function addHunter() {
-  if (hunters.length) return;
+  if (hunters.length >= (S.lv.hunter > 0) + S.lv.hunter2) return;
   const p = makePerson(0x6b8e3a, 0x4a3020);
   const bow = mesh(new THREE.TorusGeometry(.35, .04, 5, 12, Math.PI), mat(0x6b3d1f), -.45, .9, .1); bow.rotation.y = Math.PI / 2; p.body.add(bow);
   const carry = new THREE.Group(); carry.position.z = -.5; p.g.add(carry);
@@ -956,7 +959,7 @@ function updateCustomers(dt) {
     if (!sh.open()) continue;
     const ck = S.lv[sh.clerk || 'clerk'], serveN = ST.clerkSlots[ck];
     const queue = customers.filter(c => c.shop === key && c.state === 'queue');
-    const maxQ = key === 'main' ? 6 + 2 * S.lv.cabin : 5, iv = key === 'main' ? 3.2 - .6 * S.lv.cabin : 5;
+    const big = key !== 'leather', maxQ = big ? 6 + 2 * S.lv.cabin : 5, iv = big ? 3.2 - .6 * S.lv.cabin : 5;
     if (queue.length < maxQ && S.warmth >= 35 && S.started && tick('spawn' + key, iv, dt)) spawnCustomer(key);
     queue.forEach((c, i) => {
       const t = sh.front.clone().addScaledVector(sh.dir, i * 1.1);
@@ -1393,11 +1396,9 @@ function updatePlayer(dt) {
     if (tick('dropMeat', .07, dt)) { stackTake('meat'); S.meat++; S.meatIn++; fly('meat', backPos(), V(P.meatTile.x, .5, P.meatTile.z), .2); play('pop', 60); }
   }
   if (S.stage >= 2) {
-    if (near(P.ovenFish, 1.35) && S.fishRaw < T.max.fishRaw && stackHas('fish') && tick('dropFish', .07, dt)) { stackTake('fish'); S.fishRaw++; fly('fish', backPos(), V(P.ovenFish.x, .5, P.ovenFish.z), .2); play('pop', 60); }
+    if (near(P.ovenOut, 1.3) && S.fishRaw < T.max.fishRaw && stackHas('fish') && tick('dropFish', .07, dt)) { stackTake('fish'); S.fishRaw++; fly('fish', backPos(), V(P.oven.x, 1, P.oven.z), .2); play('pop', 60); }
     if (near(P.fishCrate, 1.35) && S.fishCrate < T.max.fishCrate && stackHas('fish') && tick('dropCrate', .07, dt)) { stackTake('fish'); S.fishCrate++; fly('fish', backPos(), V(P.fishCrate.x, .5, P.fishCrate.z), .2); play('pop', 60); }
     if (near(P.ovenWood, 1.35) && S.ovenWood < T.max.ovenWood && stackHas('log') && tick('dropOvenWood', .07, dt)) { stackTake('log'); S.ovenWood++; fly('log', backPos(), V(P.ovenWood.x, .5, P.ovenWood.z), .2); }
-    if (near(P.ovenOut, 1.2) && S.fishSmoked > 0 && stack.length < bagCap() && tick('pickSmoked', .08, dt)) { S.fishSmoked--; stackAdd('sfish'); play('pop', 40); }
-    if (near(P.fishStand, 1.2) && S.fishStock < T.max.fishStock && stackHas('sfish') && tick('dropSmoked', .07, dt)) { stackTake('sfish'); S.fishStock++; fly('sfish', backPos(), V(P.fishShop.x, 1, P.fishShop.z), .2); }
   }
   if (S.lv.fishing && stack.length < bagCap() && pl.stunFree) for (const h of P.holes) if (near(h, 1.4)) {
     if (tick('fishing', 1.3, dt)) { stackAdd('fish'); fly('fish', V(h.x, .2, h.z), backPos(), .35); burst(h.x, .3, h.z, 0xbfe3f5, 8, { spd: 2.5, up: 5, life: .5 }); play('splash'); buzz(15); }
@@ -1513,10 +1514,10 @@ function playerHit(b, manual) {
 function levelUp(key) {
   S.lv[key]++; S.bought++;
   const u = UP[key];
-  if (key === 'helper') addHelper();
+  if (key === 'helper' || key === 'helper2') addHelper();
   if (key === 'gate') { drawGateSpikes(); }
   if (key === 'server') addServer();
-  if (key === 'hunter') addHunter();
+  if (key === 'hunter' || key === 'hunter2') addHunter();
   if (key === 'cabin') buildCabin(S.lv.cabin - 1);
   if (key === 'fishing') { S.stage = 2; applyStage(true); }
   if (key === 'hunter' && S.lv.hunter === 3) setTimeout(() => toast('🏹 숙련 사냥꾼! 이제 가죽도 모아 와요 → 동쪽에 가죽 공방'), 2600);
@@ -1525,7 +1526,7 @@ function levelUp(key) {
   if (key === 'fisher') addFisher();
   const pad = pads.find(p => p.key === key);
   burst(pad.x, .5, pad.z, 0xffc83d, 14, { spd: 4, up: 7, life: .8 }); play('up'); buzz([20, 40, 20]);
-  const msg = { bag: `가방 용량 ${bagCap()}`, axe: `공격력·벌목 속도 ↑`, boots: `이동 속도 ↑`, gate: `습격 곰 −${val('gate')}마리`, helper: `나무꾼 Lv${S.lv.helper}: 장작 ${ST.helperCarry[S.lv.helper]}개씩`, server: `서빙 직원 Lv${S.lv.server}: 한 번에 ${ST.serverCarry[S.lv.server]}개`, hunter: `사냥꾼 Lv${S.lv.hunter}: 공격력 ${ST.hunterDmg[S.lv.hunter]}`, cabin: `손님이 더 많이, 더 자주 옵니다`, fishing: `2단계 확장!`, clerk: `판매 점원 Lv${S.lv.clerk}: 손님 ${ST.clerkSlots[S.lv.clerk]}명 동시 응대`, artisan: S.lv.artisan === 1 ? `가죽 공방 가동! 가죽 제품을 팔아요` : `가죽 제품을 더 빨리 만들어요`, fisher: `낚시꾼 Lv${S.lv.fisher}: 생선 상자를 채웁니다`, fishClerk: `생선 점원 Lv${S.lv.fishClerk}: 손님 ${ST.clerkSlots[S.lv.fishClerk]}명 동시 응대` }[key];
+  const msg = { bag: `가방 용량 ${bagCap()}`, axe: `공격력·벌목 속도 ↑`, boots: `이동 속도 ↑`, gate: `습격 곰 −${val('gate')}마리`, helper: `나무꾼 Lv${S.lv.helper}: 장작 ${ST.helperCarry[S.lv.helper]}개씩`, server: `서빙 직원 Lv${S.lv.server}: 한 번에 ${ST.serverCarry[S.lv.server]}개`, hunter: `사냥꾼 Lv${S.lv.hunter}: 공격력 ${ST.hunterDmg[S.lv.hunter]}`, cabin: `손님이 더 많이, 더 자주 옵니다`, fishing: `2단계 확장!`, clerk: `판매 점원 Lv${S.lv.clerk}: 손님 ${ST.clerkSlots[S.lv.clerk]}명 동시 응대`, artisan: S.lv.artisan === 1 ? `가죽 공방 가동! 가죽 제품을 팔아요` : `가죽 제품을 더 빨리 만들어요`, fisher: `낚시꾼 Lv${S.lv.fisher}: 생선 상자를 채웁니다`, fishClerk: `생선 점원 Lv${S.lv.fishClerk}: 손님 ${ST.clerkSlots[S.lv.fishClerk]}명 동시 응대`, helper2: `두 번째 나무꾼이 일을 시작합니다`, hunter2: `두 번째 사냥꾼이 사냥을 나갑니다` }[key];
   if (key !== 'fishing') toast(`${u.icon} ${u.name} 업그레이드! ${msg}`);
 }
 
@@ -1764,7 +1765,7 @@ $('vib').addEventListener('click', e => { SND.vib = !SND.vib; e.currentTarget.cl
 function footprints() {
   const box = (n, x, z, w, d) => [n, x - w / 2, x + w / 2, z - d / 2, z + d / 2];
   const two = S.stage >= 2, f = [];
-  const stage2Only = ['fisher', 'artisan', 'fishClerk'];
+  const stage2Only = ['fisher', 'artisan', 'fishClerk', 'helper2', 'hunter2'];
   pads.forEach(p => { if (S.lv[p.key] < UP[p.key].costs.length && (two || !stage2Only.includes(p.key))) f.push(box('pad:' + p.key, p.x, p.z, 1.9, 1.9)); });
   f.push(box('woodTile', P.woodTile.x, P.woodTile.z, 1.9, 1.9), box('meatTile', P.meatTile.x, P.meatTile.z, 1.9, 1.9));
   f.push(box('fire', P.fire.x, P.fire.z, two ? 2.6 : 2.2, two ? 2.6 : 2.2), ['grill', grillBox.x1, grillBox.x2, grillBox.z1, grillBox.z2], ['counter', counterBox.x1, counterBox.x2, counterBox.z1, counterBox.z2]);
@@ -1772,7 +1773,7 @@ function footprints() {
   if (S.lv.clerk) f.push(box('clerk', 6.6, -8.7, .8, .8));
   if (two) f.push(box('fishClerk', 9.6, -8.8, .8, .8), box('artisanSpot', TAN.home.x, TAN.home.z, .8, .8));
   if (two) {
-    f.push(box('fishShop', P.fishShop.x, P.fishShop.z, 2.6, 1.1), box('oven', P.oven.x, P.oven.z - .3, 1.4, 1.85), box('ovenWood', P.ovenWood.x, P.ovenWood.z, 1.9, 1.9), box('ovenFish', P.ovenFish.x, P.ovenFish.z, 1.9, 1.9), box('fishCrate', P.fishCrate.x, P.fishCrate.z, 1.9, 1.9));
+    f.push(box('fishShop', P.fishShop.x, P.fishShop.z, 2.6, 1.1), box('oven', P.oven.x, P.oven.z - .3, 1.4, 1.85), box('ovenWood', P.ovenWood.x, P.ovenWood.z, 1.9, 1.9), box('fishCrate', P.fishCrate.x, P.fishCrate.z, 1.9, 1.9));
     f.push(box('tanFire', TAN.fire.x, TAN.fire.z, .9, .9), box('pond', 12.5, .6, 4.8, 4.8), box('tanIn', TAN.in.x, TAN.in.z, 1.9, 1.9), box('leatherShop', TAN.out.x, TAN.out.z, 1.1, 2.6));
   }
   return f;
