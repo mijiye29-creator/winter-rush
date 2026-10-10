@@ -41,3 +41,4 @@
 - v0.8: 화덕 레벨 `UP.oven`/`T.ovenTime`/`T.ovenCap`(`ovenCap()`), 쉐프 `chooseChefJob(w)`는 `queuedNeed`·`w.since`·`w.want` 사용, 눈보라 장작 배율 `T.stormBurn`·`T.smoke.stormUse`
 - v0.8.1: 사냥꾼 `collect` 상태, `campPickup(h)`로 마을 안 픽업 탐색
 - v0.9: 칸 위치는 `makePad` 호출 순서 = 저장(`paid`) 순서라 새 칸은 맨 뒤에 추가. 장비 외형 `GEAR`/`applyGear()`(전용 재질 `gmat`, `mat()` 캐시 공유 금지), 막기 `blockChance()`/`T.armor`
+- v1.0: `COIN_PILES`(S.coinPile/coinFish/coinLeather, `SHOPS.*.coin`), `WOOD_SPOTS`/`woodSpot()`(나무꾼 `deliver` 상태), `S.tanWood`, `heroLv()`, `makeBeast(kind)`/`spawnBeast()`(`T.beasts`, 몹 객체 `kind`/`sc`/`dmg`/`reach`/`big`), `AXE_LOOKS`, 망토 `capeG`
