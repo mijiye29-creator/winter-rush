@@ -2269,15 +2269,61 @@ function updateSwing(dt) {
 function updateShock(dt) {
   if (!shock.visible) return;
   shock.t += dt; const e = shock.t / .35;
-  shock.scale.setScalar(.5 + e * 3.2); shock.material.opacity = Math.max(0, 1 - e);
+  shock.scale.setScalar(.5 + e * 3.2 * (1 + .12 * Math.min(S.lv.axe, 6))); shock.material.opacity = Math.max(0, 1 - e);
   if (e >= 1) shock.visible = false;
+}
+// slam effects grow fancier with the weapon tier: dust → gold pillar → ice spikes → flame pillars → lightning
+const fxList = [];
+function addFx(obj, life, step) { scene.add(obj); fxList.push({ obj, life, t: 0, step }); }
+function updateFx(dt) {
+  for (let i = fxList.length - 1; i >= 0; i--) {
+    const f = fxList[i]; f.t += dt; const k = Math.min(1, f.t / f.life); f.step(f.obj, k);
+    if (k >= 1) { scene.remove(f.obj); fxList.splice(i, 1); f.obj.traverse(o => { if (o.geometry) o.geometry.dispose(); if (o.material) o.material.dispose(); }); }
+  }
+}
+const fade = (o, a) => o.traverse(m => { if (m.material) { m.material.transparent = true; m.material.opacity = a; } });
+function slamFx(x, z, R, hit) {
+  const w = weaponLook(), tier = S.lv.tuskAxe ? 7 : Math.min(S.lv.axe, 6), basic = c => new THREE.MeshBasicMaterial({ color: c, transparent: true, depthWrite: false });
+  shock.material.color.setHex(w.trail);
+  if (tier >= 3) {   // light pillar on the hero
+    const col = new THREE.Mesh(new THREE.CylinderGeometry(.9, 1.2, 7, 16, 1, true), basic(tier === 4 ? 0x9fe8ff : tier === 5 ? 0xff9a3c : tier === 6 ? 0xc89bff : 0xffe27a));
+    col.material.side = THREE.DoubleSide; col.position.set(x, 3.5, z);
+    addFx(col, .5, (o, k) => { o.scale.set(1 + k, 1, 1 + k); fade(o, .6 * (1 - k)); });
+  }
+  if (tier === 4) for (let i = 0; i < 12; i++) {   // ice spikes burst out of the ground in a ring
+    const a = i / 12 * Math.PI * 2, r = R * (.45 + (i % 2) * .4), sp = new THREE.Mesh(new THREE.ConeGeometry(.4, 2.2, 5), new THREE.MeshLambertMaterial({ color: 0xdff8ff, emissive: 0x3aa8e0 }));
+    sp.position.set(x + Math.cos(a) * r, -.8, z + Math.sin(a) * r); sp.rotation.z = rand(-.25, .25);
+    addFx(sp, .9, (o, k) => { o.position.y = k < .2 ? -1.1 + 2 * k / .2 : .9; fade(o, k < .6 ? 1 : 1 - (k - .6) / .4); });
+  }
+  if (tier === 5 || tier === 7) for (let i = 0; i < 10; i++) {   // flame (or ivory light) pillars roar up around the hero
+    const a = i / 10 * Math.PI * 2, r = R * .7, fl = new THREE.Group();
+    fl.add(new THREE.Mesh(new THREE.ConeGeometry(.6, 3, 7), basic(tier === 7 ? 0xfff3c0 : 0xff4a1a)), new THREE.Mesh(new THREE.ConeGeometry(.32, 2.2, 7), basic(tier === 7 ? 0xffffff : 0xffd36b)));
+    fl.position.set(x + Math.cos(a) * r, 1.4, z + Math.sin(a) * r);
+    addFx(fl, .75, (o, k) => { o.scale.set(1 - k * .4, .3 + Math.sin(Math.min(1, k * 1.4) * Math.PI) * 1.3, 1 - k * .4); fade(o, k < .5 ? 1 : 2 * (1 - k)); });
+    if (tier === 5) burst(fl.position.x, .5, fl.position.z, 0xff8a3c, 4, { spd: 2, up: 8, life: .7, size: 1 });
+  }
+  if (tier === 6) {   // lightning strikes every animal hit (and a few spots around)
+    const spots = hit.map(b => [b.x, b.z]); while (spots.length < 4) { const a = rand(0, 6.28); spots.push([x + Math.cos(a) * R * .8, z + Math.sin(a) * R * .8]); }
+    for (const [bx, bz] of spots) {
+      const pts = []; for (let j = 0; j <= 7; j++) pts.push(new THREE.Vector3(bx + (j && j < 7 ? rand(-.5, .5) : 0), 9 - j * 9 / 7, bz + (j && j < 7 ? rand(-.5, .5) : 0)));
+      const bolt = new THREE.Group();
+      for (let j = 0; j < 7; j++) for (const [rad, col] of [[.16, 0x9a6bff], [.07, 0xffffff]]) {   // glow + white core per segment
+        const a = pts[j], b2 = pts[j + 1], len = a.distanceTo(b2), seg = new THREE.Mesh(new THREE.CylinderGeometry(rad, rad, len, 5), basic(col));
+        seg.position.copy(a).add(b2).multiplyScalar(.5); seg.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), b2.clone().sub(a).normalize()); bolt.add(seg);
+      }
+      addFx(bolt, .4, (o, k) => fade(o, k < .5 ? (Math.random() < .75 ? 1 : .25) : 1 - (k - .5) * 2));
+      burst(bx, .3, bz, 0xc89bff, 8, { spd: 4, up: 4, life: .4, size: .8 });
+    }
+  }
+  if (tier <= 2) burst(x, .3, z, 0xc8b8a0, 18, { spd: 6, up: 3, life: .6, size: 1.2 });   // dust and pebbles for plain axes
+  else burst(x, .5, z, w.trail, 28, { spd: 9, up: 6, life: .7, size: 1.1 });
 }
 function powerSlam() {
   pl.combo = 0; pl.comboT = 0;
   const dmg = axeDmg() * 3, R = 3.4 + T.legend.slamR[S.lv.tuskAxe];
   shock.position.set(pl.x, .12, pl.z); shock.t = 0; shock.visible = true;
   burst(pl.x, .4, pl.z, 0xffffff, 24, { spd: 8, up: 4, life: .6, size: 1.1 });
-  let hits = 0;
+  let hits = 0; const hitList = [];
   for (const b of [...bears]) {
     const d = Math.hypot(b.x - pl.x, b.z - pl.z) || .1;
     if (d > R + (b.boss ? .8 : 0)) continue;
@@ -2287,7 +2333,9 @@ function powerSlam() {
     popText(b.x, b.big ? 4 : 2.6, b.z, `${dmg}!`, '#ff9a3c', true);
     burst(b.x, 1.3, b.z, 0xffffff, 10, { spd: 6, up: 6, life: .5 });
     if (killed) popText(b.x, 3.4, b.z, b.lootText, '#ffd36b', true);
+    hitList.push(b);
   }
+  slamFx(pl.x, pl.z, R, hitList);
   popText(pl.x, 3.4, pl.z, hits > 1 ? `💥 강타 ×${hits}` : '💥 강타!', '#ffd36b', true);
   S.hitstop = .16; shakeK(.6); play('crit'); play('kill'); buzz([30, 20, 110]);
 }
@@ -2579,7 +2627,7 @@ function frame(now) {
     updateCustomers(g); updateHelpers(g); updateServers(g); updateHunters(g); updateShots(g); updatePets(g); updateTannery(g); updateFishers(g); updateOven(g); updateTowers(g); updateAnnex(g); updateHearth3(g); updateBank(g);
   }
   const glow = .5 + .5 * Math.sin(performance.now() / 160); IMAT.pelt.emissive.setRGB(.45 * glow, .3 * glow, 0); IMAT.tusk.emissive.setRGB(.45 * glow, .42 * glow, .25 * glow);   // trophies pulse
-  updateTrees(g); updateFlyers(g); updateParts(g); updatePops(dt); updateShock(dt); updateCabins(dt); updateSnow(dt); updateHud(dt);
+  updateTrees(g); updateFlyers(g); updateParts(g); updatePops(dt); updateShock(dt); updateFx(dt); updateCabins(dt); updateSnow(dt); updateHud(dt);
   woodPile.set(S.wood); meatPile.set(S.meat); renderGrill();
   counterPile.set(S.counter.steak);
   COIN_PILES.forEach(c => { c.v.g.visible = c.show(); c.v.set(Math.min(72, Math.ceil(S[c.key] / 5))); });
@@ -2632,5 +2680,5 @@ function footprints() {
   }
   return f;
 }
-window.__winter = { payday, get clerkNpc() { return clerkNpc; }, get farmer() { return farmer; }, couriers, whPut, PLOTS, bearHurt, spawnBeast, dropPickup, pickups, footprints, spawnPup, addPet, spawnPack, applyPetLook, pups, stackAdd, pets, fishers, SHOPS, P, S, pl, stack, bears, trees, customers, pads, helpers, servers, hunters, camera, T, save, levelUp };
+window.__winter = { powerSlam, payday, get clerkNpc() { return clerkNpc; }, get farmer() { return farmer; }, couriers, whPut, PLOTS, bearHurt, spawnBeast, dropPickup, pickups, footprints, spawnPup, addPet, spawnPack, applyPetLook, pups, stackAdd, pets, fishers, SHOPS, P, S, pl, stack, bears, trees, customers, pads, helpers, servers, hunters, camera, T, save, levelUp };
 })();
