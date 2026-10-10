@@ -30,32 +30,38 @@ window.WinterRushData = {
     // hero power = axe + boots + coat + cape levels; field animals get tougher and new beasts appear
     powerHp: { bear: .6, wolf: .34, alpha: 1, boss: 2 },
     beasts: {
-      every: 25, coinsPer: 5,
+      every: 25, coinsPer: 3,
       chief:   { name: '대장 곰', power: 4,  hp: 20, hpPer: 3, dmg: 2, spd: 2.8, scale: 1.45, meat: 6,  coins: 60,  hides: 1, max: 1 },
-      saber:   { name: '검치호',  power: 7,  hp: 12, hpPer: 2, dmg: 2, spd: 4.4, scale: 1.1,  meat: 4,  coins: 50,  hides: 1, max: 2 },
-      mammoth: { name: '매머드',  power: 11, hp: 45, hpPer: 4, dmg: 3, spd: 2.2, scale: 1,    meat: 10, coins: 160, hides: 2, max: 1 },
+      saber:   { name: '검치호',  power: 7,  hp: 12, hpPer: 2, dmg: 2, spd: 4.4, scale: 1.1,  meat: 4,  coins: 50,  hides: 1, max: 2, trophy: 'pelt' },
+      mammoth: { name: '매머드',  power: 11, hp: 45, hpPer: 4, dmg: 3, spd: 2.2, scale: 1,    meat: 10, coins: 160, hides: 2, max: 1, trophy: 'tusk' },
     },
+    // legendary gear crafted from beast trophies (coins + 🐯 pelts / 🦣 tusks)
+    legend: { coatBlock: [0, .08, .16], coatHp: [0, 2, 4], axeDmg: [0, 5, 12], slamR: [0, .8, 1.6] },
+    tower: { cd: [1.2, .9, .6], dmg: [2, 4, 7], range: 11 },   // gate Lv4-6
     armor: { boots: [0, .04, .08, .12], coat: [0, .08, .16, .24] },   // chance to block a hit
     max: { tanWood: 16, wood: 40, meat: 30, grill: 18, counter: 16, hide: 20, fishCrate: 20, fishRaw: 30, ovenWood: 12, fishSmoked: 12, fishStock: 20, leather: 16, tanFuel: 8 },
   },
   UP: {
     bag:     { name: '가방',      icon: '🎒', costs: [30, 60, 120, 240], vals: [8, 12, 16, 22, 30] },
-    axe:     { name: '도끼',      icon: '🪓', costs: [40, 90, 180, 350, 600, 1000], vals: [1, 2, 3, 4, 6, 8, 11], stage: [1, 1, 1, 2, 2, 2] },
-    boots:   { name: '장화',      icon: '🥾', costs: [30, 70, 150],      vals: [5, 5.8, 6.6, 7.4] },
-    cape:    { name: '망토',      icon: '🦸', costs: [80, 200, 400, 700], vals: [5, 6, 7, 8, 9], stage: [1, 1, 2, 2] },   // max HP
-    coat:    { name: '외투',      icon: '🧥', costs: [50, 120, 250],     vals: [0, 1, 2, 3] },
-    gate:    { name: '정문 강화',  icon: '🛡️', costs: [80, 160, 300],     vals: [0, 1, 2, 3] },
+    axe:     { name: '도끼',      icon: '🪓', costs: [40, 90, 200, 450, 900, 1600], vals: [1, 2, 3, 4, 6, 8, 11], stage: [1, 1, 1, 2, 2, 2] },
+    boots:   { name: '장화',      icon: '🥾', costs: [30, 80, 200],      vals: [5, 5.8, 6.6, 7.4] },
+    cape:    { name: '망토',      icon: '🦸', costs: [100, 300, 700, 1200], vals: [5, 6, 7, 8, 9], stage: [1, 1, 2, 2] },   // max HP
+    coat:    { name: '외투',      icon: '🧥', costs: [60, 180, 400],     vals: [0, 1, 2, 3] },
+    gate:    { name: '정문 강화',  icon: '🛡️', costs: [80, 200, 450, 900, 1800, 3200], vals: [0, 1, 2, 3, 3, 3, 3], stage: [1, 1, 1, 2, 2, 2] },   // Lv4+ watchtowers
     helper:  { name: '나무꾼',    icon: '👷', costs: [100, 220, 450],    vals: [0, 1, 2, 3] },
     server:  { name: '서빙 직원',  icon: '🧑‍🍳', costs: [150, 300, 600],    vals: [0, 1, 2, 3] },
-    hunter:  { name: '사냥꾼',    icon: '🏹', costs: [200, 400, 700],    vals: [0, 1, 2, 3], stage: [1, 1, 2] },
-    cabin:   { name: '오두막',    icon: '🏠', costs: [180, 360, 600],    vals: [0, 1, 2, 3] },
+    hunter:  { name: '사냥꾼',    icon: '🏹', costs: [200, 500, 1000],    vals: [0, 1, 2, 3], stage: [1, 1, 2] },
+    cabin:   { name: '오두막',    icon: '🏠', costs: [180, 450, 900],    vals: [0, 1, 2, 3] },
     fishing: { name: '2단계 낚시터', icon: '🎣', costs: [400],            vals: [0, 1] },
-    clerk:   { name: '판매 점원',  icon: '🧑‍💼', costs: [200, 400, 700],    vals: [0, 1, 2, 3] },
-    artisan: { name: '가죽 장인',  icon: '🧵', costs: [150, 350],         vals: [0, 1, 2] },
-    fisher:  { name: '낚시꾼',    icon: '🪝', costs: [250, 500],         vals: [0, 1, 2] },
-    helper2: { name: '나무꾼 2', icon: '👷', costs: [350], vals: [0, 1], stage: [2] },
-    hunter2: { name: '사냥꾼 2', icon: '🏹', costs: [450], vals: [0, 1], stage: [2] },
-    oven:    { name: '화덕',      icon: '🔥', costs: [250, 500],         vals: [0, 1, 2], stage: [2, 2] },
-    fishClerk: { name: '생선 점원', icon: '🧑‍💼', costs: [200, 400, 700],  vals: [0, 1, 2, 3], stage: [2, 2, 2] },
+    clerk:   { name: '판매 점원',  icon: '🧑‍💼', costs: [200, 500, 1000],    vals: [0, 1, 2, 3] },
+    artisan: { name: '가죽 장인',  icon: '🧵', costs: [200, 500],         vals: [0, 1, 2] },
+    fisher:  { name: '낚시꾼',    icon: '🪝', costs: [300, 700],         vals: [0, 1, 2] },
+    helper2: { name: '나무꾼 2', icon: '👷', costs: [500], vals: [0, 1], stage: [2] },
+    hunter2: { name: '사냥꾼 2', icon: '🏹', costs: [700], vals: [0, 1], stage: [2] },
+    oven:    { name: '화덕',      icon: '🔥', costs: [300, 700],         vals: [0, 1, 2], stage: [2, 2] },
+    saberCoat: { name: '검치호 갑옷', icon: '🐯', costs: [600, 1500], mats: { pelt: [2, 4] }, vals: [0, 1, 2], stage: [2, 2] },
+    tuskAxe:   { name: '매머드 뿔 도끼', icon: '🦣', costs: [900, 2200], mats: { tusk: [1, 3] }, vals: [0, 1, 2], stage: [2, 2] },
+    statue:    { name: '명성 동상', icon: '🗿', costs: [500, 900, 1600, 2800, 5000, 9000, 16000, 30000], vals: [0, 6, 12, 18, 24, 30, 36, 42, 48], stage: [2, 2, 2, 2, 2, 2, 2, 2] },   // +% to every sale
+    fishClerk: { name: '생선 점원', icon: '🧑‍💼', costs: [200, 500, 1000],  vals: [0, 1, 2, 3], stage: [2, 2, 2] },
   },
 };

@@ -7,7 +7,7 @@ const rand = (a, b) => a + Math.random() * (b - a);
 const { T, UP } = window.WinterRushData;
 
 const S = {
-  coins: 0, coinPile: 0, coinFish: 0, coinLeather: 0, tanWood: 0, wood: 0, meat: 0, hide: 0, fishCrate: 0, fishRaw: 0, ovenWood: 0, fishSmoked: 0, fishStock: 0, smokeFuel: 0, smokeT: 0, tanFuel: 0, leather: 0, stage: 1, tanT: 0, petCount: 0, petHits: 0, grillItems: [], counter: { steak: 0 },
+  coins: 0, mats: { pelt: 0, tusk: 0 }, coinPile: 0, coinFish: 0, coinLeather: 0, tanWood: 0, wood: 0, meat: 0, hide: 0, fishCrate: 0, fishRaw: 0, ovenWood: 0, fishSmoked: 0, fishStock: 0, smokeFuel: 0, smokeT: 0, tanFuel: 0, leather: 0, stage: 1, tanT: 0, petCount: 0, petHits: 0, grillItems: [], counter: { steak: 0 },
   fuel: 0, cookT: 0, warmth: 55, hp: 5, maxHp: 5, stun: 0, hurtCd: 0, hitstop: 0,
   lv: Object.fromEntries(Object.keys(UP).map(k => [k, 0])),
   phase: 'calm', phaseT: T.firstCalm, stormK: 0, storms: 0, stormFireOut: false,
@@ -18,11 +18,17 @@ const S = {
 const val = k => UP[k].vals[S.lv[k]];
 const bagCap = () => val('bag') + 4 * pets.length;
 const hidesOn = () => S.lv.hunter >= 3;
-const heroLv = () => S.lv.axe + S.lv.boots + S.lv.coat + S.lv.cape;   // drives how tough the wild animals get
+const heroLv = () => S.lv.axe + S.lv.boots + S.lv.coat + S.lv.cape + S.lv.saberCoat + S.lv.tuskAxe;
+const axeDmg = () => val('axe') + T.legend.axeDmg[S.lv.tuskAxe];
+const maxHpOf = () => val('cape') + T.legend.coatHp[S.lv.saberCoat];
+const towerLv = () => Math.max(0, S.lv.gate - 3);
+const MAT_ICON = { pelt: '🐯', tusk: '🦣' }, MAT_NAME = { pelt: '검치호 가죽', tusk: '매머드 뿔' };
+const matsNeed = (k, lv = S.lv[k]) => Object.entries(UP[k].mats || {}).map(([m, a]) => [m, a[lv]]).filter(([, n]) => n);
+const matsOk = k => matsNeed(k).every(([m, n]) => S.mats[m] >= n);   // drives how tough the wild animals get
 const ovenCap = () => T.ovenCap[S.lv.oven];
 const ST = T.staff;
 const raidSize = gate => Math.max(0, 1 + Math.floor((S.storms + 1) / 2) - gate);
-const blockChance = (db = 0, dc = 0) => T.armor.boots[S.lv.boots + db] + T.armor.coat[S.lv.coat + dc];
+const blockChance = (db = 0, dc = 0, dl = 0) => T.armor.boots[S.lv.boots + db] + T.armor.coat[S.lv.coat + dc] + T.legend.coatBlock[S.lv.saberCoat + dl];
 const pct = v => `${Math.round(v * 100)}%`;
 const DESC = {
   bag: (a, b) => `용량 ${a} → ${b}`,
@@ -30,7 +36,10 @@ const DESC = {
   boots: (a, b) => `이동 속도 ${a} → ${b}, 막기 ${pct(blockChance())} → ${pct(blockChance(1, 0))}`,
   cape: (a, b) => `최대 체력 ${a} → ${b}`,
   coat: () => `막기 확률 ${pct(blockChance())} → ${pct(blockChance(0, 1))}`,
-  gate: (a, b) => `다음 눈보라 습격 곰 ${raidSize(a)} → ${raidSize(b)}마리`,
+  gate: (a, b) => S.lv.gate >= 3 ? `감시탑 Lv${b - 3}: 화살 피해 ${T.tower.dmg[S.lv.gate - 3]}, ${T.tower.cd[S.lv.gate - 3]}초마다 정문 밖 동물 사격` : `다음 눈보라 습격 곰 ${raidSize(a)} → ${raidSize(b)}마리`,
+  saberCoat: () => `막기 ${pct(blockChance())} → ${pct(blockChance(0, 0, 1))}, 최대 체력 +${T.legend.coatHp[S.lv.saberCoat + 1]}`,
+  tuskAxe: () => `공격력 ${axeDmg()} → ${val('axe') + T.legend.axeDmg[S.lv.tuskAxe + 1]}, 강타 범위 ↑`,
+  statue: (a, b) => `모든 판매 가격 +${a}% → +${b}%`,
   helper: (a, b) => a ? `나무꾼 숙련 Lv${b}: 장작 ${ST.helperCarry[a]} → ${ST.helperCarry[b]}개씩, 더 빠르게` : `나무꾼 고용 (장작 ${ST.helperCarry[1]}개씩 자동 운반)`,
   server: (a, b) => a ? `서빙 숙련 Lv${b}: 한 번에 ${ST.serverCarry[a]} → ${ST.serverCarry[b]}개, 더 빠르게` : `서빙 직원 고용 (그릴 → 카운터)`,
   hunter: (a, b) => a ? `사냥꾼 숙련 Lv${b}: 공격력 ${ST.hunterDmg[a]} → ${ST.hunterDmg[b]}` + (b === 3 ? ', 가죽도 수집 → 가죽 공방 개방' : '') : `사냥꾼 고용 (곰 자동 사냥)`,
@@ -44,7 +53,7 @@ const DESC = {
   fishClerk: (a, b) => a ? `생선 점원 숙련 Lv${b}: 동시 손님 ${ST.clerkSlots[a]} → ${ST.clerkSlots[b]}명` : `생선 가게 점원 고용 (판매 속도 ↑)`,
   fisher: (a, b) => a ? `낚시꾼 숙련 Lv${b}: 더 빨리, ${ST.fisherCarry[b]}마리씩` : `낚시꾼 고용 (생선 상자에 자동 공급)`,
 };
-const descOf = k => { const u = UP[k], l = S.lv[k]; return l >= u.costs.length ? `${u.icon} ${u.name} 최대 레벨` : `${u.icon} ${u.name}: ${DESC[k](u.vals[l], u.vals[l + 1])}`; };
+const descOf = k => { const u = UP[k], l = S.lv[k]; if (l >= u.costs.length) return `${u.icon} ${u.name} 최대 레벨`; const need = matsNeed(k).map(([m, n]) => `${MAT_ICON[m]} ${MAT_NAME[m]} ${n}개 필요(보유 ${S.mats[m]})`).join(' '); return `${u.icon} ${u.name}: ${DESC[k](u.vals[l], u.vals[l + 1])}` + (need ? ` · ${need}` : ''); };
 function tick(key, every, dt) {
   const t = (S.timers[key] = (S.timers[key] ?? every) + dt);
   if (t >= every) { S.timers[key] = t - every; return true; }
@@ -130,10 +139,12 @@ const GEO = {
   fish: new THREE.SphereGeometry(.28, 8, 6).scale(1.4, .45, .6),
   hide: new THREE.BoxGeometry(.62, .1, .48),
   leather: new THREE.BoxGeometry(.5, .22, .4),
+  pelt: new THREE.BoxGeometry(.8, .1, .6),
+  tusk: new THREE.CylinderGeometry(.09, .05, .9, 6).rotateZ(1.2),
 };
 GEO.sfish = GEO.fish;
-const IMAT = { log: mat(0xc8773a), meat: mat(0xef7b7b), steak: mat(0x8b3a1f), coin: mat(0xf5c542, { emissive: 0x4a3000 }), fish: mat(0x9fb6c8), hide: mat(0x8a5a3a), leather: mat(0x6b3a1e), sfish: mat(0xb5793a) };
-const ITEM_H = { log: .4, meat: .27, steak: .15, coin: .07, fish: .2, hide: .1, leather: .22, sfish: .2 };
+const IMAT = { log: mat(0xc8773a), meat: mat(0xef7b7b), steak: mat(0x8b3a1f), coin: mat(0xf5c542, { emissive: 0x4a3000 }), fish: mat(0x9fb6c8), hide: mat(0x8a5a3a), leather: mat(0x6b3a1e), sfish: mat(0xb5793a), pelt: mat(0xe0a050, { emissive: 0x332200 }), tusk: mat(0xf4efe2, { emissive: 0x333322 }) };
+const ITEM_H = { log: .4, meat: .27, steak: .15, coin: .07, fish: .2, hide: .1, leather: .22, sfish: .2, pelt: .1, tusk: .2 };
 const itemMesh = type => mesh(GEO[type], IMAT[type]);
 
 // fixed-size visual pile for a counter value
@@ -311,7 +322,7 @@ for (const s of [-1, 1]) {
   gateGroup.add(mesh(new THREE.BoxGeometry(.27, .9, .25), mat(0x4aa3e0), s * 2.0, .65, 6.9));
 }
 function drawGateSpikes() {
-  for (let i = 0; i < S.lv.gate; i++) for (const s of [-1, 1]) {
+  for (let i = 0; i < Math.min(3, S.lv.gate); i++) for (const s of [-1, 1]) {
     const sp = mesh(new THREE.ConeGeometry(.14, .9, 6), mat(0x8a8f99), s * (2.6 + i * .5), .9, 6.45);
     sp.rotation.x = .7; gateGroup.add(sp);
   }
@@ -587,7 +598,9 @@ function drawPad(p) {
     c.font = `70px ${FONT}`; c.fillText(u.icon, w / 2, 80);
     c.font = `${u.name.length > 4 ? 30 : 36}px ${FONT}`; c.fillText(`${u.name} ${maxed ? 'MAX' : 'Lv' + (lv + 1)}`, w / 2, 150);
     c.font = `40px ${FONT}`; c.fillStyle = '#ffd36b';
-    c.fillText(maxed ? '완료' : `🪙 ${cost - p.paid}`, w / 2, 202);
+    const mn = maxed ? [] : matsNeed(p.key);
+    if (mn.length) { c.font = `32px ${FONT}`; c.fillText(`🪙 ${cost - p.paid}`, w / 2, 196); c.fillStyle = '#ffffff'; c.fillText(mn.map(([m, n]) => `${MAT_ICON[m]}×${n}`).join(' '), w / 2, 232); }
+    else c.fillText(maxed ? '완료' : `🪙 ${cost - p.paid}`, w / 2, 202);
   });
 }
 // pads sit next to what they upgrade and appear one by one
@@ -598,12 +611,16 @@ makePad('gate', 2.4, 4.2); makePad('hunter', -2.4, 4.2); makePad('hunter2', -4.5
 makePad('server', 2.4, -.2); makePad('cabin', 6.6, -.2); makePad('fishing', 2.4, 2);
 makePad('clerk', 4.5, -.2); makePad('artisan', 6.6, 4.2); makePad('fisher', 4.5, 4.2); makePad('fishClerk', 6.6, 2); makePad('oven', 4.5, 2);
 makePad('coat', -2.4, 2); makePad('cape', -6.6, 4.2);
+makePad('saberCoat', -6.6, -7.8); makePad('tuskAxe', -4.5, -7.8); makePad('statue', -2.4, -7.8);   // legend row, north-west
 const PAD_POS2 = {};   // pads that move when the village grows
 const REVEAL = {
   bag: () => true, axe: () => true,
   boots: () => S.bought >= 1,
   coat: () => S.bought >= 2,
   cape: () => S.bought >= 3,
+  saberCoat: () => S.mats.pelt > 0 || S.lv.saberCoat > 0,
+  tuskAxe: () => S.mats.tusk > 0 || S.lv.tuskAxe > 0,
+  statue: () => S.stage >= 2,
   helper: () => S.stat.sold >= 5,
   gate: () => S.storms >= 1 || S.phase !== 'calm',
   server: () => S.stat.sold >= 10,
@@ -630,7 +647,7 @@ function updatePads(dt) {
     if (!p.on) continue;
     if (p.m.scale.x < 1) p.m.scale.setScalar(Math.min(1, p.m.scale.x + dt * 2.5));
     const u = UP[p.key], lv = S.lv[p.key], maxed = lv >= u.costs.length;
-    if (!maxed) p.m.material.opacity = S.coins >= u.costs[lv] - p.paid ? 1 : .5;
+    if (!maxed) p.m.material.opacity = S.coins >= u.costs[lv] - p.paid && matsOk(p.key) ? 1 : .5;
   }
 }
 
@@ -723,11 +740,16 @@ const AXE_LOOKS = [
   { head: 0xff6a2a, glow: 0xaa2a00, size: 1.6, trail: 0xff8a3c },
   { head: 0xc07bff, glow: 0x5a1fa0, size: 1.8, trail: 0xd9a6ff },
 ];
-const axeLook = () => AXE_LOOKS[Math.min(S.lv.axe, AXE_LOOKS.length - 1)];
+const axeLook = () => S.lv.tuskAxe ? { head: 0xf4efe2, glow: 0x665533, size: 2, trail: 0xfff3c0 } : AXE_LOOKS[Math.min(S.lv.axe, AXE_LOOKS.length - 1)];
 function applyGear() {
   const ax = axeLook();
   axeHead.material.color.setHex(ax.head); axeHead.scale.set(1, ax.size, ax.size); axe.scale.setScalar(1 + (ax.size - 1) * .4);
   swoosh.material.color.setHex(ax.trail);
+  if (S.lv.tuskAxe) { axeHead.material.color.setHex(0xf4efe2); axeHead.scale.set(1, 2 + .3 * S.lv.tuskAxe, 2 + .3 * S.lv.tuskAxe); axe.scale.setScalar(1.4 + .1 * S.lv.tuskAxe); swoosh.material.color.setHex(0xfff3c0); }
+  if (S.lv.saberCoat) {
+    gearM.coat.visible = true; gearM.coat.material.color.setHex(S.lv.saberCoat >= 2 ? 0xf0c080 : 0xe0a050);
+    gearM.trim.forEach(m => { m.visible = true; m.material.color.setHex(0x6b3a1a); }); gearM.pads.forEach(m => (m.visible = true));
+  }
   const cc = CAPE_COLORS[S.lv.cape];
   capeG.visible = !!cc; if (cc) cape.material.color.setHex(cc);
   capeG.scale.y = 1 + .1 * S.lv.cape; capeTrim.visible = S.lv.cape >= 3;
@@ -930,6 +952,38 @@ function shoot(h, b) {
   const m = new THREE.Mesh(arrowGeo, mat(0x5a3a28)); scene.add(m);
   shots.push({ m, h, b, from: V(h.x, 1.1, h.z), t: 0 });
 }
+// watchtowers beside the gate (gate Lv4-6) shoot animals outside the fence
+const TOWERS = [V(-3.4, 0, 7.2), V(3.4, 0, 7.2)].map(at => {
+  const g = new THREE.Group(); g.position.copy(at); g.visible = false; scene.add(g);
+  for (const [x, z] of [[-.4, -.4], [.4, -.4], [-.4, .4], [.4, .4]]) g.add(mesh(new THREE.CylinderGeometry(.08, .1, 2.6, 6), mat(0x6b4426), x, 1.3, z));
+  g.add(mesh(new THREE.BoxGeometry(1.2, .15, 1.2), mat(0x8a5a3a), 0, 2.6, 0));
+  g.add(mesh(new THREE.ConeGeometry(.95, .7, 4).rotateY(Math.PI / 4), mat(0x8a2b2b), 0, 3.4, 0));
+  return { at, g, cd: 0 };
+});
+function updateTowers(dt) {
+  const lv = towerLv();
+  for (const t of TOWERS) {
+    t.g.visible = lv > 0; if (!lv) continue;
+    if ((t.cd -= dt) > 0) continue;
+    let tgt = null, bd = T.tower.range;
+    for (const b of bears) { const d = Math.hypot(b.x - t.at.x, b.z - t.at.z); if (d < bd && b.z > 6.5) { bd = d; tgt = b; } }
+    if (!tgt) continue;
+    t.cd = T.tower.cd[lv - 1];
+    const m = new THREE.Mesh(arrowGeo, mat(0xffd36b)); scene.add(m);
+    shots.push({ m, h: t.at, b: tgt, from: V(t.at.x, 2.9, t.at.z), t: 0, dmg: T.tower.dmg[lv - 1] });
+  }
+}
+// fame statue (north-west): grows and turns gold as the village gets famous
+const statueG = new THREE.Group(); statueG.position.set(-.4, 0, -8.8); scene.add(statueG);
+function buildStatue() {
+  statueG.clear(); const lv = S.lv.statue; statueG.visible = lv > 0; if (!lv) return;
+  const c = lv >= 6 ? 0xffc83d : lv >= 3 ? 0xc7ccd6 : 0x9aa0aa, k = .8 + lv * .06;
+  statueG.add(mesh(new THREE.BoxGeometry(1, .4, 1), mat(0x6e6a72), 0, .2, 0));
+  const fig = new THREE.Group(); fig.scale.setScalar(k); fig.position.y = .4; statueG.add(fig);
+  fig.add(mesh(new THREE.CylinderGeometry(.28, .36, .9, 8), mat(c, lv >= 6 ? { emissive: 0x553300 } : undefined), 0, .45, 0));
+  fig.add(mesh(new THREE.SphereGeometry(.24, 10, 8), mat(c, lv >= 6 ? { emissive: 0x553300 } : undefined), 0, 1.1, 0));
+  fig.add(mesh(new THREE.BoxGeometry(.08, .9, .08), mat(c), .35, .9, 0));
+}
 function updateShots(dt) {
   for (let i = shots.length - 1; i >= 0; i--) {
     const s = shots[i], to = V(s.b.x, 1.2, s.b.z); s.t += dt * 5;
@@ -938,8 +992,8 @@ function updateShots(dt) {
     scene.remove(s.m); shots.splice(i, 1);
     if (!bears.includes(s.b)) continue;
     burst(s.b.x, 1.3, s.b.z, 0xffffff, 4, { spd: 3, up: 3, life: .35, size: .7 });
-    const dmg = ST.hunterDmg[S.lv.hunter];
-    popText(s.b.x, 2.5, s.b.z, `${dmg}`, '#c9f29b');
+    const dmg = s.dmg || ST.hunterDmg[S.lv.hunter];
+    popText(s.b.x, 2.5, s.b.z, `${dmg}`, s.dmg ? '#ffd36b' : '#c9f29b');
     if (bearHurt(s.b, dmg, s.h)) burst(s.b.x, 1, s.b.z, 0xffffff, 10, { spd: 5, up: 6, life: .6 });
   }
 }
@@ -1071,7 +1125,7 @@ function updateCustomers(dt) {
       c.g.rotation.y = sh.face; c.wait += dt;
       if (c.wait > 30 && !sh.stock()) { c.state = 'leave'; drawBubble(c); toast('😠 기다리다 지친 손님이 떠났어요'); return; }
       if (sh.stock() > 0 && tick('serve' + key + i, ST.clerkIv[ck], dt)) {
-        sh.take(); c.need--; c.wait = 0; S[sh.coin] += T.price[sh.item]; S.stat[sh.stat]++;
+        sh.take(); c.need--; c.wait = 0; S[sh.coin] += Math.round(T.price[sh.item] * (1 + val('statue') / 100)); S.stat[sh.stat]++;
         fly(sh.item, V(sh.at.x, 1, sh.at.z), V(c.x, 1.2, c.z), .25);
         if (c.need <= 0) { c.state = 'leave'; S.served++; }
         drawBubble(c);
@@ -1350,6 +1404,7 @@ function bearHurt(b, dmg, src = pl) {
     for (let i = 0; i < meat; i++) dropPickup('meat', b.x + rand(-1.2, 1.2), b.z + rand(-1.2, 1.2));
     for (let i = 0; i < hides; i++) dropPickup('hide', b.x + rand(-1, 1), b.z + rand(-1, 1));
   }
+  if (B && B.trophy) { if (src !== pl && src.carry) { S.mats[B.trophy]++; toast(`${MAT_ICON[B.trophy]} 사냥꾼이 ${MAT_NAME[B.trophy]}을(를) 챙겼어요`); } else dropPickup(B.trophy, b.x, b.z); }
   if (B) { const c = B.coins + T.beasts.coinsPer * heroLv(); S.coinPile += c; S.stat.beasts = (S.stat.beasts || 0) + 1; toast(`⚔ ${B.name} 처치! 보너스 🪙${c}`); return true; }
   if (b.boss) { S.stat.boss++; S.coinPile += 300; toast('👑 보스 곰 처치! 보너스 🪙300'); return true; }
   if (b.wolf) return true;
@@ -1643,13 +1698,17 @@ function updatePlayer(dt) {
   for (let i = pickups.length - 1; i >= 0; i--) {
     const p = pickups[i];
     p.t += dt; p.m.position.y = .3 + Math.sin(p.t * 4) * .08; p.m.rotation.y += dt * 2;
+    if (MAT_ICON[p.type] && Math.hypot(p.x - pl.x, p.z - pl.z) < 1.4) {   // trophies go straight to the materials pouch
+      scene.remove(p.m); pickups.splice(i, 1); S.mats[p.type]++; play('up');
+      popText(pl.x, 2.8, pl.z, `${MAT_ICON[p.type]} ${MAT_NAME[p.type]} +1`, '#ffd36b', true); continue;
+    }
     if (Math.hypot(p.x - pl.x, p.z - pl.z) < 1.4 && pl.stunFree && stackAdd(p.type)) { scene.remove(p.m); pickups.splice(i, 1); play('pop', 40); if (p.type === 'hide') S.stat.hides++; }
   }
   for (const p of pads) {
     if (!p.on) continue;
     const u = UP[p.key], lv = S.lv[p.key];
     if (p.lock) { if (!near(p, 1.3)) p.lock = false; continue; }
-    if (padHidden(p) || !near(p, 1.0) || S.coins <= 0 || pl.moving) { p.dwell = 0; continue; }
+    if (padHidden(p) || !near(p, 1.0) || S.coins <= 0 || pl.moving || !matsOk(p.key)) { p.dwell = 0; continue; }
     if ((p.dwell = (p.dwell || 0) + dt) < T.padDwell) continue;
     if (!tick('pad', .03, dt)) continue;
     const cost = u.costs[lv], k = Math.min(S.coins, cost - p.paid, Math.max(1, Math.ceil(cost / 25)));
@@ -1694,7 +1753,7 @@ function updateShock(dt) {
 }
 function powerSlam() {
   pl.combo = 0; pl.comboT = 0;
-  const dmg = val('axe') * 3, R = 3.4;
+  const dmg = axeDmg() * 3, R = 3.4 + T.legend.slamR[S.lv.tuskAxe];
   shock.position.set(pl.x, .12, pl.z); shock.t = 0; shock.visible = true;
   burst(pl.x, .4, pl.z, 0xffffff, 24, { spd: 8, up: 4, life: .6, size: 1.1 });
   let hits = 0;
@@ -1717,7 +1776,7 @@ function playerHit(b, manual) {
     if (pl.combo >= 2) popText(pl.x - .6, 2.4, pl.z, pl.combo % T.combat.slamEvery === T.combat.slamEvery - 1 ? '⚡ 강타 준비' : `${pl.combo} 콤보`, '#ffb347');
   }
   const crit = manual && Math.random() < T.combat.critChance;
-  const dmg = val('axe') * (crit ? 2 : 1), by = b.big ? 4 : 2.6;
+  const dmg = axeDmg() * (crit ? 2 : 1), by = b.big ? 4 : 2.6;
   const killed = bearHurt(b, dmg, pl);
   popText(b.x, by, b.z, crit ? `${dmg}!` : `${dmg}`, crit ? '#ffd36b' : '#ffffff', crit);
   const ax = axeLook();
@@ -1737,6 +1796,7 @@ function playerHit(b, manual) {
   }
 }
 function levelUp(key) {
+  for (const [m, n] of matsNeed(key)) S.mats[m] -= n;
   S.lv[key]++; S.bought++;
   const u = UP[key];
   if (key === 'helper' || key === 'helper2') addHelper();
@@ -1749,15 +1809,16 @@ function levelUp(key) {
   if (key === 'clerk' || key === 'fishClerk') syncClerks();
   if (key === 'artisan') addArtisan();
   if (key === 'fisher') addFisher();
-  if (key === 'cape') { S.maxHp = val('cape'); S.hp = S.maxHp; }
-  if (key === 'boots' || key === 'coat' || key === 'cape' || key === 'axe') {
+  if (key === 'cape' || key === 'saberCoat') { S.maxHp = maxHpOf(); S.hp = S.maxHp; }
+  if (key === 'statue') buildStatue();
+  if (['boots', 'coat', 'cape', 'axe', 'saberCoat', 'tuskAxe'].includes(key)) {
     const p = heroLv(), nb = Object.entries(T.beasts).find(([, B]) => B.power === p);
     if (nb) setTimeout(() => toast(`⚔ 영웅 Lv${p}! 이제 ${nb[1].name}이(가) 나타나요`), 2400);
  applyGear(); burst(pl.x, 1, pl.z, 0xffd36b, 16, { spd: 3, up: 5, life: .7 });
   }
   const pad = pads.find(p => p.key === key);
   burst(pad.x, .5, pad.z, 0xffc83d, 14, { spd: 4, up: 7, life: .8 }); play('up'); buzz([20, 40, 20]);
-  const msg = { bag: `가방 용량 ${bagCap()}`, axe: `도끼 Lv${S.lv.axe + 1}: 공격력 ${val('axe')}`, cape: `최대 체력 ${val('cape')}`, boots: `이동 속도 ↑ · 막기 ${pct(blockChance())}`, coat: `외투 Lv${S.lv.coat}: 막기 ${pct(blockChance())}`, gate: `습격 곰 −${val('gate')}마리`, helper: `나무꾼 Lv${S.lv.helper}: 장작 ${ST.helperCarry[S.lv.helper]}개씩`, server: `서빙 직원 Lv${S.lv.server}: 한 번에 ${ST.serverCarry[S.lv.server]}개`, hunter: `사냥꾼 Lv${S.lv.hunter}: 공격력 ${ST.hunterDmg[S.lv.hunter]}`, cabin: `손님이 더 많이, 더 자주 옵니다`, fishing: `2단계 확장!`, clerk: `판매 점원 Lv${S.lv.clerk}: 손님 ${ST.clerkSlots[S.lv.clerk]}명 동시 응대`, artisan: S.lv.artisan === 1 ? `가죽 공방 가동! 가죽 제품을 팔아요` : `가죽 제품을 더 빨리 만들어요`, fisher: `낚시꾼 Lv${S.lv.fisher}: 생선 상자를 채웁니다`, fishClerk: `생선 점원 Lv${S.lv.fishClerk}: 손님 ${ST.clerkSlots[S.lv.fishClerk]}명 동시 응대`, helper2: `두 번째 나무꾼이 일을 시작합니다`, oven: `생선을 ${T.ovenTime[S.lv.oven]}초마다 굽고, 위에 ${ovenCap()}마리까지 올려요`, hunter2: `두 번째 사냥꾼이 사냥을 나갑니다` }[key];
+  const msg = { bag: `가방 용량 ${bagCap()}`, axe: `도끼 Lv${S.lv.axe + 1}: 공격력 ${val('axe')}`, cape: `최대 체력 ${S.maxHp}`, saberCoat: `검치호 갑옷 Lv${S.lv.saberCoat}: 막기 ${pct(blockChance())}, 체력 ${S.maxHp}`, tuskAxe: `매머드 뿔 도끼 Lv${S.lv.tuskAxe}: 공격력 ${axeDmg()}`, statue: `명성 +${val('statue')}%: 모든 판매가 상승`, boots: `이동 속도 ↑ · 막기 ${pct(blockChance())}`, coat: `외투 Lv${S.lv.coat}: 막기 ${pct(blockChance())}`, gate: S.lv.gate > 3 ? `감시탑 Lv${towerLv()} 가동!` : `습격 곰 −${val('gate')}마리`, helper: `나무꾼 Lv${S.lv.helper}: 장작 ${ST.helperCarry[S.lv.helper]}개씩`, server: `서빙 직원 Lv${S.lv.server}: 한 번에 ${ST.serverCarry[S.lv.server]}개`, hunter: `사냥꾼 Lv${S.lv.hunter}: 공격력 ${ST.hunterDmg[S.lv.hunter]}`, cabin: `손님이 더 많이, 더 자주 옵니다`, fishing: `2단계 확장!`, clerk: `판매 점원 Lv${S.lv.clerk}: 손님 ${ST.clerkSlots[S.lv.clerk]}명 동시 응대`, artisan: S.lv.artisan === 1 ? `가죽 공방 가동! 가죽 제품을 팔아요` : `가죽 제품을 더 빨리 만들어요`, fisher: `낚시꾼 Lv${S.lv.fisher}: 생선 상자를 채웁니다`, fishClerk: `생선 점원 Lv${S.lv.fishClerk}: 손님 ${ST.clerkSlots[S.lv.fishClerk]}명 동시 응대`, helper2: `두 번째 나무꾼이 일을 시작합니다`, oven: `생선을 ${T.ovenTime[S.lv.oven]}초마다 굽고, 위에 ${ovenCap()}마리까지 올려요`, hunter2: `두 번째 사냥꾼이 사냥을 나갑니다` }[key];
   if (key !== 'fishing') toast(`${u.icon} ${u.name} 업그레이드! ${msg}`);
 }
 
@@ -1867,7 +1928,7 @@ function updateHud(dt) {
   setText(stormEl, S.phase === 'calm' ? `❄ 다음 눈보라 ${Math.floor(t / 60)}:${String(t % 60).padStart(2, '0')}` : S.phase === 'warn' ? `⚠ 눈보라 접근 ${t}` : `🌨 눈보라 ${t}초`);
   warmFill.style.width = S.warmth.toFixed(0) + '%';
   warmEl.classList.toggle('cold', S.warmth < 35);
-  setText(bagEl, `🎒 ${stack.length} / ${bagCap()}`);
+  setText(bagEl, `🎒 ${stack.length} / ${bagCap()}` + (S.mats.pelt || S.mats.tusk ? ` · 🐯${S.mats.pelt} 🦣${S.mats.tusk}` : ''));
   while (TUT[S.tut] && TUT[S.tut].done()) S.tut++;
   const cur = TUT[S.tut];
   let obj = cur ? cur.text : '';
@@ -1914,7 +1975,7 @@ const SAVE_KEY = 'winter-rush-v1';
 function save() {
   try {
     const counter = { ...S.counter };
-    const keys = ['coins', 'coinPile', 'coinFish', 'coinLeather', 'tanWood', 'wood', 'meat', 'fuel', 'warmth', 'grillItems', 'lv', 'storms', 'stat', 'goal', 'tut', 'woodIn', 'meatIn', 'steakIn', 'served', 'bought', 'hide', 'fishCrate', 'fishRaw', 'ovenWood', 'fishSmoked', 'fishStock', 'smokeFuel', 'tanFuel', 'leather', 'stage', 'petCount', 'petHits', 'packs', 'tanT', 'hp', 'phase', 'phaseT', 'stormFireOut'];
+    const keys = ['coins', 'mats', 'coinPile', 'coinFish', 'coinLeather', 'tanWood', 'wood', 'meat', 'fuel', 'warmth', 'grillItems', 'lv', 'storms', 'stat', 'goal', 'tut', 'woodIn', 'meatIn', 'steakIn', 'served', 'bought', 'hide', 'fishCrate', 'fishRaw', 'ovenWood', 'fishSmoked', 'fishStock', 'smokeFuel', 'tanFuel', 'leather', 'stage', 'petCount', 'petHits', 'packs', 'tanT', 'hp', 'phase', 'phaseT', 'stormFireOut'];
     const data = Object.fromEntries(keys.map(k => [k, S[k]]));
     data.counter = counter; data.paid = pads.map(p => p.paid);
     data.player = { x: pl.x, z: pl.z };
@@ -1928,7 +1989,7 @@ function load() {
   try { d = JSON.parse(localStorage.getItem(SAVE_KEY) || 'null'); } catch (e) {}
   if (!d) return false;
   const { paid, lv, stat, counter, player: savedPlayer, stackTypes, raiders, ...rest } = d;
-  Object.assign(S, rest); Object.assign(S.lv, lv || {}); Object.assign(S.stat, stat || {}); Object.assign(S.counter, counter || {});
+  Object.assign(S, rest); S.mats = Object.assign({ pelt: 0, tusk: 0 }, S.mats); Object.assign(S.lv, lv || {}); Object.assign(S.stat, stat || {}); Object.assign(S.counter, counter || {});
   (paid || []).forEach((v, i) => { if (pads[i]) pads[i].paid = v; });
   for (let i = 0; i < val('helper'); i++) addHelper();
   for (let i = 0; i < val('server'); i++) addServer();
@@ -1946,7 +2007,7 @@ function load() {
     b.x = saved.x; b.z = saved.z; b.hp = saved.hp;
     bears.push(b);
   }
-  S.maxHp = val('cape'); S.hp = Math.min(S.hp, S.maxHp);
+  S.maxHp = maxHpOf(); S.hp = Math.min(S.hp, S.maxHp); buildStatue();
   if (S.lv.fishing) S.stage = 2;
   drawGateSpikes(); applyStage(false); pads.forEach(drawPad);
   return true;
@@ -1962,7 +2023,7 @@ function frame(now) {
   if (S.hitstop > 0) { S.hitstop -= dt; g = dt * .08; }
   if (S.started) {
     updatePhase(g); updatePlayer(g); updateFire(g); updateBears(g);
-    updateCustomers(g); updateHelpers(g); updateServers(g); updateHunters(g); updateShots(g); updatePets(g); updateTannery(g); updateFishers(g); updateOven(g);
+    updateCustomers(g); updateHelpers(g); updateServers(g); updateHunters(g); updateShots(g); updatePets(g); updateTannery(g); updateFishers(g); updateOven(g); updateTowers(g);
   }
   updateTrees(g); updateFlyers(g); updateParts(g); updatePops(dt); updateShock(dt); updateCabins(dt); updateSnow(dt); updateHud(dt);
   woodPile.set(S.wood); meatPile.set(S.meat); renderGrill();
@@ -2002,6 +2063,7 @@ function footprints() {
   f.push(box('fire', P.fire.x, P.fire.z, two ? 2.6 : 2.2, two ? 2.6 : 2.2), ['grill', grillBox.x1, grillBox.x2, grillBox.z1, grillBox.z2], ['counter', counterBox.x1, counterBox.x2, counterBox.z1, counterBox.z2]);
   f.push(box('counterStand', P.counterStand.x, P.counterStand.z, 1.2, 1.2), box('coinPile', P.coinPile.x, P.coinPile.z, 1.3, 1.3));
   if (S.lv.clerk) f.push(box('clerk', 6.6, -8.7, .8, .8));
+  f.push(box('statue', -.4, -8.8, 1, 1));
   if (two) f.push(box('fishClerk', 9.6, -8.8, .8, .8), box('artisanSpot', TAN.home.x, TAN.home.z, .8, .8));
   if (two) {
     f.push(box('fishShop', P.fishShop.x, P.fishShop.z, 2.6, 1.1), box('oven', P.oven.x, P.oven.z - .3, 1.4, 1.85), box('ovenWood', P.ovenWood.x, P.ovenWood.z, 1.9, 1.9), box('fishCrate', P.fishCrate.x, P.fishCrate.z, 1.9, 1.9));
