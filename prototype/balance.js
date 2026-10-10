@@ -2,7 +2,7 @@ window.WinterRushData = {
   T: {
     logFuel: 8,
     cook: { steak: 2.5 }, burn: 35,
-    price: { steak: 10, sfish: 18, leather: 25, hide: 4 },
+    price: { steak: 10, sfish: 18, leather: 25, hide: 4, pizza: 40 },
     burnGrow: .15, burnMax: 2.2,   // fire burns faster each blizzard survived (×1 → ×2.2)
     smoke: { time: 3.5, fishPerLog: 1, stormUse: 1.5 },   // oven: 1 log per fish, 1.5 logs in a blizzard
     ovenTime: [3.5, 2.6, 1.8], ovenCap: [18, 24, 30],   // fish oven level: seconds per fish, fish stacked on top
@@ -15,7 +15,9 @@ window.WinterRushData = {
       serverCarry: [0, 6, 10, 14], serverSpeed: [0, 3.6, 4.4, 5.2], serverIv: [0, .15, .1, .06],
       hunterDmg: [0, 2, 3, 4], hunterCd: [0, .7, .55, .4],
       clerkSlots: [1, 2, 2, 3], clerkIv: [.35, .28, .2, .14],
-      fisherCatch: [0, 3.2, 2.4], fisherCarry: [0, 6, 10],
+      hunterCarry: [0, 6, 9, 12], hunterHides: [0, 4, 6, 8],   // meat / hides a hunter carries home by level
+    farmerCarry: [0, 4, 8], farmerSpeed: [0, 3.4, 4.2], pizzaChefCarry: [0, 4, 8], pizzaChefSpeed: [0, 3.6, 4.4],
+    fisherCatch: [0, 2.6, 1.9], fisherCarry: [0, 6, 10],
     },
     combat: { autoInterval: .75, manualSwing: .24, comboWindow: 1.6, critChance: .15, slamEvery: 4, tapRange: 2.7 },
     alpha: { every: 3, hp: 12, meat: 4, coins: 80, pupChance: .6 },   // every 3rd wolf pack (from the 2nd blizzard) brings an alpha
@@ -38,8 +40,12 @@ window.WinterRushData = {
     // legendary gear crafted from beast trophies (coins + 🐯 pelts / 🦣 tusks)
     legend: { coatBlock: [0, .08, .16], coatHp: [0, 2, 4], axeDmg: [0, 5, 12], slamR: [0, .8, 1.6] },
     tower: { cd: [1.2, .9, .6], dmg: [2, 4, 7], range: 11 },   // gate Lv4-6
+    // stage 3 (큰 화로): garden → veg, veg + meat + logs → pizza, smith processes beast trophies
+    garden: { grow: 12 },          // seconds for a plot to ripen
+    pizzaTime: 3.2,                // seconds per pizza in the pizza oven (1 veg + 1 meat + 1 log)
+    smithTime: [0, 8, 4],          // seconds per trophy processed by smith level
     armor: { boots: [0, .04, .08, .12], coat: [0, .08, .16, .24] },   // chance to block a hit
-    max: { tanWood: 16, wood: 40, meat: 30, grill: 18, counter: 16, hide: 20, fishCrate: 20, fishRaw: 30, ovenWood: 12, fishSmoked: 12, fishStock: 20, leather: 16, tanFuel: 8 },
+    max: { vegCrate: 20, pzVeg: 12, pzMeat: 12, pzWood: 12, pizza: 16, forgeRaw: 10, tanWood: 16, wood: 40, meat: 30, grill: 18, counter: 16, hide: 20, fishCrate: 20, fishRaw: 30, ovenWood: 12, fishSmoked: 12, fishStock: 20, leather: 16, tanFuel: 8 },
   },
   UP: {
     bag:     { name: '가방',      icon: '🎒', costs: [30, 60, 120, 240], vals: [8, 12, 16, 22, 30] },
@@ -62,6 +68,14 @@ window.WinterRushData = {
     saberCoat: { name: '검치호 갑옷', icon: '🐯', costs: [600, 1500], mats: { pelt: [2, 4] }, vals: [0, 1, 2], stage: [2, 2] },
     tuskAxe:   { name: '매머드 뿔 도끼', icon: '🦣', costs: [900, 2200], mats: { tusk: [1, 3] }, vals: [0, 1, 2], stage: [2, 2] },
     statue:    { name: '명성 동상', icon: '🗿', costs: [500, 900, 1600, 2800, 5000, 9000, 16000, 30000], vals: [0, 6, 12, 18, 24, 30, 36, 42, 48], stage: [2, 2, 2, 2, 2, 2, 2, 2] },   // +% to every sale
+    fisher2:   { name: '낚시꾼 2', icon: '🪝', costs: [800], vals: [0, 1], stage: [2] },
+    hearth:    { name: '큰 화로', icon: '🔥', costs: [3000], vals: [0, 1], stage: [2] },   // → stage 3
+    farmer:    { name: '농부', icon: '🧑‍🌾', costs: [600, 1300], vals: [0, 1, 2], stage: [3, 3] },
+    pizzaChef: { name: '피자 요리사', icon: '👨‍🍳', costs: [800, 1600], vals: [0, 1, 2], stage: [3, 3] },
+    pizzaClerk: { name: '피자 점원', icon: '🧑‍💼', costs: [500, 1000, 1800], vals: [0, 1, 2, 3], stage: [3, 3, 3] },
+    smith:     { name: '대장장이', icon: '⚒️', costs: [700, 1500], vals: [0, 1, 2], stage: [3, 3] },
+    helper3:   { name: '나무꾼 3', icon: '👷', costs: [1200], vals: [0, 1], stage: [3] },
+    hunter3:   { name: '사냥꾼 3', icon: '🏹', costs: [1500], vals: [0, 1], stage: [3] },
     fishClerk: { name: '생선 점원', icon: '🧑‍💼', costs: [200, 500, 1000],  vals: [0, 1, 2, 3], stage: [2, 2, 2] },
   },
 };
