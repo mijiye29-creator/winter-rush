@@ -2448,6 +2448,7 @@ function save() {
     const counter = { ...S.counter };
     const keys = ['coins', 'guard', 'bank', 'strike', 'paydayT', 'wh', 'mats', 'raw', 'forgeRaw', 'plots', 'pzFish', 'pzVeg', 'pzMeat', 'pzWood', 'pzFuel', 'pzT', 'pizza', 'smithT', 'coinPizza', 'coinPile', 'coinFish', 'coinLeather', 'tanWood', 'wood', 'meat', 'fuel', 'warmth', 'grillItems', 'lv', 'storms', 'stat', 'goal', 'tut', 'woodIn', 'meatIn', 'steakIn', 'served', 'bought', 'hide', 'fishCrate', 'fishRaw', 'ovenWood', 'fishSmoked', 'fishStock', 'smokeFuel', 'tanFuel', 'leather', 'stage', 'petCount', 'petHits', 'packs', 'tanT', 'hp', 'phase', 'phaseT', 'stormFireOut'];
     const data = Object.fromEntries(keys.map(k => [k, S[k]]));
+    data.wh = { ...S.wh }; couriers.forEach(c => { if (c.n > 0 && c.item in data.wh) data.wh[c.item] += c.n; });   // cargo on a moving truck goes back to the warehouse on save
     data.counter = counter; data.paid = Object.fromEntries(pads.map(p => [p.key, p.paid]));
     data.player = { x: pl.x, z: pl.z };
     data.stackTypes = stack.map(i => i.type);
