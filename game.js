@@ -664,8 +664,8 @@ function addCourier() {
     person.add(mesh(new THREE.SphereGeometry(.3, 10, 6, 0, Math.PI * 2, 0, Math.PI / 2), mat(0x2f7fe0), 0, 1.55, -.02));   // cap
     // green flatbed hand trolley pulled behind the courier, the load rides on the deck
     walker.add(mesh(new THREE.BoxGeometry(.95, .08, 1.1), mat(0x2fa84f), 0, .32, -1.15));   // deck
-    walker.add(mesh(new THREE.BoxGeometry(.06, .7, .06), mat(0x2fa84f), -.42, .65, -.62), mesh(new THREE.BoxGeometry(.06, .7, .06), mat(0x2fa84f), .42, .65, -.62), mesh(new THREE.BoxGeometry(.9, .06, .06), mat(0x2fa84f), 0, 1.0, -.62));   // front handle frame
-    walker.add(mesh(new THREE.BoxGeometry(.06, .06, .45), mat(0x2b2f3a), .2, .75, -.4));   // pull bar to the hand
+    walker.add(mesh(new THREE.CylinderGeometry(.035, .035, .7, 8), mat(0xeee6cf, { emissive: 0x222018 }), -.42, .65, -.62), mesh(new THREE.CylinderGeometry(.035, .035, .7, 8), mat(0xeee6cf, { emissive: 0x222018 }), .42, .65, -.62), mesh(new THREE.CylinderGeometry(.035, .035, .88, 8).rotateZ(Math.PI / 2), mat(0xeee6cf, { emissive: 0x222018 }), 0, 1.0, -.62));   // ivory steel handle frame on the green deck
+    walker.add(mesh(new THREE.CylinderGeometry(.03, .03, .45, 8).rotateX(Math.PI / 2), mat(0xeee6cf, { emissive: 0x222018 }), .2, .75, -.4));   // pull bar to the hand
     for (const [x, z] of [[-.4, -.7], [.4, -.7], [-.4, -1.6], [.4, -1.6]]) walker.add(mesh(new THREE.CylinderGeometry(.11, .11, .08, 10).rotateZ(Math.PI / 2), mat(0x2b2f3a), x, .12, z));
     c.carry.position.set(0, 0, -1.15);
     c.carry.children.forEach(m => { const i = m.userData.i; m.position.set((i % 3 - 1) * .28, .4 + Math.floor(i / 3) * ITEM_H[m.userData.t], (Math.floor(i / 3) % 2) * .2 - .1); });
