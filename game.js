@@ -294,7 +294,7 @@ const P = {
   ovenWood: V(12, 0, -4.8), fishCrate: V(14.2, 0, -4.8), serverGrill: V(.3, 0, -5.4), serverWay: V(.3, 0, -7.1),
   fishCoin: V(11.4, 0, -7.2), tanCoin: V(12.3, 0, 3.4),
   pizzaOven: V(19, 0, -8.9), pizzaShop: V(21.8, 0, -8.9), pizzaIn: V(19, 0, -6.7), pizzaCoin: V(24.9, 0, -7.4),
-  wh: V(24.1, 0, 4.2), whIn: V(24.1, 0, 1.9), bank: V(24.6, 0, -3), vault: V(25.3, 0, -4.6),
+  wh: V(18, 0, 4.4), whIn: V(18, 0, 1.9), bank: V(20.9, 0, 4.2), vault: V(22.2, 0, 4.6),   // warehouse + bank side by side, bottom-left of the annex
   holes: [V(11.9, 0, -.4), V(13.4, 0, .8)],
 };
 const BOUNDS = { x1: -21, x2: 18, z1: -15, z2: 24 };
@@ -867,7 +867,7 @@ function updateBank(dt) {
       continue;
     }
     if (!walkPath(n, dt, 3.6)) continue;
-    if (n.st === 'grab') { n.cash = S[r.coin]; S[r.coin] = 0; popText(n.x, 2.4, n.z, `🪙${n.cash}`, '#ffd36b'); n.st = 'bank'; n.path = [V(16.8, 0, -1), V(P.bank.x - 1.3, 0, P.bank.z)]; }
+    if (n.st === 'grab') { n.cash = S[r.coin]; S[r.coin] = 0; popText(n.x, 2.4, n.z, `🪙${n.cash}`, '#ffd36b'); n.st = 'bank'; n.path = [V(16.8, 0, -1), V(P.bank.x, 0, P.bank.z - 1.3)]; }
     else if (n.st === 'bank') { S.bank += n.cash; fly('coin', V(n.x, 1.4, n.z), V(P.bank.x, .3, P.bank.z)); n.cash = 0; play('coin', 45); n.st = 'back'; n.path = [V(16.8, 0, -1), r.post.clone()]; }
     else { n.st = 'post'; n.g.rotation.y = r.face; }
   }
@@ -970,9 +970,9 @@ makePad('server', 2.4, -.2); makePad('cabin', 6.6, -.2); makePad('fishing', 2.4,
 makePad('clerk', 4.5, -.2); makePad('artisan', 6.6, 4.2); makePad('fisher', 4.5, 4.2); makePad('fishClerk', 6.6, 2); makePad('oven', 4.5, 2);
 makePad('coat', -2.4, 2); makePad('cape', -6.6, 4.2);
 makePad('hearth', 8.7, -.2); makePad('fisher2', 8.7, 2);   // stage 2 column east of the right block
-makePad('farmer', 17.4, -.2); makePad('pizzaChef', 17.4, 2); makePad('pizzaClerk', 21.6, -.2); makePad('smith', 8.7, -5.6); makePad('helper3', 21.6, 2); makePad('hunter3', 17.4, 4.2);   // stage 3 annex grid
-makePad('warehouse', 23.7, -.2); makePad('wall', 19.5, 4.2); makePad('bank', 23.7, -5.6); makePad('staffHouse', 21.6, 4.2);
-makePad('courier', 19.5, -.2); makePad('pizzaOven', 19.5, 2); makePad('leatherClerk', 8.7, 4.2); makePad('fire', -.3, -7.8);
+makePad('farmer', 18, -.2); makePad('pizzaChef', 24.4, -.2); makePad('pizzaClerk', 22.3, -.2); makePad('smith', 8.7, -5.6); makePad('helper3', 22.3, 2); makePad('hunter3', 24.4, 2);   // stage 3 annex grid
+makePad('warehouse', 24.4, -4.8); makePad('wall', 24.4, 4.2); makePad('bank', 20.9, 4.2); makePad('staffHouse', 24.4, -2.6);   // the bank pad becomes the bank tile
+makePad('courier', 20.2, -.2); makePad('pizzaOven', 20.2, 2); makePad('leatherClerk', 8.7, 4.2); makePad('fire', -.3, -7.8);
 makePad('saberCoat', -6.6, -7.8); makePad('tuskAxe', -4.5, -7.8); makePad('statue', -2.4, -7.8);   // legend row, north-west
 const PAD_POS2 = {};   // pads that move when the village grows
 const REVEAL = {
