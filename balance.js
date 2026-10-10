@@ -24,12 +24,14 @@ window.WinterRushData = {
     stormBurn: 3.5, stormSlow: .35,
     fieldBears: 5, maxFieldBears: 9, bearRespawn: 5, bearHp: 4, bossEvery: 4,
     wolfPackSize: 3, maxWolves: 10, wolfSpawn: 14, wolfStartSold: 8, hurtGrace: .8,
+    armor: { boots: [0, .04, .08, .12], coat: [0, .08, .16, .24] },   // chance to block a hit
     max: { wood: 40, meat: 30, grill: 18, counter: 16, hide: 20, fishCrate: 20, fishRaw: 30, ovenWood: 12, fishSmoked: 12, fishStock: 20, leather: 16, tanFuel: 8 },
   },
   UP: {
     bag:     { name: '가방',      icon: '🎒', costs: [30, 60, 120, 240], vals: [8, 12, 16, 22, 30] },
     axe:     { name: '도끼',      icon: '🪓', costs: [40, 90, 180],      vals: [1, 2, 3, 4] },
     boots:   { name: '장화',      icon: '🥾', costs: [30, 70, 150],      vals: [5, 5.8, 6.6, 7.4] },
+    coat:    { name: '외투',      icon: '🧥', costs: [50, 120, 250],     vals: [0, 1, 2, 3] },
     gate:    { name: '정문 강화',  icon: '🛡️', costs: [80, 160, 300],     vals: [0, 1, 2, 3] },
     helper:  { name: '나무꾼',    icon: '👷', costs: [100, 220, 450],    vals: [0, 1, 2, 3] },
     server:  { name: '서빙 직원',  icon: '🧑‍🍳', costs: [150, 300, 600],    vals: [0, 1, 2, 3] },

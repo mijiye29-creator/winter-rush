@@ -21,10 +21,13 @@ const hidesOn = () => S.lv.hunter >= 3;
 const ovenCap = () => T.ovenCap[S.lv.oven];
 const ST = T.staff;
 const raidSize = gate => Math.max(0, 1 + Math.floor((S.storms + 1) / 2) - gate);
+const blockChance = (db = 0, dc = 0) => T.armor.boots[S.lv.boots + db] + T.armor.coat[S.lv.coat + dc];
+const pct = v => `${Math.round(v * 100)}%`;
 const DESC = {
   bag: (a, b) => `용량 ${a} → ${b}`,
   axe: (a, b) => `공격력 ${a} → ${b}, 벌목 속도 ↑`,
-  boots: (a, b) => `이동 속도 ${a} → ${b}`,
+  boots: (a, b) => `이동 속도 ${a} → ${b}, 막기 ${pct(blockChance())} → ${pct(blockChance(1, 0))}`,
+  coat: () => `막기 확률 ${pct(blockChance())} → ${pct(blockChance(0, 1))}`,
   gate: (a, b) => `다음 눈보라 습격 곰 ${raidSize(a)} → ${raidSize(b)}마리`,
   helper: (a, b) => a ? `나무꾼 숙련 Lv${b}: 장작 ${ST.helperCarry[a]} → ${ST.helperCarry[b]}개씩, 더 빠르게` : `나무꾼 고용 (장작 ${ST.helperCarry[1]}개씩 자동 운반)`,
   server: (a, b) => a ? `서빙 숙련 Lv${b}: 한 번에 ${ST.serverCarry[a]} → ${ST.serverCarry[b]}개, 더 빠르게` : `서빙 직원 고용 (그릴 → 카운터)`,
@@ -575,15 +578,18 @@ function drawPad(p) {
   });
 }
 // pads sit next to what they upgrade and appear one by one
-makePad('bag', -3.6, 1.2); makePad('boots', -6.3, 1.3);
-makePad('axe', -6.2, -4); makePad('helper', -6, -8.2); makePad('helper2', -3.8, -8.2);
-makePad('gate', 3.6, 4.2); makePad('hunter', -3.6, 4.2); makePad('hunter2', -6.2, 4);
-makePad('server', -1, -6.6); makePad('cabin', 6.6, -4.6); makePad('fishing', 6.4, -.4);
-makePad('clerk', 2, -8.3); makePad('artisan', 10.4, 3.8); makePad('fisher', 9.4, -4.8); makePad('fishClerk', 7.4, -5.2); makePad('oven', 11.4, -6.8);
-const PAD_POS2 = { cabin: [9.4, -7.1] };   // pads that move when the village grows
+// two 3x3 blocks either side of the gate path, rows z = -.2 / 2 / 4.2 (call order = save order, append new pads at the end)
+makePad('bag', -2.4, -.2); makePad('boots', -6.6, -.2);
+makePad('axe', -4.5, -.2); makePad('helper', -4.5, 2); makePad('helper2', -6.6, 2);
+makePad('gate', 2.4, 4.2); makePad('hunter', -2.4, 4.2); makePad('hunter2', -4.5, 4.2);
+makePad('server', 2.4, -.2); makePad('cabin', 6.6, -.2); makePad('fishing', 2.4, 2);
+makePad('clerk', 4.5, -.2); makePad('artisan', 6.6, 4.2); makePad('fisher', 4.5, 4.2); makePad('fishClerk', 6.6, 2); makePad('oven', 4.5, 2);
+makePad('coat', -2.4, 2);
+const PAD_POS2 = {};   // pads that move when the village grows
 const REVEAL = {
   bag: () => true, axe: () => true,
   boots: () => S.bought >= 1,
+  coat: () => S.bought >= 2,
   helper: () => S.stat.sold >= 5,
   gate: () => S.storms >= 1 || S.phase !== 'calm',
   server: () => S.stat.sold >= 10,
@@ -673,6 +679,31 @@ player.body.add(mesh(new THREE.SphereGeometry(.38, 10, 8, 0, Math.PI * 2, 0, 1.2
 const axeHead = mesh(new THREE.BoxGeometry(.06, .25, .3), new THREE.MeshLambertMaterial({ color: 0xc7ccd6 }), 0, .52, .12);
 const axe = new THREE.Group(); axe.position.set(.45, .8, .15); player.body.add(axe);
 axe.add(mesh(new THREE.CylinderGeometry(.04, .04, .8, 5), mat(0x5a3a28), 0, .2, 0), axeHead);
+// gear: boots and coat levels change the hero's look
+const GEAR = {
+  boots: [null, [0x6b4426, null], [0x8a2b2b, 0xffffff], [0x2b4f8a, 0xffd36b]],   // [boot, cuff]
+  coat: [null, [0x7a5a3a, null], [0xb03a3a, 0xffffff], [0x2c3e7a, 0xffd36b]],     // [coat, trim]
+};
+const gmat = (c = 0xffffff) => new THREE.MeshLambertMaterial({ color: c });   // own material: gear colors change per level
+const gearM = { boot: [], cuff: [], trim: [], pads: [] };
+for (const s of [-1, 1]) {
+  gearM.boot.push(mesh(new THREE.BoxGeometry(.22, .24, .28), gmat(), s * .16, .12, .03));
+  gearM.cuff.push(mesh(new THREE.BoxGeometry(.26, .07, .3), gmat(), s * .16, .26, .03));
+  gearM.pads.push(mesh(new THREE.SphereGeometry(.16, 8, 6), gmat(0xffd36b), s * .38, 1.02, 0));
+}
+gearM.coat = mesh(new THREE.CylinderGeometry(.37, .48, .8, 10), gmat(), 0, .68, 0);
+gearM.trim.push(mesh(new THREE.TorusGeometry(.47, .06, 5, 14).rotateX(Math.PI / 2), gmat(), 0, .3, 0));
+gearM.trim.push(mesh(new THREE.TorusGeometry(.36, .08, 5, 14).rotateX(Math.PI / 2), gmat(), 0, 1.08, 0));
+[...gearM.boot, ...gearM.cuff, ...gearM.pads, ...gearM.trim, gearM.coat].forEach(m => player.body.add(m));
+function applyGear() {
+  const b = GEAR.boots[S.lv.boots], c = GEAR.coat[S.lv.coat];
+  gearM.boot.forEach(m => { m.visible = !!b; if (b) m.material.color.setHex(b[0]); });
+  gearM.cuff.forEach(m => { m.visible = !!(b && b[1]); if (b && b[1]) m.material.color.setHex(b[1]); });
+  gearM.coat.visible = !!c; if (c) gearM.coat.material.color.setHex(c[0]);
+  gearM.trim.forEach(m => { m.visible = !!(c && c[1]); if (c && c[1]) m.material.color.setHex(c[1]); });
+  gearM.pads.forEach(m => (m.visible = S.lv.coat >= 3));
+}
+applyGear();
 const shock = new THREE.Mesh(new THREE.RingGeometry(.85, 1, 48).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ color: 0xffe08a, transparent: true, depthWrite: false }));
 shock.visible = false; scene.add(shock);
 const swoosh = new THREE.Mesh(new THREE.RingGeometry(.7, 1.35, 18, 1, -Math.PI * .8, Math.PI * .6).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0, side: THREE.DoubleSide, depthWrite: false }));
@@ -1310,6 +1341,10 @@ function dropPickup(type, x, z) {
 
 // ───────────────────────── player ─────────────────────────
 function hurtPlayer(b) {
+  if (Math.random() < blockChance()) {
+    S.hurtCd = T.hurtGrace; popText(pl.x, 2.6, pl.z, '🛡 막음!', '#9fd8ff'); play('hit'); buzz(25);
+    burst(pl.x, 1, pl.z, 0x9fd8ff, 8, { spd: 3, up: 3, life: .4 }); return;
+  }
   S.hp -= b.boss || b.alpha ? 2 : 1; S.hurtCd = T.hurtGrace; play('hurt'); buzz(150);
   const dx = pl.x - b.x, dz = pl.z - b.z, d = Math.hypot(dx, dz) || 1;
   pl.x += dx / d * 1.1; pl.z += dz / d * 1.1;
@@ -1600,9 +1635,10 @@ function levelUp(key) {
   if (key === 'clerk' || key === 'fishClerk') syncClerks();
   if (key === 'artisan') addArtisan();
   if (key === 'fisher') addFisher();
+  if (key === 'boots' || key === 'coat') { applyGear(); burst(pl.x, 1, pl.z, 0xffd36b, 16, { spd: 3, up: 5, life: .7 }); }
   const pad = pads.find(p => p.key === key);
   burst(pad.x, .5, pad.z, 0xffc83d, 14, { spd: 4, up: 7, life: .8 }); play('up'); buzz([20, 40, 20]);
-  const msg = { bag: `가방 용량 ${bagCap()}`, axe: `공격력·벌목 속도 ↑`, boots: `이동 속도 ↑`, gate: `습격 곰 −${val('gate')}마리`, helper: `나무꾼 Lv${S.lv.helper}: 장작 ${ST.helperCarry[S.lv.helper]}개씩`, server: `서빙 직원 Lv${S.lv.server}: 한 번에 ${ST.serverCarry[S.lv.server]}개`, hunter: `사냥꾼 Lv${S.lv.hunter}: 공격력 ${ST.hunterDmg[S.lv.hunter]}`, cabin: `손님이 더 많이, 더 자주 옵니다`, fishing: `2단계 확장!`, clerk: `판매 점원 Lv${S.lv.clerk}: 손님 ${ST.clerkSlots[S.lv.clerk]}명 동시 응대`, artisan: S.lv.artisan === 1 ? `가죽 공방 가동! 가죽 제품을 팔아요` : `가죽 제품을 더 빨리 만들어요`, fisher: `낚시꾼 Lv${S.lv.fisher}: 생선 상자를 채웁니다`, fishClerk: `생선 점원 Lv${S.lv.fishClerk}: 손님 ${ST.clerkSlots[S.lv.fishClerk]}명 동시 응대`, helper2: `두 번째 나무꾼이 일을 시작합니다`, oven: `생선을 ${T.ovenTime[S.lv.oven]}초마다 굽고, 위에 ${ovenCap()}마리까지 올려요`, hunter2: `두 번째 사냥꾼이 사냥을 나갑니다` }[key];
+  const msg = { bag: `가방 용량 ${bagCap()}`, axe: `공격력·벌목 속도 ↑`, boots: `이동 속도 ↑ · 막기 ${pct(blockChance())}`, coat: `외투 Lv${S.lv.coat}: 막기 ${pct(blockChance())}`, gate: `습격 곰 −${val('gate')}마리`, helper: `나무꾼 Lv${S.lv.helper}: 장작 ${ST.helperCarry[S.lv.helper]}개씩`, server: `서빙 직원 Lv${S.lv.server}: 한 번에 ${ST.serverCarry[S.lv.server]}개`, hunter: `사냥꾼 Lv${S.lv.hunter}: 공격력 ${ST.hunterDmg[S.lv.hunter]}`, cabin: `손님이 더 많이, 더 자주 옵니다`, fishing: `2단계 확장!`, clerk: `판매 점원 Lv${S.lv.clerk}: 손님 ${ST.clerkSlots[S.lv.clerk]}명 동시 응대`, artisan: S.lv.artisan === 1 ? `가죽 공방 가동! 가죽 제품을 팔아요` : `가죽 제품을 더 빨리 만들어요`, fisher: `낚시꾼 Lv${S.lv.fisher}: 생선 상자를 채웁니다`, fishClerk: `생선 점원 Lv${S.lv.fishClerk}: 손님 ${ST.clerkSlots[S.lv.fishClerk]}명 동시 응대`, helper2: `두 번째 나무꾼이 일을 시작합니다`, oven: `생선을 ${T.ovenTime[S.lv.oven]}초마다 굽고, 위에 ${ovenCap()}마리까지 올려요`, hunter2: `두 번째 사냥꾼이 사냥을 나갑니다` }[key];
   if (key !== 'fishing') toast(`${u.icon} ${u.name} 업그레이드! ${msg}`);
 }
 
@@ -1782,7 +1818,7 @@ function load() {
   for (let i = 0; i < Math.min(1, S.petCount); i++) addPet();
   for (let i = 0; i < val('fisher'); i++) addFisher();
   if (S.lv.artisan) addArtisan();
-  syncClerks();
+  syncClerks(); applyGear();
   S.grillItems = S.grillItems.filter(it => it.type === 'steak');
   if (savedPlayer) { pl.x = clamp(savedPlayer.x, BOUNDS.x1, BOUNDS.x2); pl.z = clamp(savedPlayer.z, BOUNDS.z1, BOUNDS.z2); player.g.position.set(pl.x, 0, pl.z); }
   for (const type of stackTypes || []) if (GEO[type]) stackAdd(type);
