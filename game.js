@@ -7,17 +7,18 @@ const rand = (a, b) => a + Math.random() * (b - a);
 const { T, UP } = window.WinterRushData;
 
 const S = {
-  coins: 0, bank: 0, strike: false, whWood: 0, whMeat: 0, mats: { pelt: 0, tusk: 0 }, raw: { pelt: 0, tusk: 0 }, forgeRaw: { pelt: 0, tusk: 0 }, plots: [0, 0, 0, 0, 0, 0], vegCrate: 0, pzVeg: 0, pzMeat: 0, pzWood: 0, pzFuel: 0, pzT: 0, pizza: 0, smithT: 0, coinPizza: 0, coinPile: 0, coinFish: 0, coinLeather: 0, tanWood: 0, wood: 0, meat: 0, hide: 0, fishCrate: 0, fishRaw: 0, ovenWood: 0, fishSmoked: 0, fishStock: 0, smokeFuel: 0, smokeT: 0, tanFuel: 0, leather: 0, stage: 1, tanT: 0, petCount: 0, petHits: 0, grillItems: [], counter: { steak: 0 },
+  coins: 0, guard: 0, bank: 0, strike: false, wh: { log: 0, meat: 0, fish: 0, veg: 0, hide: 0, pelt: 0, tusk: 0 }, mats: { pelt: 0, tusk: 0 }, raw: { pelt: 0, tusk: 0 }, forgeRaw: { pelt: 0, tusk: 0 }, plots: [0, 0, 0, 0, 0, 0], vegCrate: 0, pzVeg: 0, pzMeat: 0, pzFish: 0, pzWood: 0, pzFuel: 0, pzT: 0, pizza: 0, smithT: 0, coinPizza: 0, coinPile: 0, coinFish: 0, coinLeather: 0, tanWood: 0, wood: 0, meat: 0, hide: 0, fishCrate: 0, fishRaw: 0, ovenWood: 0, fishSmoked: 0, fishStock: 0, smokeFuel: 0, smokeT: 0, tanFuel: 0, leather: 0, stage: 1, tanT: 0, petCount: 0, petHits: 0, grillItems: [], counter: { steak: 0 },
   fuel: 0, cookT: 0, warmth: 55, hp: 5, maxHp: 5, stun: 0, hurtCd: 0, hitstop: 0,
   lv: Object.fromEntries(Object.keys(UP).map(k => [k, 0])),
   phase: 'calm', phaseT: T.firstCalm, stormK: 0, storms: 0, stormFireOut: false,
   served: 0, bought: 0, tut: 0, woodIn: 0, meatIn: 0, steakIn: 0, goal: 0,
   stat: { soldPizza: 0, sold: 0, soldFish: 0, soldLeather: 0, kills: 0, held: 0, boss: 0, wolves: 0, hides: 0 },
-  timers: {}, started: false,
+  timers: {}, paydayT: 0, started: false,
 };
 const val = k => UP[k].vals[S.lv[k]];
 const bagCap = () => val('bag') + 4 * pets.length;
 const hidesOn = () => S.lv.hunter >= 3;
+const logFuel = () => T.logFuel * (1 + T.fireLv * S.lv.fire);
 const heroLv = () => S.lv.axe + S.lv.boots + S.lv.coat + S.lv.cape + S.lv.saberCoat + S.lv.tuskAxe;
 const axeDmg = () => val('axe') + T.legend.axeDmg[S.lv.tuskAxe];
 const maxHpOf = () => val('cape') + T.legend.coatHp[S.lv.saberCoat];
@@ -29,11 +30,13 @@ const ovenCap = () => T.ovenCap[S.lv.oven];
 const huntCap = () => ST.hunterCarry[S.lv.hunter], hideCap = () => ST.hunterHides[S.lv.hunter];
 const ST = T.staff;
 const raidSize = gate => Math.max(0, 1 + Math.floor((S.storms + 1) / 2) - Math.min(3, gate) - S.lv.wall);
+const guardCost = () => Math.round((T.guard.baseCost + T.guard.costPerStorm * S.storms) * (1 + .25 * S.guard));
+const guardPad = p => p.key === 'hearth' && S.lv.hearth > 0;
 const blockChance = (db = 0, dc = 0, dl = 0) => T.armor.boots[S.lv.boots + db] + T.armor.coat[S.lv.coat + dc] + T.legend.coatBlock[S.lv.saberCoat + dl];
 const pct = v => `${Math.round(v * 100)}%`;
 const DESC = {
   bag: (a, b) => `용량 ${a} → ${b}`,
-  axe: (a, b) => `공격력 ${a} → ${b}, 벌목 속도 ↑`,
+  axe: (a, b) => `${WEAPONS[Math.min(S.lv.axe + 1, WEAPONS.length - 1)].name}: 공격력 ${a} → ${b}, 벌목 속도 ↑`,
   boots: (a, b) => `이동 속도 ${a} → ${b}, 막기 ${pct(blockChance())} → ${pct(blockChance(1, 0))}`,
   cape: (a, b) => `최대 체력 ${a} → ${b}`,
   coat: () => `막기 확률 ${pct(blockChance())} → ${pct(blockChance(0, 1))}`,
@@ -44,11 +47,15 @@ const DESC = {
   hearth: () => `3단계! 화로를 키워 마을을 동쪽으로 확장: 텃밭·피자 가게·대장간, 직원 추가 고용`,
   fisher2: () => `두 번째 낚시꾼 고용 (같은 숙련도로 생선 공급)`,
   farmer: (a, b) => a ? `농부 숙련 Lv${b}: ${ST.farmerCarry[b]}개씩, 더 빠르게` : `농부 고용 (텃밭 채소 → 채소 상자)`,
-  pizzaChef: (a, b) => a ? `피자 요리사 숙련 Lv${b}: ${ST.pizzaChefCarry[b]}개씩` : `피자 요리사 고용 (채소·고기 → 피자 재료 칸)`,
+  pizzaChef: (a, b) => a ? `피자 쉐프 Lv${b}: 한 번에 2판씩 굽기` : `피자 쉐프 고용 (쉐프가 있어야 화덕이 피자를 구워요)`,
+  pizzaOven: (a, b) => `피자 화덕 Lv${b + 1}: ${T.pizzaTime[a]}초 → ${T.pizzaTime[b]}초`,
+  courier: (a, b) => a ? `배달 직원 ${b}명: ${T.courier.carry[b]}개씩, 더 빠르게` : `배달 직원 고용: 창고 → 모닥불·화덕·공방·피자 재료 칸 자동 배달`,
+  leatherClerk: (a, b) => a ? `가죽 점원 숙련 Lv${b}: 동시 손님 ${Math.max(T.leatherShop.slots, ST.clerkSlots[b])}명` : `가죽 가게 점원 고용 (판매, 은행 입금)`,
+  fire: (a, b) => `모닥불 Lv${b + 1}: 장작 지속 +${Math.round(T.fireLv * 100 * b)}%, 창고 +${T.warehouse.perFire * b}칸` + (b % 2 ? '' : ', 배달 트럭 +1'),
   pizzaClerk: (a, b) => a ? `피자 점원 숙련 Lv${b}: 동시 손님 ${ST.clerkSlots[a]} → ${ST.clerkSlots[b]}명` : `피자 가게 점원 고용 (판매 속도 ↑)`,
-  smith: (a, b) => a ? `가공 속도 ${T.smithTime[a]}초 → ${T.smithTime[b]}초` : `대장장이 고용: 맹수 전리품 → 전설 장비 재료 (${T.smithTime[1]}초)`,
+  smith: (a, b) => a ? `가공 속도 ${T.smithTime[a]}초 → ${T.smithTime[b]}초` : `대장장이 고용 (가죽 공방 옆): 맹수 전리품 → 전설 장비 재료 (${T.smithTime[1]}초)`,
   helper3: () => `세 번째 나무꾼 고용`,
-  warehouse: (a, b) => `창고 ${T.warehouse.cap[a]} → ${T.warehouse.cap[b]}칸: 넘치는 장작·고기를 보관, 컨베이어로 자동 보충`,
+  warehouse: (a, b) => a ? `창고 ${T.warehouse.cap[a]} → ${T.warehouse.cap[b]}칸` : `큰 창고 (${T.warehouse.cap[b]}칸): 나무꾼·사냥꾼·낚시꾼·농부가 모든 재료를 여기 쌓아요`,
   wall: (a, b) => `${b === 1 ? '돌담' : '가시 돌담'}: 눈보라 습격 곰 −${b}마리`,
   bank: () => `은행: 점원이 동전을 모아 입금, 월급 자동 지급, 이자 ${Math.round(T.wage.interest * 100)}%`,
   staffHouse: (a, b) => `직원 숙소 ${b}채: 직원 이동 속도 +${Math.round(T.staffHouse * 100 * b)}%`,
@@ -66,7 +73,7 @@ const DESC = {
   fishClerk: (a, b) => a ? `생선 점원 숙련 Lv${b}: 동시 손님 ${ST.clerkSlots[a]} → ${ST.clerkSlots[b]}명` : `생선 가게 점원 고용 (판매 속도 ↑)`,
   fisher: (a, b) => a ? `낚시꾼 숙련 Lv${b}: 더 빨리, ${ST.fisherCarry[b]}마리씩` : `낚시꾼 고용 (생선 상자에 자동 공급)`,
 };
-const descOf = k => { const u = UP[k], l = S.lv[k]; if (l >= u.costs.length) return `${u.icon} ${u.name} 최대 레벨`; const need = matsNeed(k).map(([m, n]) => `${MAT_ICON[m]} ${MAT_NAME[m]} ${n}개 필요(보유 ${S.mats[m]})`).join(' '); return `${u.icon} ${u.name}: ${DESC[k](u.vals[l], u.vals[l + 1])}` + (need ? ` · ${need}` : ''); };
+const descOf = k => { if (k === 'hearth' && S.lv.hearth) return `🛡️ 경비 보급: 다음 눈보라 습격 곰 1마리 차단 (${S.guard}/${T.guard.max}) · 🪙${guardCost()}`; const u = UP[k], l = S.lv[k]; if (l >= u.costs.length) return `${u.icon} ${u.name} 최대 레벨`; const need = matsNeed(k).map(([m, n]) => `${MAT_ICON[m]} ${MAT_NAME[m]} ${n}개 필요(보유 ${S.mats[m]})`).join(' '); return `${u.icon} ${u.name}: ${DESC[k](u.vals[l], u.vals[l + 1])}` + (need ? ` · ${need}` : ''); };
 function tick(key, every, dt) {
   const t = (S.timers[key] = (S.timers[key] ?? every) + dt);
   if (t >= every) { S.timers[key] = t - every; return true; }
@@ -285,11 +292,10 @@ const P = {
   coinPile: V(6.9, 0, -7.2), gate: V(0, 0, 6), queueFront: V(3.6, 0, -11.2),
   fishShop: V(11.6, 0, -8.9), oven: V(14, 0, -8.9), ovenOut: V(14, 0, -7.2),
   ovenWood: V(12, 0, -4.8), fishCrate: V(14.2, 0, -4.8), serverGrill: V(.3, 0, -5.4), serverWay: V(.3, 0, -7.1),
-  fishCoin: V(11.4, 0, -7.2), tanWood: V(8.8, 0, 4.2), tanCoin: V(10.6, 0, 4.4),
-  vegCrate: V(18.2, 0, -8.4), pizzaWood: V(20.4, 0, -8.4), pizzaIn: V(22.6, 0, -8.4), pizzaOven: V(24.8, 0, -8.6), pizzaShop: V(25, 0, -5.4), pizzaCoin: V(22.8, 0, -6.4),
-  forgeIn: V(19.4, 0, 4.2), anvil: V(21.5, 0, 4.2),
-  whWood: V(-.4, 0, -5.9), whMeat: V(10, 0, -2.8), bank: V(23.6, 0, 4.2), vault: V(25.1, 0, 4.6),
-  holes: [V(11.7, 0, 0), V(13.4, 0, 1.4)],
+  fishCoin: V(11.4, 0, -7.2), tanCoin: V(12.3, 0, 3.4),
+  pizzaOven: V(19, 0, -8.9), pizzaShop: V(21.8, 0, -8.9), pizzaIn: V(19, 0, -6.7), pizzaCoin: V(24.9, 0, -7.4),
+  wh: V(24.1, 0, 4.2), whIn: V(24.1, 0, 1.9), bank: V(24.6, 0, -3), vault: V(25.3, 0, -4.6),
+  holes: [V(11.9, 0, -.4), V(13.4, 0, .8)],
 };
 const BOUNDS = { x1: -21, x2: 18, z1: -15, z2: 24 };
 const CAMP = { x1: -8, x2: 8, z1: -10, z2: 6 };
@@ -309,11 +315,11 @@ const WALLS2 = [   // stage 2: the village extends east to x = 16
   { x1: 10.3, x2: 12.9, z1: -9.45, z2: -8.35 },   // fish shop bench
   { x1: 13.3, x2: 14.7, z1: -9.6, z2: -7.75 },    // fish oven, attached to the shop
 ];
-const WALLS3 = [   // stage 3 (큰 화로): the village extends east again to x = 26, with a south gap for leather customers
+const WALLS3 = [   // stage 3 (큰 화로): the village extends east again to x = 26
   { x1: -8.3, x2: 26.3, z1: -10.3, z2: -9.7 },
-  { x1: -8.3, x2: -1.8, z1: 5.7, z2: 6.3 }, { x1: 1.8, x2: 16.3, z1: 5.7, z2: 6.3 }, { x1: 18.3, x2: 26.3, z1: 5.7, z2: 6.3 },
+  { x1: -8.3, x2: -1.8, z1: 5.7, z2: 6.3 }, { x1: 1.8, x2: 26.3, z1: 5.7, z2: 6.3 },
   { x1: -8.3, x2: -7.7, z1: -10.3, z2: -6 }, { x1: -8.3, x2: -7.7, z1: -2, z2: 6.3 },
-  { x1: 25.7, x2: 26.3, z1: -10.3, z2: 6.3 }, grillBox, counterBox, WALLS2[8], WALLS2[9],
+  { x1: 25.7, x2: 26.3, z1: -10.3, z2: 6.3 }, grillBox, counterBox, WALLS2[8], WALLS2[9], { x1: 18.3, x2: 19.7, z1: -9.6, z2: -8.2 },
 ];
 let walls = WALLS1;
 const circles = [{ x: P.fire.x, z: P.fire.z, r: .95 }];
@@ -341,9 +347,9 @@ function buildFence(segs, capColor, stone = 0) {
 }
 // fences open where a shop counter stands (the invisible wall stays, the counter fills the gap)
 const fence1 = buildFence([[-8, -10, 3.2, -10], [6, -10, 8, -10], [-8, 6, -1.9, 6], [1.9, 6, 8, 6], [-8, -10, -8, -6], [-8, -2, -8, 6], [8, -10, 8, 6]], 0xf2dcc0);
-const fence2 = buildFence([[-8, -10, 3.2, -10], [6, -10, 10.2, -10], [13, -10, 16, -10], [-8, 6, -1.9, 6], [1.9, 6, 16, 6], [-8, -10, -8, -6], [-8, -2, -8, 6], [16, -10, 16, 2.2], [16, 4.8, 16, 6]], 0xffd36b);
+const fence2 = buildFence([[-8, -10, 3.2, -10], [6, -10, 10.2, -10], [13, -10, 16, -10], [-8, 6, -1.9, 6], [1.9, 6, 11.6, 6], [14.4, 6, 16, 6], [-8, -10, -8, -6], [-8, -2, -8, 6], [16, -10, 16, 6]], 0xffd36b);
 fence2.visible = false;
-const FENCE3_SEGS = [[-8, -10, 3.2, -10], [6, -10, 10.2, -10], [13, -10, 26, -10], [-8, 6, -1.9, 6], [1.9, 6, 16.3, 6], [18.3, 6, 26, 6], [-8, -10, -8, -6], [-8, -2, -8, 6], [26, -10, 26, -6.7], [26, -4.1, 26, 6]];
+const FENCE3_SEGS = [[-8, -10, 3.2, -10], [6, -10, 10.2, -10], [13, -10, 20.4, -10], [23.2, -10, 26, -10], [-8, 6, -1.9, 6], [1.9, 6, 11.6, 6], [14.4, 6, 26, 6], [-8, -10, -8, -6], [-8, -2, -8, 6], [26, -10, 26, 6]];
 const fence3 = buildFence(FENCE3_SEGS, 0xff8a3c);
 fence3.visible = false;
 const stoneFence = [buildFence(FENCE3_SEGS, 0xffffff, 1), buildFence(FENCE3_SEGS, 0xffffff, 2)]; stoneFence.forEach(f => (f.visible = false));
@@ -469,7 +475,7 @@ const counterPile = pile('steak', T.max.counter, V(P.counter.x, .9, P.counter.z)
 // stage 2 east district: ice fishing, smokehouse and the smoked-fish shop (north fence)
 const eastG = new THREE.Group(); scene.add(eastG);
 eastG.add(mesh(new THREE.PlaneGeometry(8, 16).rotateX(-Math.PI / 2), mat(0xd99c86), 12, .011, -2, false));
-eastG.add(mesh(new THREE.CylinderGeometry(2.4, 2.4, .06, 28), mat(0x8fc4e6), 12.5, .03, .6, false));
+eastG.add(mesh(new THREE.CylinderGeometry(2, 2, .06, 28), mat(0x8fc4e6), 12.6, .03, 0, false));
 P.holes.forEach(h => eastG.add(mesh(new THREE.CylinderGeometry(.55, .55, .07, 16), mat(0x1d4f73), h.x, .05, h.z, false)));
 function stall(x, z, color) {
   const g = new THREE.Group(); g.position.set(x, 0, z);
@@ -501,13 +507,17 @@ for (const [x, z] of [[-7.4, -9.4], [3, -9.4], [8.5, -9.4], [15.4, -9.4], [-7.4,
 }
 
 // tannery + leather shop (stage 2, east): unlocked when the hunter reaches mastery Lv3 and starts bringing hides
-const LEATHER_ROUTE = V(22, 0, 9);   // leather customers walk in through the south gap once stage 3 walls the east side
-const TAN = { in: V(12.6, 0, 4), out: V(15, 0, 3.5), fire: V(14, 0, 5.2), home: V(14, 0, 4) };
-const tanTile = tile(TAN.in, '🟫');
-const tanWoodTile = tile(P.tanWood, '🪵');
-const tanWoodPile = pile('log', T.max.tanWood, V(P.tanWood.x, .09, P.tanWood.z), 2, 3, .9, .42);
-const hidePile = pile('hide', T.max.hide, V(TAN.in.x, .09, TAN.in.z), 2, 2, .7, .55);
-const tanG = stall(TAN.out.x, TAN.out.z, 0x8a5a3a); tanG.rotation.y = Math.PI / 2; scene.add(tanG);
+// workshop row along the south fence: one input tile (hides, logs, beast trophies), artisan + smith benches, the leather stall faces the outside
+const TAN = { in: V(10.7, 0, 3.8), out: V(13, 0, 5.3), fire: V(14.6, 0, 2.6), home: V(11, 0, 2.4), anvil: V(15.2, 0, 4.2), clerk: V(13.4, 0, 4.2) };
+const tanTile = tile(TAN.in, '🛠️');
+const tanWoodPile = pile('log', T.max.tanWood, V(TAN.in.x, .09, TAN.in.z + .5), 2, 1, .9, .42);
+const hidePile = pile('hide', T.max.hide, V(TAN.in.x - .4, .09, TAN.in.z - .35), 1, 2, .7, .4);
+const rawPeltPile = pile('pelt', T.max.forgeRaw, V(TAN.in.x + .4, .09, TAN.in.z - .55), 1, 1, .5, .5);
+const rawTuskPile = pile('tusk', T.max.forgeRaw, V(TAN.in.x + .45, .2, TAN.in.z - .15), 1, 1, .5, .5);
+const anvilG = new THREE.Group(); anvilG.position.copy(TAN.anvil); scene.add(anvilG);
+anvilG.add(mesh(new THREE.BoxGeometry(.5, .5, .4), mat(0x6e6a72), 0, .25, 0), mesh(new THREE.BoxGeometry(.85, .22, .4), mat(0x3a3f4a), 0, .6, 0));
+anvilG.add(mesh(new THREE.ConeGeometry(.16, .4, 4).rotateZ(Math.PI / 2), mat(0x3a3f4a), .6, .6, 0));
+const tanG = stall(TAN.out.x, TAN.out.z, 0x8a5a3a); scene.add(tanG);
 const tanHide = mesh(new THREE.BoxGeometry(.8, .6, .05), mat(0x9b6a45), 0, 1.25, -.35); tanG.add(tanHide);
 const leatherPile = pile('leather', T.max.leather, V(TAN.out.x, .9, TAN.out.z), 2, 4, .5, .5);
 const tanSign = sprite(260, 100, 2.4, .92); tanSign.sp.position.set(TAN.out.x, 3.2, TAN.out.z); scene.add(tanSign.sp);
@@ -527,19 +537,21 @@ function addArtisan() {
 }
 function updateTannery(dt) {
   const on = hidesOn() && S.stage >= 2;
-  tanWoodTile.g.visible = tanWoodPile.g.visible = tanTile.g.visible = tanG.visible = leatherPile.g.visible = hidePile.g.visible = tanFireG.visible = on;
+  tanG.visible = leatherPile.g.visible = hidePile.g.visible = tanFireG.visible = on;
+  tanTile.g.visible = tanWoodPile.g.visible = rawPeltPile.g.visible = rawTuskPile.g.visible = on || S.lv.smith > 0; anvilG.visible = S.lv.smith > 0;
+  rawPeltPile.set(S.forgeRaw.pelt); rawTuskPile.set(S.forgeRaw.tusk); updateSmith(dt);
   tanSign.sp.visible = on && !S.lv.artisan;
   if (on && !tanG.shown && S.started) { tanG.shown = true; toast('🟫 가죽 공방이 생겼어요 (동쪽): 장인을 고용하면 가죽 제품을 팔아요'); }
   tanG.shown = tanG.shown || on;
   tanFlame.visible = S.tanFuel > 0;
   if (S.tanFuel > 0) tanFlame.scale.setScalar(.8 + Math.sin(performance.now() / 70) * .2);
-  hidePile.set(S.hide); leatherPile.set(S.leather); tanTile.setFull(S.hide > 0); tanWoodPile.set(S.tanWood); tanWoodTile.setFull(S.tanWood > 0);
+  hidePile.set(S.hide); leatherPile.set(S.leather); tanTile.setFull(S.hide + S.tanWood + S.forgeRaw.pelt + S.forgeRaw.tusk > 0); tanWoodPile.set(S.tanWood);
   if (!artisan) return;
   const a = artisan;
   a.carry.children.forEach((m, i) => (m.visible = i < a.n));
   if (a.state === 'getWood') {          // walk to the tannery log tile (or the main pile when it is empty) and bring logs back
     if (!walkPath(a, dt, 3.6)) return;
-    const key = a.src === 'tan' ? 'tanWood' : 'wood', from = a.src === 'tan' ? P.tanWood : P.woodTile;
+    const key = a.src === 'tan' ? 'tanWood' : 'wood', from = a.src === 'tan' ? TAN.in : P.woodTile;
     const k = Math.min(3, S[key], Math.ceil((T.max.tanFuel - S.tanFuel) / T.tanPerLog));
     if (k > 0) { S[key] -= k; a.n = k; fly('log', V(from.x, .5, from.z), V(a.x, 1.3, a.z)); }
     a.state = 'back'; a.path = [TAN.home.clone()]; return;
@@ -549,8 +561,8 @@ function updateTannery(dt) {
     if (a.n) { S.tanFuel = Math.min(T.max.tanFuel, S.tanFuel + a.n * T.tanPerLog); fly('log', V(a.x, 1.3, a.z), V(TAN.fire.x, .3, TAN.fire.z)); a.n = 0; }
     a.state = 'work'; return;
   }
-  a.body.position.y = 0; a.g.rotation.y = Math.PI / 2;
-  if (S.tanFuel <= 0 && S.hide > 0 && S.tanWood > 0) { a.state = 'getWood'; a.src = 'tan'; a.path = [V(P.tanWood.x + 1.2, 0, P.tanWood.z)]; return; }
+  a.body.position.y = 0; a.g.rotation.y = 0;
+  if (S.tanFuel <= 0 && S.hide > 0 && S.tanWood > 0) { a.state = 'getWood'; a.src = 'tan'; a.path = [V(TAN.in.x + 1.1, 0, TAN.in.z - 1)]; return; }
   if (S.tanFuel <= 0 && S.hide > 0 && S.wood > 0) { a.state = 'getWood'; a.src = 'main'; a.path = [V(P.woodTile.x + .8, 0, P.woodTile.z + 1.3)]; return; }
   const busy = S.hide > 0 && S.leather < T.max.leather && S.tanFuel > 0;
   tanHide.rotation.y = busy ? Math.sin(performance.now() / 120) * .15 : 0;
@@ -578,11 +590,15 @@ function updateOven(dt) {
   if (tick('smokePuff', .45, dt)) burst(P.oven.x + .35, 1.8, P.oven.z - .35, 0x9aa0aa, 2, { spd: .4, up: 1.2, grav: -1.5, life: 1.4, size: 1.4 });
 }
 
-// ───────────────────────── stage 3 annex (큰 화로): garden, pizza, forge ─────────────────────────
+// ───────────────────────── stage 3 annex (큰 화로): garden, pizza, warehouse, bank ─────────────────────────
 const annexG = new THREE.Group(); annexG.visible = false; scene.add(annexG);
 annexG.add(mesh(new THREE.PlaneGeometry(10, 16).rotateX(-Math.PI / 2), mat(0xd99c86), 21, .012, -2, false));
+// border trees: the old east edge disappears and a new one stands further out
+const farTrees = new THREE.Group(); farTrees.visible = false; scene.add(farTrees);
+for (let z = -16; z <= 26; z += 2.6) farTrees.add(makeTree(31 + rand(-.6, .6), z, true).g);
+for (let x = 23; x <= 30; x += 2.6) { farTrees.add(makeTree(x, 26 + rand(-1, 1), true).g); farTrees.add(makeTree(x, -17 + rand(-1, 1), true).g); }
 const PLOTS = [];
-for (const z of [-4.6, -2.8]) for (const x of [19, 20.8, 22.6]) {
+for (const z of [-4, -2.2]) for (const x of [18.2, 20, 21.8]) {
   const g = new THREE.Group(); g.position.set(x, 0, z); annexG.add(g);
   g.add(mesh(new THREE.BoxGeometry(1.6, .12, 1.6), mat(0x6b4a32), 0, .06, 0, false));
   for (const rz of [-.45, 0, .45]) g.add(mesh(new THREE.BoxGeometry(1.4, .06, .18), mat(0x5a3c28), 0, .14, rz, false));
@@ -594,44 +610,82 @@ for (const z of [-4.6, -2.8]) for (const x of [19, 20.8, 22.6]) {
   PLOTS.push({ x, z, g, veg });
 }
 const plotRipe = i => S.plots[i] >= T.garden.grow;
-const vegTile = tile(P.vegCrate, '🥬'); annexG.add(vegTile.g);
-const vegPile = pile('veg', T.max.vegCrate, V(P.vegCrate.x, .09, P.vegCrate.z), 3, 3, .5, .45); annexG.add(vegPile.g);
-const pzWoodTile = tile(P.pizzaWood, '🪵'); annexG.add(pzWoodTile.g);
-const pzWoodPile = pile('log', T.max.pzWood, V(P.pizzaWood.x, .09, P.pizzaWood.z), 2, 3, .9, .42); annexG.add(pzWoodPile.g);
+// pizza: one ingredient tile (veg + meat + logs) in front of the oven, the counter on the north fence
 const pzInTile = tile(P.pizzaIn, '🍕'); annexG.add(pzInTile.g);
-const pzVegPile = pile('veg', T.max.pzVeg, V(P.pizzaIn.x - .45, .09, P.pizzaIn.z), 2, 2, .45, .5); annexG.add(pzVegPile.g);
-const pzMeatPile = pile('meat', T.max.pzMeat, V(P.pizzaIn.x + .45, .09, P.pizzaIn.z), 2, 2, .45, .5); annexG.add(pzMeatPile.g);
+const pzVegPile = pile('veg', T.max.pzVeg, V(P.pizzaIn.x - .5, .09, P.pizzaIn.z - .35), 2, 2, .42, .42); annexG.add(pzVegPile.g);
+const pzMeatPile = pile('meat', T.max.pzMeat, V(P.pizzaIn.x + .5, .09, P.pizzaIn.z - .35), 2, 2, .42, .42); annexG.add(pzMeatPile.g);
+const pzWoodPile = pile('log', T.max.pzWood, V(P.pizzaIn.x - .3, .09, P.pizzaIn.z + .45), 1, 1, .9, .4); annexG.add(pzWoodPile.g);
+const pzFishPile = pile('fish', T.max.pzFish, V(P.pizzaIn.x + .5, .09, P.pizzaIn.z + .45), 1, 1, .5, .4); annexG.add(pzFishPile.g);
 const pzOvenG = new THREE.Group(); pzOvenG.position.copy(P.pizzaOven); annexG.add(pzOvenG);
-pzOvenG.add(mesh(new THREE.SphereGeometry(.75, 12, 8, 0, Math.PI * 2, 0, Math.PI / 2), mat(0xc4623e), 0, 0, 0));
+const pzDome = mesh(new THREE.SphereGeometry(.75, 12, 8, 0, Math.PI * 2, 0, Math.PI / 2), mat(0xc4623e), 0, 0, 0); pzOvenG.add(pzDome);
 pzOvenG.add(mesh(new THREE.BoxGeometry(.22, .8, .22), mat(0x6e6a72), .3, 1, -.3));
 const pzFire = new THREE.Mesh(new THREE.ConeGeometry(.2, .4, 6), new THREE.MeshBasicMaterial({ color: 0xff8a2a })); pzFire.position.set(0, .25, .62); pzOvenG.add(pzFire);
-const pizzaStall = stall(P.pizzaShop.x, P.pizzaShop.z, 0xe5484d); pizzaStall.rotation.y = Math.PI / 2; annexG.add(pizzaStall);
-const pizzaPile = pile('pizza', T.max.pizza, V(P.pizzaShop.x, .9, P.pizzaShop.z), 2, 4, .62, .55); annexG.add(pizzaPile.g);
+const pzBench = new THREE.Group(); pzBench.position.copy(P.pizzaShop); annexG.add(pzBench);
+pzBench.add(mesh(new THREE.BoxGeometry(2.6, .2, 1.1), mat(0xe2a35a), 0, .8, 0));
+for (const sx of [-1.1, 1.1]) pzBench.add(mesh(new THREE.BoxGeometry(.2, .8, .9), mat(0xc4823e), sx, .4, 0));
+pzBench.add(mesh(new THREE.BoxGeometry(2.6, .45, .08), mat(0xe5484d), 0, .45, -.56));
+const pizzaPile = pile('pizza', T.max.pizza, V(P.pizzaShop.x, .9, P.pizzaShop.z), 4, 2, .62, .5); annexG.add(pizzaPile.g);
 const pzSign = sprite(240, 100, 2.2, .92); pzSign.sp.position.set(P.pizzaOven.x, 2.4, P.pizzaOven.z); annexG.add(pzSign.sp);
-pzSign.draw((c, w, h) => bubble(c, w, h, '🪵 장작 필요', '#ffd36b'));
-// forge: raw trophies on the tile, the smith hammers them into crafting materials at the anvil
-const forgeTile = tile(P.forgeIn, '⚒️'); annexG.add(forgeTile.g);
-const forgePeltPile = pile('pelt', T.max.forgeRaw, V(P.forgeIn.x - .4, .09, P.forgeIn.z), 1, 2, .5, .7); annexG.add(forgePeltPile.g);
-const forgeTuskPile = pile('tusk', T.max.forgeRaw, V(P.forgeIn.x + .45, .09, P.forgeIn.z), 1, 2, .5, .7); annexG.add(forgeTuskPile.g);
-const anvilG = new THREE.Group(); anvilG.position.copy(P.anvil); annexG.add(anvilG);
-anvilG.add(mesh(new THREE.BoxGeometry(.5, .5, .4), mat(0x6e6a72), 0, .25, 0), mesh(new THREE.BoxGeometry(.85, .22, .4), mat(0x3a3f4a), 0, .6, 0));
-anvilG.add(mesh(new THREE.ConeGeometry(.16, .4, 4).rotateZ(Math.PI / 2), mat(0x3a3f4a), .6, .6, 0));
-// border trees: the old east edge disappears and a new one stands further out
-const farTrees = new THREE.Group(); farTrees.visible = false; scene.add(farTrees);
-for (let z = -16; z <= 26; z += 2.6) farTrees.add(makeTree(31 + rand(-.6, .6), z, true).g);
-for (let x = 23; x <= 30; x += 2.6) { farTrees.add(makeTree(x, 26 + rand(-1, 1), true).g); farTrees.add(makeTree(x, -17 + rand(-1, 1), true).g); }
-let farmer = null, pizzaCook = null, smithNpc = null, pizzaClerkNpc = null;
+// the one big warehouse (south-east corner): every raw material ends up here, couriers hand it out
+const whG = new THREE.Group(); whG.position.copy(P.wh); whG.visible = false; scene.add(whG);
+whG.add(mesh(new THREE.BoxGeometry(2.8, 1.8, 2.2), mat(0x9a6a40), 0, .9, 0));
+whG.add(mesh(new THREE.CylinderGeometry(1.25, 1.25, 2.9, 12, 1, false, 0, Math.PI).rotateZ(Math.PI / 2).rotateY(Math.PI / 2), mat(0x8a2b2b), 0, 1.8, 0));
+whG.add(mesh(new THREE.BoxGeometry(1.1, 1.3, .05), mat(0x5a3420), 0, .65, -1.12));
+const whTile = tile(P.whIn, '📦'); whTile.g.visible = false;
+const whLabel = sprite(360, 90, 3.4, .85); whLabel.sp.position.set(P.wh.x, 3.6, P.wh.z); whLabel.sp.visible = false; scene.add(whLabel.sp);
+let whShown = '';
+const WH_ITEMS = ['log', 'meat', 'fish', 'veg', 'hide', 'pelt', 'tusk'], WH_ICON = { log: '🪵', meat: '🥩', fish: '🐟', veg: '🥬', hide: '🟫', pelt: '🐯', tusk: '🦣' };
+const whOn = () => S.stage >= 3 && S.lv.warehouse > 0;
+const whCap = () => T.warehouse.cap[S.lv.warehouse] + (S.lv.warehouse ? T.warehouse.perFire * S.lv.fire : 0);   // a bigger hearth also grows the warehouse
+const courierCount = () => S.lv.courier ? S.lv.courier + Math.floor(S.lv.fire / 2) : 0;   // and adds a truck every two hearth levels
+const whTotal = () => WH_ITEMS.reduce((s, k) => s + S.wh[k], 0);
+const whRoom = () => Math.max(0, whCap() - whTotal());
+function whPut(item, n, from) { const k = Math.min(n, whRoom()); if (k > 0) { S.wh[item] += k; if (from) fly(item, from, V(P.whIn.x, .5, P.whIn.z), .3); } return k; }
+// staff
+let farmer = null, smithNpc = null, pizzaClerkNpc = null, leatherClerkNpc = null, pizzaChefNpc = null;
+const couriers = [];
 function carrier(coat, hair, types, x, z) {
   const p = makePerson(coat, hair), carry = new THREE.Group(); carry.position.z = -.5; p.g.add(carry);
-  for (const t of types) for (let i = 0; i < 8; i++) { const m = itemMesh(t); m.userData.t = t; m.position.y = 1.1 + i * ITEM_H[t]; m.visible = false; carry.add(m); }
+  for (const t of types) for (let i = 0; i < 14; i++) { const m = itemMesh(t); m.userData.t = t; m.userData.i = i; m.position.y = 1.1 + i * ITEM_H[t]; m.visible = false; carry.add(m); }
   p.g.position.set(x, 0, z);
   return { ...p, carry, n: 0, item: types[0], x, z, path: [], state: 'idle' };
 }
-function addFarmer() { if (!farmer) { farmer = carrier(0x6b9e3a, 0x8a5a2a, ['veg'], 18.4, -1.8); farmer.body.add(mesh(new THREE.CylinderGeometry(.5, .5, .05, 12), mat(0xe8c86a), 0, 1.68, 0)); } }
-function addPizzaCook() { if (!pizzaCook) pizzaCook = carrier(0xf4f4f4, 0xe5484d, ['veg', 'meat'], 21.6, -6.6); }
+function showCarry(w) { w.carry.children.forEach(m => (m.visible = m.userData.t === w.item && m.userData.i < w.n)); }
+function addFarmer() { if (!farmer) { farmer = carrier(0x6b9e3a, 0x8a5a2a, ['veg'], 17.4, -1.4); farmer.body.add(mesh(new THREE.CylinderGeometry(.5, .5, .05, 12), mat(0xe8c86a), 0, 1.68, 0)); } }
+// couriers drive small delivery trucks (driver in a reflective delivery vest), cargo rides in the bed
+function addCourier() {
+  while (couriers.length < courierCount()) {
+    const c = carrier(0x2b4f8a, 0x3a2a22, WH_ITEMS, P.whIn.x - couriers.length * 1.4, P.whIn.z - 1.6);
+    const driver = c.body, truck = new THREE.Group(); c.g.add(truck);
+    driver.add(mesh(new THREE.CylinderGeometry(.37, .46, .55, 10), mat(0x2f7fe0), 0, .75, 0), mesh(new THREE.TorusGeometry(.42, .05, 5, 14).rotateX(Math.PI / 2), mat(0xe8ff6a, { emissive: 0x556600 }), 0, .62, 0));   // vest + reflective stripe
+    driver.add(mesh(new THREE.SphereGeometry(.3, 10, 6, 0, Math.PI * 2, 0, Math.PI / 2), mat(0x2f7fe0), 0, 1.55, -.02));   // cap
+    c.g.remove(driver); truck.add(driver); driver.position.set(0, .45, .55); driver.scale.setScalar(.72);
+    truck.add(mesh(new THREE.BoxGeometry(1.15, .45, 2.1), mat(0x2f7fe0), 0, .55, 0), mesh(new THREE.BoxGeometry(1.1, .65, .7), mat(0xf4f4f4), 0, 1.05, .62));
+    truck.add(mesh(new THREE.BoxGeometry(1.0, .3, .05), mat(0x9fd8ff), 0, 1.15, .98));   // windshield
+    for (const [x, z] of [[-.6, .65], [.6, .65], [-.6, -.65], [.6, -.65]]) truck.add(mesh(new THREE.CylinderGeometry(.24, .24, .16, 10).rotateZ(Math.PI / 2), mat(0x2b2f3a), x, .25, z));
+    c.carry.position.set(0, 0, -.45); c.g.remove(c.carry); truck.add(c.carry);
+    c.carry.children.forEach(m => { const i = m.userData.i; m.position.set((i % 3 - 1) * .36, .82 + Math.floor(i / 3) * ITEM_H[m.userData.t], 0); });   // spread over the bed
+    c.body = truck; couriers.push(c);
+  }
+}
+const viaGate = (from, to) => from.z > 6.5 && to.z < 6 ? [GATE_OUT.clone(), GATE_IN.clone(), to] : from.z < 6 && to.z > 6.5 ? [GATE_IN.clone(), GATE_OUT.clone(), to] : [to];
+function nearestPickup(c, type) {
+  let best = null, bd = 1e9;
+  for (const pk of pickups) {
+    if (!['meat', 'hide', 'pelt', 'tusk'].includes(pk.type) || (type && pk.type !== type) || couriers.some(o => o !== c && o.target === pk)) continue;
+    if (pk.x < BOUNDS.x1 || pk.x > BOUNDS.x2 || pk.z > 23) continue;
+    const d = Math.hypot(pk.x - c.x, pk.z - c.z); if (d < bd) { bd = d; best = pk; }
+  }
+  return best;
+}
+function addPizzaChef() {
+  if (pizzaChefNpc) return;
+  pizzaChefNpc = makePerson(0xf4f4f4, 0x2b2f3a); pizzaChefNpc.g.position.set(20.3, 0, -7.9); pizzaChefNpc.g.rotation.y = -Math.PI / 2;
+  pizzaChefNpc.body.add(mesh(new THREE.CylinderGeometry(.24, .3, .4, 10), mat(0xffffff), 0, 1.85, 0));
+}
 function addSmith() {
   if (smithNpc) return;
-  smithNpc = makePerson(0x4a4f5a, 0x2b2f3a); smithNpc.g.position.set(P.anvil.x, 0, P.anvil.z - .9);
+  smithNpc = makePerson(0x4a4f5a, 0x2b2f3a); smithNpc.g.position.set(TAN.anvil.x, 0, TAN.anvil.z - .85);
   smithNpc.body.add(mesh(new THREE.BoxGeometry(.5, .6, .05), mat(0x6b3d1f), 0, .7, .4));
   smithNpc.hammer = new THREE.Group(); smithNpc.hammer.position.set(.45, .9, .2); smithNpc.body.add(smithNpc.hammer);
   smithNpc.hammer.add(mesh(new THREE.CylinderGeometry(.04, .04, .5, 5), mat(0x5a3a28), 0, .2, 0), mesh(new THREE.BoxGeometry(.25, .14, .14), mat(0x3a3f4a), 0, .45, 0));
@@ -640,76 +694,117 @@ function updateAnnex(dt) {
   const on = S.stage >= 3;
   for (let i = 0; i < PLOTS.length; i++) {
     if (on) S.plots[i] = Math.min(T.garden.grow, S.plots[i] + dt);
-    const k = S.plots[i] / T.garden.grow, pl0 = PLOTS[i];
-    pl0.veg.scale.setScalar(.15 + .85 * k); pl0.veg.position.y = plotRipe(i) ? Math.abs(Math.sin(performance.now() / 300 + i)) * .06 : 0;
+    const k = S.plots[i] / T.garden.grow, p0 = PLOTS[i];
+    p0.veg.scale.setScalar(.15 + .85 * k); p0.veg.position.y = plotRipe(i) ? Math.abs(Math.sin(performance.now() / 300 + i)) * .06 : 0;
   }
-  vegPile.set(S.vegCrate); pzWoodPile.set(S.pzWood); pzVegPile.set(S.pzVeg); pzMeatPile.set(S.pzMeat); pizzaPile.set(S.pizza);
-  forgePeltPile.set(S.forgeRaw.pelt); forgeTuskPile.set(S.forgeRaw.tusk);
-  vegTile.setFull(S.vegCrate > 0); pzWoodTile.setFull(S.pzWood > 0); pzInTile.setFull(S.pzVeg > 0 && S.pzMeat > 0); forgeTile.setFull(S.forgeRaw.pelt + S.forgeRaw.tusk > 0);
+  pzWoodPile.set(S.pzWood); pzFishPile.set(S.pzFish); pzVegPile.set(S.pzVeg); pzMeatPile.set(S.pzMeat); pizzaPile.set(S.pizza);
+  const PR = T.pizzaRecipe, canBake = n => S.pzVeg >= PR.veg * n && S.pzMeat >= PR.meat * n && S.pzFish >= PR.fish * n;
+  pzInTile.setFull(canBake(1) && S.pzWood + S.pzFuel > 0);
+  pzDome.scale.setScalar(1 + .15 * S.lv.pizzaOven);
+  whG.visible = whTile.g.visible = whLabel.sp.visible = whOn();
+  if (whOn()) {
+    const t = WH_ITEMS.filter(k => S.wh[k]).map(k => `${WH_ICON[k]}${S.wh[k]}`).join(' ') || `📦 0/${whCap()}`;
+    if (t !== whShown) { whShown = t; whLabel.draw((c, w, h) => bubble(c, w, h, t, '#ffffff')); }
+    whTile.setFull(whTotal() > 0);
+  }
   if (!on) return;
-  // pizza oven: 1 veg + 1 meat + 1 log (1.5 in a storm) per pizza, straight onto the pizza counter
-  const need = S.pzVeg > 0 && S.pzMeat > 0 && S.pizza < T.max.pizza;
+  // pizza oven: the chef bakes veg + meat + fish (T.pizzaRecipe) with 1 log a batch (1.5 in a storm); Lv2 chef bakes two at once
+  const need = canBake(1) && S.pizza < T.max.pizza && pizzaChefNpc;
   if (need && S.pzFuel <= 0 && S.pzWood > 0) { S.pzWood--; S.pzFuel += 1; }
-  pzSign.sp.visible = need && S.pzFuel <= 0; pzFire.visible = S.pzFuel > 0;
+  pzSign.sp.visible = !pizzaChefNpc || (need && S.pzFuel <= 0);
+  const signKey = pizzaChefNpc ? 'w' : 'c';
+  if (pzSign.key !== signKey) { pzSign.key = signKey; pzSign.draw((c, w, h) => bubble(c, w, h, pizzaChefNpc ? '🪵 장작 필요' : '👨‍🍳 쉐프 필요', '#ffd36b')); }
+  pzFire.visible = S.pzFuel > 0;
   if (pzFire.visible) pzFire.scale.setScalar(.8 + Math.sin(performance.now() / 60) * .2);
-  if (need && S.pzFuel > 0 && (S.pzT += dt) >= T.pizzaTime) {
-    S.pzT = 0; S.pzVeg--; S.pzMeat--; S.pizza++; S.pzFuel -= S.phase === 'storm' ? T.smoke.stormUse : 1;
+  if (pizzaChefNpc) pizzaChefNpc.body.rotation.x = need && S.pzFuel > 0 ? Math.sin(performance.now() / 110) * .15 : 0;
+  if (need && S.pzFuel > 0 && (S.pzT += dt) >= T.pizzaTime[S.lv.pizzaOven]) {
+    S.pzT = 0;
+    const n = Math.min(S.lv.pizzaChef >= 2 && canBake(2) ? 2 : 1, T.max.pizza - S.pizza);
+    S.pzVeg -= PR.veg * n; S.pzMeat -= PR.meat * n; S.pzFish -= PR.fish * n; S.pizza += n; S.pzFuel -= S.phase === 'storm' ? T.smoke.stormUse : 1;
     fly('pizza', V(P.pizzaOven.x, 1, P.pizzaOven.z), V(P.pizzaShop.x, 1, P.pizzaShop.z), .35);
   }
-  // smith
-  if (smithNpc) {
-    const raw = S.forgeRaw.pelt > 0 ? 'pelt' : S.forgeRaw.tusk > 0 ? 'tusk' : null;
-    smithNpc.hammer.rotation.x = raw ? -1.2 + Math.abs(Math.sin(performance.now() / 120)) * 1.6 : 0;
-    if (raw && (S.smithT += dt) >= T.smithTime[S.lv.smith]) {
-      S.smithT = 0; S.forgeRaw[raw]--; S.mats[raw]++;
-      burst(P.anvil.x, .9, P.anvil.z, 0xffc83d, 10, { spd: 3, up: 4, life: .4, size: .6 }); play('crit');
-      popText(P.anvil.x, 2, P.anvil.z, `✨ ${MAT_NAME[raw]}`, '#ffd36b');
-    } else if (raw && tick('anvilSpark', .24, dt)) burst(P.anvil.x, .8, P.anvil.z, 0xffb347, 3, { spd: 2, up: 3, life: .25, size: .5 });
-  }
   if (farmer) updateFarmer(dt);
-  if (pizzaCook) updatePizzaCook(dt);
+  couriers.forEach(c => updateCourier(c, dt));
 }
-function showCarry(w) { w.carry.children.forEach(m => (m.visible = m.userData.t === w.item && m.position.y < 1.1 + w.n * ITEM_H[w.item] - .01)); }
+// the smith works beside the leather artisan: trophies on the workshop tile → crafting materials
+function updateSmith(dt) {
+  if (!smithNpc) return;
+  const raw = S.forgeRaw.pelt > 0 ? 'pelt' : S.forgeRaw.tusk > 0 ? 'tusk' : null;
+  smithNpc.hammer.rotation.x = raw ? -1.2 + Math.abs(Math.sin(performance.now() / 120)) * 1.6 : 0;
+  if (raw && (S.smithT += dt) >= T.smithTime[S.lv.smith]) {
+    S.smithT = 0; S.forgeRaw[raw]--; S.mats[raw]++; S.stat.forged = (S.stat.forged || 0) + 1;
+    burst(TAN.anvil.x, .9, TAN.anvil.z, 0xffc83d, 10, { spd: 3, up: 4, life: .4, size: .6 }); play('crit');
+    popText(TAN.anvil.x, 2, TAN.anvil.z, `✨ ${MAT_NAME[raw]}`, '#ffd36b');
+  } else if (raw && tick('anvilSpark', .24, dt)) burst(TAN.anvil.x, .8, TAN.anvil.z, 0xffb347, 3, { spd: 2, up: 3, life: .25, size: .5 });
+}
 function updateFarmer(dt) {
   const f = farmer, lv = S.lv.farmer;
   showCarry(f);
   if (!walkPath(f, dt, ST.farmerSpeed[lv])) return;
   if (f.state === 'harvest') {
-    if (plotRipe(f.plot) && f.n < ST.farmerCarry[lv]) { S.plots[f.plot] = 0; f.n++; burst(PLOTS[f.plot].x, .5, PLOTS[f.plot].z, 0x6fbf4a, 5, { spd: 2, up: 3, life: .4 }); }
+    if (plotRipe(f.plot) && f.n < ST.farmerCarry[lv]) { S.plots[f.plot] = 0; f.n++; S.stat.veg = (S.stat.veg || 0) + 1; burst(PLOTS[f.plot].x, .5, PLOTS[f.plot].z, 0x6fbf4a, 5, { spd: 2, up: 3, life: .4 }); }
     f.state = 'idle';
   }
-  if (f.state === 'toCrate') {
-    const k = Math.min(f.n, T.max.vegCrate - S.vegCrate);
-    if (k > 0) { S.vegCrate += k; f.n -= k; fly('veg', V(f.x, 1.3, f.z), V(P.vegCrate.x, .4, P.vegCrate.z)); }
-    if (f.n) return; f.state = 'idle';
+  if (f.state === 'unload') {   // into the warehouse, or straight onto the pizza tile before there is one
+    const k = whOn() ? whPut('veg', f.n, V(f.x, 1.3, f.z)) : Math.min(f.n, T.max.pzVeg - S.pzVeg);
+    if (!whOn() && k > 0) { S.pzVeg += k; fly('veg', V(f.x, 1.3, f.z), V(P.pizzaIn.x, .4, P.pizzaIn.z)); }
+    f.n -= k; if (f.n) return; f.state = 'idle';
   }
   let best = -1, bd = 1e9;
   PLOTS.forEach((p, i) => { const d = Math.hypot(p.x - f.x, p.z - f.z); if (plotRipe(i) && d < bd) { bd = d; best = i; } });
-  if (f.n >= ST.farmerCarry[lv] || (f.n && best < 0)) { f.state = 'toCrate'; f.path = [V(P.vegCrate.x, 0, P.vegCrate.z + 1.3)]; return; }
+  if (f.n >= ST.farmerCarry[lv] || (f.n && best < 0)) { const to = whOn() ? P.whIn : P.pizzaIn; f.state = 'unload'; f.path = [V(to.x, 0, to.z + (whOn() ? -1.3 : 1.3))]; return; }
   if (best >= 0) { f.state = 'harvest'; f.plot = best; f.path = [V(PLOTS[best].x, 0, PLOTS[best].z + .95)]; }
 }
-function updatePizzaCook(dt) {
-  const c = pizzaCook, lv = S.lv.pizzaChef;
+// couriers: warehouse → whichever input tile is running lowest
+const DELIVER = [
+  { item: 'log', at: () => P.woodTile, get: () => S.wood, max: () => T.max.wood, add: k => (S.wood += k) },
+  { item: 'meat', at: () => P.meatTile, get: () => S.meat, max: () => T.max.meat, add: k => (S.meat += k) },
+  { item: 'log', at: () => P.ovenWood, get: () => S.ovenWood, max: () => T.max.ovenWood, add: k => (S.ovenWood += k) },
+  { item: 'fish', at: () => P.fishCrate, get: () => S.fishCrate, max: () => T.max.fishCrate, add: k => (S.fishCrate += k) },
+  { item: 'log', at: () => TAN.in, get: () => S.tanWood, max: () => T.max.tanWood, add: k => (S.tanWood += k), on: () => S.lv.artisan > 0 },
+  { item: 'hide', at: () => TAN.in, get: () => S.hide, max: () => T.max.hide, add: k => (S.hide += k), on: () => S.lv.artisan > 0 },
+  { item: 'pelt', at: () => TAN.in, get: () => S.forgeRaw.pelt, max: () => T.max.forgeRaw, add: k => (S.forgeRaw.pelt += k), on: () => S.lv.smith > 0 },
+  { item: 'tusk', at: () => TAN.in, get: () => S.forgeRaw.tusk, max: () => T.max.forgeRaw, add: k => (S.forgeRaw.tusk += k), on: () => S.lv.smith > 0 },
+  { item: 'veg', at: () => P.pizzaIn, get: () => S.pzVeg, max: () => T.max.pzVeg, add: k => (S.pzVeg += k) },
+  { item: 'meat', at: () => P.pizzaIn, get: () => S.pzMeat, max: () => T.max.pzMeat, add: k => (S.pzMeat += k) },
+  { item: 'fish', at: () => P.pizzaIn, get: () => S.pzFish, max: () => T.max.pzFish, add: k => (S.pzFish += k) },
+  { item: 'log', at: () => P.pizzaIn, get: () => S.pzWood, max: () => T.max.pzWood, add: k => (S.pzWood += k) },
+];
+function updateCourier(c, dt) {
+  const lv = S.lv.courier;
   showCarry(c);
-  if (!walkPath(c, dt, ST.pizzaChefSpeed[lv])) return;
-  if (c.state === 'fetch') {
-    const key = c.item === 'veg' ? 'vegCrate' : 'meat', room = T.max[c.item === 'veg' ? 'pzVeg' : 'pzMeat'] - S[c.item === 'veg' ? 'pzVeg' : 'pzMeat'];
-    const k = Math.min(ST.pizzaChefCarry[lv], S[key], room);
-    if (k > 0) { S[key] -= k; c.n = k; }
-    c.state = 'deliver'; c.path = [V(P.pizzaIn.x, 0, P.pizzaIn.z + 1.3)]; return;
+  if (!walkPath(c, dt, T.courier.speed[lv])) return;
+  if (c.state === 'collect') {   // scoop up meat / hides / trophies lying around and haul them to the warehouse
+    for (let i = pickups.length - 1; i >= 0; i--) {
+      const pk = pickups[i];
+      if (pk.type !== c.item || c.n >= T.courier.carry[lv] || Math.hypot(pk.x - c.x, pk.z - c.z) > 1.5) continue;
+      scene.remove(pk.m); pickups.splice(i, 1); c.n++; play('pop', 40);
+    }
+    const next = c.n < T.courier.carry[lv] && nearestPickup(c, c.item);
+    if (next) { c.target = next; c.path = viaGate(c, V(next.x, 0, next.z)); return; }
+    c.target = null; c.state = 'stash'; c.path = viaGate(c, V(P.whIn.x, 0, P.whIn.z - 1.3)); return;
   }
-  if (c.state === 'deliver') {
-    const key = c.item === 'veg' ? 'pzVeg' : 'pzMeat', k = Math.min(c.n, T.max[key] - S[key]);
-    if (k > 0) { S[key] += k; c.n -= k; fly(c.item, V(c.x, 1.3, c.z), V(P.pizzaIn.x, .4, P.pizzaIn.z)); }
-    if (c.n) return; c.state = 'idle';
+  if (c.state === 'stash') { const k = whPut(c.item, c.n, V(c.x, 1.2, c.z)); c.n -= k; if (c.n) return; c.state = 'idle'; }
+  if (c.state === 'load') {
+    const t = c.job, k = Math.min(T.courier.carry[lv], S.wh[t.item], t.max() - t.get());
+    if (k <= 0) { c.state = 'idle'; c.job = null; return; }
+    S.wh[t.item] -= k; c.n = k; c.item = t.item; c.state = 'drop'; c.path = [V(t.at().x, 0, t.at().z + 1.3)]; return;
   }
-  const vegNeed = S.vegCrate > 0 && S.pzVeg < T.max.pzVeg, meatNeed = S.meat > 0 && S.pzMeat < T.max.pzMeat;
-  if (!vegNeed && !meatNeed) return;
-  c.item = vegNeed && (!meatNeed || S.pzVeg <= S.pzMeat) ? 'veg' : 'meat';
-  const src = c.item === 'veg' ? P.vegCrate : P.meatTile;
-  c.state = 'fetch'; c.path = [V(src.x, 0, src.z + 1.3)];
+  if (c.state === 'drop') {
+    const t = c.job, k = Math.min(c.n, t.max() - t.get());
+    if (k > 0) { t.add(k); fly(c.item, V(c.x, 1.3, c.z), V(t.at().x, .4, t.at().z)); }
+    c.n -= k; if (c.n) whPut(c.item, c.n); c.n = 0; c.state = 'idle'; c.job = null;
+  }
+  if (!whOn()) return;
+  let best = null, br = .6;
+  for (const t of DELIVER) {
+    if ((t.on && !t.on()) || S.wh[t.item] <= 0 || couriers.some(o => o !== c && o.job === t)) continue;
+    const r = t.get() / t.max(); if (r < br) { br = r; best = t; }
+  }
+  if (best) { c.job = best; c.state = 'load'; c.path = viaGate(c, V(P.whIn.x - .6 + couriers.indexOf(c) * .6, 0, P.whIn.z - 1.3)); return; }
+  const pk = whRoom() > 0 && nearestPickup(c);
+  if (pk) { c.state = 'collect'; c.item = pk.type; c.target = pk; c.path = viaGate(c, V(pk.x, 0, pk.z)); }
 }
-
 // stage 3 grand hearth: gold ring, four tall blue-flame torches and drifting embers
 const fire3G = new THREE.Group(); fire3G.visible = false; fireG.add(fire3G);
 fire3G.add(mesh(new THREE.TorusGeometry(1.05, .09, 6, 28).rotateX(Math.PI / 2), mat(0xffc83d, { emissive: 0x664400 }), 0, .14, 0, false));
@@ -720,60 +815,12 @@ for (const a of [Math.PI / 3, Math.PI * 2 / 3, Math.PI * 4 / 3, Math.PI * 5 / 3]
   fire3G.add(mesh(new THREE.CylinderGeometry(.16, .08, .16, 8), mat(0xffc83d, { emissive: 0x664400 }), x, 1.55, z));
   const f = new THREE.Mesh(new THREE.ConeGeometry(.12, .4, 6), new THREE.MeshBasicMaterial({ color: 0x8fd8ff })); f.position.set(x, 1.8, z); fire3G.add(f); torchFlames.push(f);
 }
-// village warehouses (stage 3): big stores that soak up overflow and feed the hearth tiles by conveyor
-const whG = new THREE.Group(); whG.visible = false; scene.add(whG);
-function warehouse(at, roof, icon) {
-  const g = new THREE.Group(); g.position.copy(at); whG.add(g);
-  g.add(mesh(new THREE.BoxGeometry(1.7, 1.3, 1.7), mat(0x9a6a40), 0, .65, 0));
-  g.add(mesh(new THREE.ConeGeometry(1.35, .8, 4).rotateY(Math.PI / 4), mat(roof), 0, 1.7, 0));
-  g.add(mesh(new THREE.BoxGeometry(.7, .9, .05), mat(0x5a3420), 0, .45, .86));
-  const label = sprite(220, 90, 1.9, .9); label.sp.position.set(0, 2.7, 0); g.add(label.sp);
-  return { g, label, icon, shown: '' };
+function updateHearth3(dt) {
+  fire3G.visible = S.stage >= 3;
+  if (!fire3G.visible) return;
+  torchFlames.forEach((f, i) => f.scale.setScalar(.85 + Math.sin(performance.now() / 70 + i) * .15));
+  if (tick('ember', .25, dt)) burst(P.fire.x + rand(-.6, .6), 1.6, P.fire.z + rand(-.6, .6), 0xffc83d, 1, { spd: .5, up: 2.5, grav: -1, life: 1.2, size: .5 });
 }
-const whWoodB = warehouse(P.whWood, 0x6e8a4a, '🪵'), whMeatB = warehouse(P.whMeat, 0x8a2b2b, '🥩');
-const beltTex = canvasTex(64, 64);
-beltTex.draw((c, w) => { c.fillStyle = '#2b2f3a'; c.fillRect(0, 0, w, w); c.fillStyle = '#555c6a'; for (let i = 0; i < 4; i++) c.fillRect(i * 16, 0, 7, w); });
-beltTex.tex.wrapS = beltTex.tex.wrapT = THREE.RepeatWrapping;
-const belts = [];
-function belt(pts, key, type) {
-  const segs = [];
-  for (let i = 0; i < pts.length - 1; i++) {
-    const a = pts[i], b = pts[i + 1], len = Math.hypot(b.x - a.x, b.z - a.z), tex = beltTex.tex.clone(); tex.needsUpdate = true; tex.repeat.set(len / .5, 1);
-    const m = new THREE.Mesh(new THREE.PlaneGeometry(len, .55).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ map: tex }));
-    m.position.set((a.x + b.x) / 2, .07, (a.z + b.z) / 2); m.rotation.y = -Math.atan2(b.z - a.z, b.x - a.x); whG.add(m);
-    const rail = mesh(new THREE.BoxGeometry(len + .1, .12, .7), mat(0x6e6a72), (a.x + b.x) / 2, .03, (a.z + b.z) / 2, false); rail.rotation.y = m.rotation.y; whG.add(rail);
-    segs.push({ a, b, len, tex });
-  }
-  const b = { pts, segs, key, type, items: [], total: segs.reduce((s, q) => s + q.len, 0) };
-  belts.push(b); return b;
-}
-const whCap = () => T.warehouse.cap[S.lv.warehouse];
-belt([V(P.whWood.x + .85, 0, P.whWood.z), V(2.6, 0, P.whWood.z), V(2.6, 0, -3.95)], 'wood', 'log');   // into the stage 2/3 wood tile (2.6, -3)
-belt([V(P.whMeat.x - .85, 0, P.whMeat.z), V(8.35, 0, P.whMeat.z)], 'meat', 'meat');   // into the meat tile (7.4, -3)
-const beltPos = (b, d) => { for (const q of b.segs) { if (d <= q.len) return V(q.a.x + (q.b.x - q.a.x) * d / q.len, .3, q.a.z + (q.b.z - q.a.z) * d / q.len); d -= q.len; } return b.pts[b.pts.length - 1].clone().setY(.3); };
-function updateWarehouses(dt) {
-  const on = S.lv.warehouse > 0 && S.stage >= 3;
-  whG.visible = on; fire3G.visible = S.stage >= 3;
-  if (fire3G.visible) { torchFlames.forEach((f, i) => f.scale.setScalar(.85 + Math.sin(performance.now() / 70 + i) * .15)); if (tick('ember', .25, dt)) burst(P.fire.x + rand(-.6, .6), 1.6, P.fire.z + rand(-.6, .6), 0xffc83d, 1, { spd: .5, up: 2.5, grav: -1, life: 1.2, size: .5 }); }
-  if (!on) return;
-  for (const [b, k] of [[whWoodB, 'whWood'], [whMeatB, 'whMeat']]) {
-    const t = `${S[k]}/${whCap()}`;
-    if (b.shown !== t) { b.shown = t; b.label.draw((c, w, h) => bubble(c, w, h, `${b.icon} ${t}`, '#ffffff')); }
-  }
-  const spd = T.warehouse.beltSpeed[S.lv.warehouse];
-  for (const b of belts) {
-    b.segs.forEach(q => (q.tex.offset.x -= dt * spd * 2));
-    const src = b.key === 'wood' ? 'whWood' : 'whMeat', inFlight = b.items.length;
-    if (S[src] > 0 && S[b.key] + inFlight < T.max[b.key] && tick('belt' + b.key, T.warehouse.beltIv[S.lv.warehouse], dt)) {
-      S[src]--; const m = itemMesh(b.type); scene.add(m); b.items.push({ m, d: 0 });
-    }
-    for (let i = b.items.length - 1; i >= 0; i--) {
-      const it = b.items[i]; it.d += spd * dt; it.m.position.copy(beltPos(b, it.d));
-      if (it.d >= b.total) { scene.remove(it.m); b.items.splice(i, 1); S[b.key] = Math.min(T.max[b.key], S[b.key] + 1); }
-    }
-  }
-}
-
 // bank (stage 3): shop clerks carry their coin piles here; wages come out of it on payday, interest goes back in
 const bankTile = tile(P.bank, '🏦'); bankTile.g.visible = false;
 const bankPile = pile('coin', 72, V(P.bank.x, .09, P.bank.z), 3, 3, .36, .36); bankPile.g.visible = false;
@@ -781,12 +828,12 @@ const vaultG = new THREE.Group(); vaultG.position.copy(P.vault); vaultG.visible 
 vaultG.add(mesh(new THREE.BoxGeometry(.8, 1.1, .8), mat(0x8a8f99), 0, .55, 0), mesh(new THREE.CylinderGeometry(.22, .22, .06, 12).rotateZ(Math.PI / 2), mat(0xffc83d, { emissive: 0x664400 }), -.42, .6, 0));
 const bankLabel = sprite(220, 90, 1.9, .9); bankLabel.sp.position.set(P.bank.x, 2.2, P.bank.z); bankLabel.sp.visible = false; scene.add(bankLabel.sp);
 let bankShown = '';
-const staffCount = () => helpers.length + servers.length + hunters.length + fishers.length + (artisan ? 1 : 0) + (farmer ? 1 : 0) + (pizzaCook ? 1 : 0) + (smithNpc ? 1 : 0) + (S.lv.clerk > 0) + (S.lv.fishClerk > 0) + (S.lv.pizzaClerk > 0);
+const staffCount = () => helpers.length + servers.length + hunters.length + fishers.length + couriers.length + (artisan ? 1 : 0) + (farmer ? 1 : 0) + (pizzaChefNpc ? 1 : 0) + (smithNpc ? 1 : 0) + (S.lv.clerk > 0) + (S.lv.fishClerk > 0) + (S.lv.pizzaClerk > 0) + (S.lv.leatherClerk > 0);
 const staffMul = () => (S.strike ? .5 : 1) * (1 + T.staffHouse * S.lv.staffHouse);
 function payday() {
   const n = staffCount(), wage = n * T.wage.per;
   if (!n) return;
-  const interest = S.lv.bank ? Math.min(T.wage.maxInterest, Math.floor(S.bank * T.wage.interest)) : 0;
+  const interest = S.lv.bank ? Math.min(T.wage.maxInterest, Math.floor(S.bank * T.wage.interest), Math.floor(wage / 2)) : 0;   // never more than half the wage bill
   S.bank += interest;
   const fromBank = Math.min(S.bank, wage); S.bank -= fromBank;
   const fromPocket = Math.min(S.coins, wage - fromBank); S.coins -= fromPocket;
@@ -795,16 +842,20 @@ function payday() {
   else if (paid) toast(`💰 월급날! 직원 ${n}명 🪙${wage} 지급` + (interest ? ` · 은행 이자 🪙${interest}` : '') + (S.strike ? ' · 태업 끝!' : ''));
   S.strike = !paid;
 }
-// clerks as cash runners: post → their coin pile → bank → post
+// shop clerks double as cash runners: post → their coin pile → bank → post
 const RUNNERS = [
-  { npc: () => clerkNpc, coin: 'coinPile', at: () => P.coinPile, post: V(6.6, 0, -8.7) },
-  { npc: () => fishClerkNpc, coin: 'coinFish', at: () => P.fishCoin, post: V(9.6, 0, -8.8) },
-  { npc: () => pizzaClerkNpc, coin: 'coinPizza', at: () => P.pizzaCoin, post: V(23.9, 0, -5.4) },
+  { npc: () => clerkNpc, coin: 'coinPile', at: () => P.coinPile, post: V(6.6, 0, -8.7), face: Math.PI },
+  { npc: () => fishClerkNpc, coin: 'coinFish', at: () => P.fishCoin, post: V(9.6, 0, -8.8), face: Math.PI },
+  { npc: () => pizzaClerkNpc, coin: 'coinPizza', at: () => P.pizzaCoin, post: V(23.8, 0, -8.8), face: Math.PI },
+  { npc: () => leatherClerkNpc, coin: 'coinLeather', at: () => P.tanCoin, post: TAN.clerk, face: 0 },
 ];
 function updateBank(dt) {
   const on = S.lv.bank > 0 && S.stage >= 3;
   bankTile.g.visible = bankPile.g.visible = vaultG.visible = bankLabel.sp.visible = on;
-  if (S.stage >= 3 && S.started && tick('payday', T.wage.every, dt)) payday();
+  if (S.stage >= 3 && S.started) {
+    S.paydayT += dt;
+    if (S.paydayT >= T.wage.every) { S.paydayT -= T.wage.every; payday(); }
+  }
   if (!on) return;
   bankPile.set(Math.min(72, Math.ceil(S.bank / 20))); bankTile.setFull(S.bank > 0);
   const t = `🏦 ${S.bank}`; if (t !== bankShown) { bankShown = t; bankLabel.draw((c, w, h) => bubble(c, w, h, t, '#ffd36b')); }
@@ -816,9 +867,9 @@ function updateBank(dt) {
       continue;
     }
     if (!walkPath(n, dt, 3.6)) continue;
-    if (n.st === 'grab') { n.cash = S[r.coin]; S[r.coin] = 0; popText(n.x, 2.4, n.z, `🪙${n.cash}`, '#ffd36b'); n.st = 'bank'; n.path = [V(16.8, 0, 0), V(P.bank.x - 1.2, 0, P.bank.z)]; }
-    else if (n.st === 'bank') { S.bank += n.cash; fly('coin', V(n.x, 1.4, n.z), V(P.bank.x, .3, P.bank.z)); n.cash = 0; play('coin', 45); n.st = 'back'; n.path = [V(16.8, 0, 0), r.post.clone()]; }
-    else { n.st = 'post'; n.g.rotation.y = r.coin === 'coinPizza' ? Math.PI / 2 : Math.PI; }
+    if (n.st === 'grab') { n.cash = S[r.coin]; S[r.coin] = 0; popText(n.x, 2.4, n.z, `🪙${n.cash}`, '#ffd36b'); n.st = 'bank'; n.path = [V(16.8, 0, -1), V(P.bank.x - 1.3, 0, P.bank.z)]; }
+    else if (n.st === 'bank') { S.bank += n.cash; fly('coin', V(n.x, 1.4, n.z), V(P.bank.x, .3, P.bank.z)); n.cash = 0; play('coin', 45); n.st = 'back'; n.path = [V(16.8, 0, -1), r.post.clone()]; }
+    else { n.st = 'post'; n.g.rotation.y = r.face; }
   }
   if (near(P.bank, 1.3) && S.bank > 0 && tick('withdraw', .03, dt)) {
     const k = Math.min(S.bank, Math.max(10, Math.ceil(S.bank / 20)));
@@ -830,7 +881,7 @@ const houseG = new THREE.Group(); scene.add(houseG);
 function buildHouses() {
   houseG.clear();
   for (let i = 0; i < S.lv.staffHouse; i++) {
-    const g = new THREE.Group(); g.position.set(20.6 + i * 2.8, 0, 9.6); houseG.add(g);
+    const g = new THREE.Group(); g.position.set(20.6 + i * 2.8, 0, 10); houseG.add(g);
     g.add(mesh(new THREE.BoxGeometry(2, 1.4, 1.8), mat([0xc98f5a, 0xb07a4a, 0x9a6a40][i]), 0, .7, 0));
     g.add(mesh(new THREE.ConeGeometry(1.6, .9, 4).rotateY(Math.PI / 4), mat([0x3a6e9a, 0x8a2b2b, 0x4a7a3a][i]), 0, 1.85, 0));
     g.add(mesh(new THREE.BoxGeometry(.5, .8, .05), mat(0x5a3420), 0, .4, -.92), mesh(new THREE.BoxGeometry(.4, .35, .05), mat(0xffd36b, { emissive: 0x664400 }), .6, .9, -.92));
@@ -841,7 +892,8 @@ function buildHouses() {
 let clerkNpc = null, fishClerkNpc = null;
 function syncClerks() {
   if (!clerkNpc && S.lv.clerk) { clerkNpc = makePerson(0x2b6e4f, 0x2b2f3a); clerkNpc.g.position.set(6.6, 0, -8.7); clerkNpc.g.rotation.y = Math.PI; }
-  if (!pizzaClerkNpc && S.lv.pizzaClerk) { pizzaClerkNpc = makePerson(0xb03a3a, 0x2b2f3a); pizzaClerkNpc.g.position.set(23.9, 0, -5.4); pizzaClerkNpc.g.rotation.y = Math.PI / 2; }
+  if (!pizzaClerkNpc && S.lv.pizzaClerk) { pizzaClerkNpc = makePerson(0xb03a3a, 0x2b2f3a); pizzaClerkNpc.g.position.set(23.8, 0, -8.8); pizzaClerkNpc.g.rotation.y = Math.PI; }
+  if (!leatherClerkNpc && S.lv.leatherClerk) { leatherClerkNpc = makePerson(0x8a5a3a, 0x2b2f3a); leatherClerkNpc.g.position.copy(TAN.clerk); }
   if (!fishClerkNpc && S.lv.fishClerk) { fishClerkNpc = makePerson(0x2f6e8a, 0x2b2f3a); fishClerkNpc.g.position.set(9.6, 0, -8.8); fishClerkNpc.g.rotation.y = Math.PI; }
 }
 
@@ -882,6 +934,16 @@ function makePad(key, x, z) {
   pads.push(pad); drawPad(pad); return pad;
 }
 function drawPad(p) {
+  if (guardPad(p)) {
+    p.ct.draw((c, w) => {
+      c.fillStyle = 'rgba(19,37,61,.82)'; c.fillRect(8, 8, w - 16, w - 16);
+      c.strokeStyle = '#ffffff'; c.lineWidth = 8; c.setLineDash([22, 14]); c.strokeRect(12, 12, w - 24, w - 24); c.setLineDash([]);
+      c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillStyle = '#ffffff'; c.font = `70px ${FONT}`; c.fillText('🛡️', w / 2, 80);
+      c.font = `31px ${FONT}`; c.fillText(`경비 보급 ${S.guard}/${T.guard.max}`, w / 2, 150);
+      c.fillStyle = '#ffd36b'; c.font = `40px ${FONT}`; c.fillText(`🪙 ${guardCost()}`, w / 2, 202);
+    });
+    return;
+  }
   const u = UP[p.key], lv = S.lv[p.key], maxed = lv >= u.costs.length;
   const cost = maxed ? 0 : u.costs[lv];
   p.ct.draw((c, w) => {
@@ -908,8 +970,9 @@ makePad('server', 2.4, -.2); makePad('cabin', 6.6, -.2); makePad('fishing', 2.4,
 makePad('clerk', 4.5, -.2); makePad('artisan', 6.6, 4.2); makePad('fisher', 4.5, 4.2); makePad('fishClerk', 6.6, 2); makePad('oven', 4.5, 2);
 makePad('coat', -2.4, 2); makePad('cape', -6.6, 4.2);
 makePad('hearth', 8.7, -.2); makePad('fisher2', 8.7, 2);   // stage 2 column east of the right block
-makePad('farmer', 19.4, -.2); makePad('pizzaChef', 21.5, -.2); makePad('pizzaClerk', 23.6, -.2); makePad('smith', 19.4, 2); makePad('helper3', 21.5, 2); makePad('hunter3', 23.6, 2);   // stage 3 annex
-makePad('warehouse', 8.7, -.2); makePad('wall', 17.2, -6); makePad('bank', 17.2, -3.8); makePad('staffHouse', 17.2, -1.6);   // stage 3
+makePad('farmer', 17.4, -.2); makePad('pizzaChef', 17.4, 2); makePad('pizzaClerk', 21.6, -.2); makePad('smith', 8.7, -5.6); makePad('helper3', 21.6, 2); makePad('hunter3', 17.4, 4.2);   // stage 3 annex grid
+makePad('warehouse', 23.7, -.2); makePad('wall', 19.5, 4.2); makePad('bank', 23.7, -5.6); makePad('staffHouse', 21.6, 4.2);
+makePad('courier', 19.5, -.2); makePad('pizzaOven', 19.5, 2); makePad('leatherClerk', 8.7, 4.2); makePad('fire', -.3, -7.8);
 makePad('saberCoat', -6.6, -7.8); makePad('tuskAxe', -4.5, -7.8); makePad('statue', -2.4, -7.8);   // legend row, north-west
 const PAD_POS2 = {};   // pads that move when the village grows
 const REVEAL = {
@@ -919,9 +982,10 @@ const REVEAL = {
   cape: () => S.bought >= 3,
   saberCoat: () => S.raw.pelt + S.forgeRaw.pelt + S.mats.pelt > 0 || S.lv.saberCoat > 0,
   tuskAxe: () => S.raw.tusk + S.forgeRaw.tusk + S.mats.tusk > 0 || S.lv.tuskAxe > 0,
-  hearth: () => S.stage >= 2 && S.stat.sold >= 60,
+  hearth: () => S.lv.hearth > 0 || S.stage >= 2 && S.stat.sold >= 60,
   fisher2: () => S.stage >= 2 && S.lv.fisher >= 1,
   farmer: () => S.stage >= 3, pizzaChef: () => S.stage >= 3, pizzaClerk: () => S.stage >= 3, smith: () => S.stage >= 3,
+  courier: () => S.stage >= 3 && S.lv.warehouse > 0, pizzaOven: () => S.lv.pizzaChef > 0, leatherClerk: () => S.lv.artisan > 0, fire: () => S.bought >= 2,
   warehouse: () => S.stage >= 3, wall: () => S.stage >= 3, bank: () => S.stage >= 3, staffHouse: () => S.stage >= 3,
   helper3: () => S.stage >= 3 && S.lv.helper2 >= 1, hunter3: () => S.stage >= 3 && S.lv.hunter2 >= 1,
   statue: () => S.stage >= 2,
@@ -940,7 +1004,7 @@ const REVEAL = {
   hunter2: () => S.stage >= 2 && S.lv.hunter >= 1,
 };
 // a pad disappears at max level, and waits while its next level needs a later village stage
-const padHidden = p => { const u = UP[p.key], lv = S.lv[p.key]; return lv >= u.costs.length || (u.stage && S.stage < u.stage[lv]); };
+const padHidden = p => { if (guardPad(p)) return S.guard >= T.guard.max; const u = UP[p.key], lv = S.lv[p.key]; return lv >= u.costs.length || (u.stage && S.stage < u.stage[lv]); };
 function updatePads(dt) {
   for (const p of pads) {
     p.m.visible = p.on && !padHidden(p);
@@ -951,7 +1015,8 @@ function updatePads(dt) {
     if (!p.on) continue;
     if (p.m.scale.x < 1) p.m.scale.setScalar(Math.min(1, p.m.scale.x + dt * 2.5));
     const u = UP[p.key], lv = S.lv[p.key], maxed = lv >= u.costs.length;
-    if (!maxed) p.m.material.opacity = S.coins >= u.costs[lv] - p.paid && matsOk(p.key) ? 1 : .5;
+    if (guardPad(p)) p.m.material.opacity = S.coins >= guardCost() ? 1 : .5;
+    else if (!maxed) p.m.material.opacity = S.coins >= u.costs[lv] - p.paid && matsOk(p.key) ? 1 : .5;
   }
 }
 
@@ -971,8 +1036,8 @@ function applyStage(fanfare) {
   const two = S.stage >= 2, three = S.stage >= 3;
   fence1.visible = !two; fence2.visible = two && !three; fence3.visible = three && !S.lv.wall; stoneFence.forEach((f, i) => (f.visible = three && S.lv.wall === i + 1)); walls = three ? WALLS3 : two ? WALLS2 : WALLS1;
   CAMP.x2 = three ? 26 : two ? 16 : 8; BOUNDS.x2 = three ? 29 : 18; eastG.visible = decoG.visible = two; annexG.visible = farTrees.visible = three;
-  eastBorder.forEach(t => (t.g.visible = !three)); if (three) LEATHER_ROUTE.set(17.3, 0, 14);
-  fireDeco.visible = two; fireG.scale.setScalar(three ? 1.4 : two ? 1.15 : 1); circles[0].r = three ? 1.3 : two ? 1.1 : .95;
+  eastBorder.forEach(t => (t.g.visible = !three));
+  fireDeco.visible = two; fireG.scale.setScalar((three ? 1.4 : two ? 1.15 : 1) * (1 + .08 * S.lv.fire)); circles[0].r = three ? 1.3 : two ? 1.1 : .95;
   if (two && !applyStage.moved) {
     applyStage.moved = true;
     const from = V(P.fire.x, 0, P.fire.z);
@@ -1020,9 +1085,8 @@ function makePerson(coat, hair) {
 
 const player = makePerson(0x3a9ad9, 0x3a9ad9);
 player.body.add(mesh(new THREE.SphereGeometry(.38, 10, 8, 0, Math.PI * 2, 0, 1.2), mat(0xffffff), 0, 1.5, -.06));
-const axeHead = mesh(new THREE.BoxGeometry(.06, .25, .3), new THREE.MeshLambertMaterial({ color: 0xc7ccd6 }), 0, .52, .12);
+let axeHead = null;   // main blade of the current weapon (glows on combos)
 const axe = new THREE.Group(); axe.position.set(.45, .8, .15); player.body.add(axe);
-axe.add(mesh(new THREE.CylinderGeometry(.04, .04, .8, 5), mat(0x5a3a28), 0, .2, 0), axeHead);
 // gear: boots and coat levels change the hero's look
 const GEAR = {
   boots: [null, [0x6b4426, null], [0x8a2b2b, 0xffffff], [0x2b4f8a, 0xffd36b]],   // [boot, cuff]
@@ -1044,25 +1108,42 @@ const cape = mesh(new THREE.BoxGeometry(.66, .9, .04), gmat(), 0, -.45, 0); cape
 const capeTrim = mesh(new THREE.BoxGeometry(.68, .08, .05), gmat(0xffd36b), 0, -.88, 0); capeG.add(capeTrim);
 const CAPE_COLORS = [null, 0x8a2b2b, 0x3a4fa0, 0x6b2fa0, 0x1b1b22];
 // axe tiers: stone → iron → steel → gold → ice → fire → storm
-const AXE_LOOKS = [
-  { head: 0x8a8f99, glow: 0, size: 1, trail: 0xffffff },
-  { head: 0xc7ccd6, glow: 0, size: 1.1, trail: 0xffffff },
-  { head: 0xe8f0ff, glow: 0x223344, size: 1.2, trail: 0xdff3ff },
-  { head: 0xffc83d, glow: 0x664400, size: 1.3, trail: 0xffd36b },
-  { head: 0x8fe3ff, glow: 0x2a8fbf, size: 1.45, trail: 0x8fe3ff },
-  { head: 0xff6a2a, glow: 0xaa2a00, size: 1.6, trail: 0xff8a3c },
-  { head: 0xc07bff, glow: 0x5a1fa0, size: 1.8, trail: 0xd9a6ff },
+// weapon tiers: axes first, then a golden double axe, frost and flame greatswords, a storm halberd; mammoth tusk lances on top
+const WEAPONS = [
+  { name: '돌도끼', shape: 'axe', head: 0x8a8f99, glow: 0, size: 1, trail: 0xffffff },
+  { name: '쇠도끼', shape: 'axe', head: 0xc7ccd6, glow: 0, size: 1.1, trail: 0xffffff },
+  { name: '강철 도끼', shape: 'axe', head: 0xe8f0ff, glow: 0x223344, size: 1.2, trail: 0xdff3ff },
+  { name: '황금 양날도끼', shape: 'double', head: 0xffc83d, glow: 0x664400, size: 1.25, trail: 0xffd36b },
+  { name: '얼음 대검', shape: 'sword', head: 0x8fe3ff, glow: 0x2a8fbf, size: 1.2, trail: 0x8fe3ff },
+  { name: '화염 대검', shape: 'sword', head: 0xff6a2a, glow: 0xaa2a00, size: 1.35, trail: 0xff8a3c },
+  { name: '폭풍 할버드', shape: 'halberd', head: 0xc07bff, glow: 0x5a1fa0, size: 1.3, trail: 0xd9a6ff },
 ];
-const axeLook = () => S.lv.tuskAxe ? { head: 0xf4efe2, glow: 0x665533, size: 2, trail: 0xfff3c0 } : AXE_LOOKS[Math.min(S.lv.axe, AXE_LOOKS.length - 1)];
-function applyGear() {
-  const ax = axeLook();
-  axeHead.material.color.setHex(ax.head); axeHead.scale.set(1, ax.size, ax.size); axe.scale.setScalar(1 + (ax.size - 1) * .4);
-  swoosh.material.color.setHex(ax.trail);
-  if (S.lv.tuskAxe) { axeHead.material.color.setHex(0xf4efe2); axeHead.scale.set(1, 2 + .3 * S.lv.tuskAxe, 2 + .3 * S.lv.tuskAxe); axe.scale.setScalar(1.4 + .1 * S.lv.tuskAxe); swoosh.material.color.setHex(0xfff3c0); }
-  if (S.lv.saberCoat) {
-    gearM.coat.visible = true; gearM.coat.material.color.setHex(S.lv.saberCoat >= 2 ? 0xf0c080 : 0xe0a050);
-    gearM.trim.forEach(m => { m.visible = true; m.material.color.setHex(0x6b3a1a); }); gearM.pads.forEach(m => (m.visible = true));
+const TUSK_WEAPONS = [null, { name: '매머드 뿔 창', shape: 'lance', head: 0xf4efe2, glow: 0x665533, size: 1.3, trail: 0xfff3c0 }, { name: '매머드 뿔 대창', shape: 'lance', head: 0xfff8e8, glow: 0x886633, size: 1.55, trail: 0xfff3c0 }];
+const weaponLook = () => S.lv.tuskAxe ? TUSK_WEAPONS[S.lv.tuskAxe] : WEAPONS[Math.min(S.lv.axe, WEAPONS.length - 1)];
+const axeLook = weaponLook;
+function buildWeapon() {
+  const w = weaponLook(), hm = new THREE.MeshLambertMaterial({ color: w.head, emissive: w.glow }), wood = mat(0x5a3a28), dark = mat(0x3a3f4a);
+  axe.clear();
+  if (w.shape === 'axe' || w.shape === 'double') {
+    axe.add(mesh(new THREE.CylinderGeometry(.04, .04, .8, 5), wood, 0, .2, 0));
+    axeHead = mesh(new THREE.BoxGeometry(.06, .25, .3), hm, 0, .52, .12); axe.add(axeHead);
+    if (w.shape === 'double') axe.add(mesh(new THREE.BoxGeometry(.06, .25, .3), hm, 0, .52, -.12), mesh(new THREE.ConeGeometry(.05, .2, 5), hm, 0, .7, 0));
+  } else if (w.shape === 'sword') {
+    axe.add(mesh(new THREE.CylinderGeometry(.04, .04, .32, 6), wood, 0, 0, 0), mesh(new THREE.BoxGeometry(.08, .08, .46), dark, 0, .18, 0));
+    axeHead = mesh(new THREE.BoxGeometry(.05, 1, .16), hm, 0, .7, 0); axe.add(axeHead);
+    axe.add(mesh(new THREE.ConeGeometry(.08, .22, 4), hm, 0, 1.31, 0));
+  } else if (w.shape === 'halberd') {
+    axe.add(mesh(new THREE.CylinderGeometry(.035, .035, 1.6, 6), wood, 0, .45, 0));
+    axeHead = mesh(new THREE.BoxGeometry(.06, .38, .34), hm, 0, 1, .16); axe.add(axeHead);
+    axe.add(mesh(new THREE.ConeGeometry(.07, .4, 6), hm, 0, 1.43, 0), mesh(new THREE.ConeGeometry(.05, .2, 4).rotateX(-Math.PI / 2), hm, 0, 1, -.12));
+  } else {
+    axe.add(mesh(new THREE.CylinderGeometry(.04, .04, 1.4, 6), dark, 0, .35, 0), mesh(new THREE.TorusGeometry(.09, .03, 5, 10).rotateX(Math.PI / 2), mat(0xffc83d), 0, .95, 0));
+    axeHead = mesh(new THREE.ConeGeometry(.11, 1, 8), hm, 0, 1.5, 0); axe.add(axeHead);
   }
+  axe.scale.setScalar(w.size);
+}
+function applyGear() {
+  buildWeapon(); swoosh.material.color.setHex(weaponLook().trail);
   const cc = CAPE_COLORS[S.lv.cape];
   capeG.visible = !!cc; if (cc) cape.material.color.setHex(cc);
   capeG.scale.y = 1 + .1 * S.lv.cape; capeTrim.visible = S.lv.cape >= 3;
@@ -1072,6 +1153,10 @@ function applyGear() {
   gearM.coat.visible = !!c; if (c) gearM.coat.material.color.setHex(c[0]);
   gearM.trim.forEach(m => { m.visible = !!(c && c[1]); if (c && c[1]) m.material.color.setHex(c[1]); });
   gearM.pads.forEach(m => (m.visible = S.lv.coat >= 3));
+  if (S.lv.saberCoat) {   // saber-tooth armour sits over whatever coat is worn
+    gearM.coat.visible = true; gearM.coat.material.color.setHex(S.lv.saberCoat >= 2 ? 0xf0c080 : 0xe0a050);
+    gearM.trim.forEach(m => { m.visible = true; m.material.color.setHex(0x6b3a1a); }); gearM.pads.forEach(m => (m.visible = true));
+  }
 }
 const shock = new THREE.Mesh(new THREE.RingGeometry(.85, 1, 48).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ color: 0xffe08a, transparent: true, depthWrite: false }));
 shock.visible = false; scene.add(shock);
@@ -1126,14 +1211,15 @@ function helperToTree(h) {
 const WOOD_SPOTS = [
   { key: 'wood', at: () => P.woodTile, max: () => T.max.wood, on: () => true },
   { key: 'ovenWood', at: () => P.ovenWood, max: () => T.max.ovenWood, on: () => S.stage >= 2 },
-  { key: 'tanWood', at: () => P.tanWood, max: () => T.max.tanWood, on: () => hidesOn() && S.stage >= 2 },
-  { key: 'pzWood', at: () => P.pizzaWood, max: () => T.max.pzWood, on: () => S.stage >= 3 },
-  { key: 'whWood', at: () => P.whWood, max: () => whCap(), on: () => S.stage >= 3 && S.lv.warehouse > 0, store: true },
+  { key: 'tanWood', at: () => TAN.in, max: () => T.max.tanWood, on: () => hidesOn() && S.stage >= 2 },
+  { key: 'pzWood', at: () => P.pizzaIn, max: () => T.max.pzWood, on: () => S.stage >= 3 },
 ];
+const WH_SPOT = { wh: true, at: () => P.whIn, on: () => whOn() };   // with a warehouse, woodcutters only ever unload there
 function woodSpot(skip) {
+  if (whOn()) return WH_SPOT;
   const open = WOOD_SPOTS.filter(w => w !== skip && w.on() && S[w.key] < w.max());
   const ovenLow = open.find(w => w.key === 'ovenWood' && S.ovenWood < T.max.ovenWood / 2 && S.ovenWood * 3 < S.wood);
-  return ovenLow || open.find(w => w.key === 'wood') || open.filter(w => !w.store).sort((a, b) => S[a.key] / a.max() - S[b.key] / b.max())[0] || open.find(w => w.store) || skip || WOOD_SPOTS[0];
+  return ovenLow || open.find(w => w.key === 'wood') || open.sort((a, b) => S[a.key] / a.max() - S[b.key] / b.max())[0] || skip || WOOD_SPOTS[0];
 }
 function updateHelpers(dt) {
   for (const h of helpers) {
@@ -1157,10 +1243,11 @@ function updateHelpers(dt) {
         else if (h.tree.logs === 0) helperToTree(h);
       }
     } else if (h.state === 'deliver') {   // unload; when this tile is full, walk on to another wood tile that still has room
-      const w = h.spot, k = Math.min(w.max() - S[w.key], h.n);
-      if (k > 0) { S[w.key] += k; h.n -= k; fly('log', V(h.x, 1.3, h.z), V(w.at().x, .4, w.at().z)); }
+      if (h.spot.wh && !whOn()) h.spot = woodSpot();
+      const w = h.spot, k = w.wh ? whPut('log', h.n) : Math.min(w.max() - S[w.key], h.n);
+      if (k > 0) { if (!w.wh) S[w.key] += k; h.n -= k; fly('log', V(h.x, 1.3, h.z), V(w.at().x, .4, w.at().z)); }
       if (!h.n) helperToTree(h);
-      else { const nx = woodSpot(w); if (nx !== w) { h.spot = nx; h.path = [V(nx.at().x - .4, 0, nx.at().z - 1.3)]; } }
+      else if (!w.wh) { const nx = woodSpot(w); if (nx !== w) { h.spot = nx; h.path = [V(nx.at().x - .4, 0, nx.at().z - 1.3)]; } }
     } else helperToTree(h);
     h.carry.children.forEach((m, i) => (m.visible = i < h.n));
     h.g.position.set(h.x, 0, h.z);
@@ -1256,7 +1343,8 @@ function addHunter() {
 function huntOut(h) { h.state = 'out'; h.prey = null; h.path = h.z < 6 ? [GATE_IN.clone(), GATE_OUT.clone()] : []; }
 function huntHome(h) {
   h.state = 'home';
-  h.path = (h.z > 6 ? [GATE_OUT.clone(), GATE_IN.clone()] : []).concat([V(P.meatTile.x, 0, P.meatTile.z + 1.3)]);
+  const to = whOn() ? V(P.whIn.x + .8, 0, P.whIn.z - 1.3) : V(P.meatTile.x, 0, P.meatTile.z + 1.3);
+  h.path = (h.z > 6 ? [GATE_OUT.clone(), GATE_IN.clone()] : []).concat([to]);
 }
 function hurtHunter(h, b) {
   h.hp -= b.boss ? 2 : 1;
@@ -1289,7 +1377,7 @@ function updateTowers(dt) {
   }
 }
 // fame statue (north-west): grows and turns gold as the village gets famous
-const statueG = new THREE.Group(); statueG.position.set(-.4, 0, -8.8); scene.add(statueG);
+const statueG = new THREE.Group(); statueG.position.set(-.4, 0, -5.9); scene.add(statueG);
 function buildStatue() {
   statueG.clear(); const lv = S.lv.statue; statueG.visible = lv > 0; if (!lv) return;
   const c = lv >= 6 ? 0xffc83d : lv >= 3 ? 0xc7ccd6 : 0x9aa0aa, k = .8 + lv * .06;
@@ -1328,9 +1416,10 @@ function updateHunters(dt) {
     if (h.state === 'out') { if (walkPath(h, dt, 3.4)) h.state = 'hunt'; continue; }
     if (h.state === 'home') {
       if (!walkPath(h, dt, 3.4)) continue;
-      const k = Math.min(h.n, T.max.meat - S.meat);
+      if (whOn()) { h.n -= whPut('meat', h.n, V(h.x, 1.3, h.z)); h.hides -= whPut('hide', h.hides); }
+      const k = whOn() ? 0 : Math.min(h.n, T.max.meat - S.meat);
       if (k > 0) { S.meat += k; h.n -= k; fly('meat', V(h.x, 1.3, h.z), V(P.meatTile.x, .5, P.meatTile.z)); }
-      if (h.n && S.lv.warehouse && S.stage >= 3) { const w = Math.min(h.n, whCap() - S.whMeat); if (w > 0) { S.whMeat += w; h.n -= w; fly('meat', V(h.x, 1.3, h.z), V(P.whMeat.x, 1, P.whMeat.z), .4); } }
+      if (h.n > 0) { S.coinPile += h.n * T.price.meat; h.n = 0; }   // nowhere left to put it: sell the surplus
       if (h.n === 0) { if (h.hides) { h.state = 'hides'; h.path = [V(TAN.in.x - 1.3, 0, TAN.in.z)]; } else huntOut(h); }
       continue;
     }
@@ -1349,13 +1438,13 @@ function updateHunters(dt) {
         if (pk.type === 'meat' && h.n < huntCap()) h.n++; else if (pk.type === 'hide' && h.hides < hideCap()) h.hides++; else continue;
         scene.remove(pk.m); pickups.splice(i, 1);
       }
-      const next = campPickup(h);
-      if (next) h.path = [V(next.x, 0, next.z)];
+      const next = loosePickup(h);
+      if (next) h.path = lootPath(h, next);
       else if (h.n || h.hides) huntHome(h); else huntOut(h);
       continue;
     }
-    const loot = campPickup(h);
-    if (loot) { h.state = 'collect'; h.path = (h.z > 6 ? [GATE_OUT.clone(), GATE_IN.clone()] : []).concat([V(loot.x, 0, loot.z)]); continue; }
+    const loot = loosePickup(h);
+    if (loot) { h.state = 'collect'; h.path = lootPath(h, loot); continue; }
     if (h.n >= huntCap() || h.hides >= hideCap()) { huntHome(h); continue; }
     if (h.hp < 8 && tick('hReg' + hunters.indexOf(h), 2, dt)) h.hp++;
     if (!h.prey || !bears.includes(h.prey) || h.prey.raider) {
@@ -1390,8 +1479,9 @@ function updateFishers(dt) {
     if (f.state === 'toHole') {
       f.g.rotation.y = -Math.PI / 2; f.body.rotation.x = Math.sin(performance.now() / 300) * .05;
       if ((f.t += dt) >= ST.fisherCatch[S.lv.fisher]) { f.t = 0; f.n++; burst(f.hole.x, .3, f.hole.z, 0xbfe3f5, 5, { spd: 2, up: 4, life: .4 }); }
-      if (f.n >= ST.fisherCarry[S.lv.fisher]) { f.state = 'toShop'; f.path = [V(P.fishCrate.x + 1.2, 0, P.fishCrate.z)]; }
+      if (f.n >= ST.fisherCarry[S.lv.fisher]) { f.state = 'toShop'; f.path = whOn() ? [V(16.8, 0, f.z), V(P.whIn.x - .8, 0, P.whIn.z - 1.3)] : [V(P.fishCrate.x + 1.2, 0, P.fishCrate.z)]; }
     } else {
+      if (whOn()) { f.n -= whPut('fish', f.n, V(f.x, 1.2, f.z)); if (f.n === 0) { f.state = 'toHole'; f.path = [V(16.8, 0, f.hole.z), V(f.hole.x + 1, 0, f.hole.z)]; } return; }
       const k = Math.min(f.n, T.max.fishCrate - S.fishCrate);
       if (k > 0) { S.fishCrate += k; f.n -= k; fly('fish', V(f.x, 1.2, f.z), V(P.fishCrate.x, .5, P.fishCrate.z)); }
       if (f.n === 0) { f.state = 'toHole'; f.path = [V(f.hole.x + 1, 0, f.hole.z)]; }
@@ -1406,9 +1496,9 @@ const SHOPS = {
     open: () => true, stock: () => S.counter.steak, take: () => S.counter.steak--, stat: 'sold' },
   fish: { item: 'sfish', icon: '🐟', front: V(10.6, 0, -11.2), dir: V(1, 0, 0), side: V(0, 0, -.4), face: 0, from: V(22, 0, -12.6), exit: V(22, 0, -12.8), at: P.fishShop, coat: 0x7fb3e0, clerk: 'fishClerk', coin: 'coinFish',
     open: () => S.stage >= 2, stock: () => S.fishStock, take: () => S.fishStock--, stat: 'soldFish' },
-  leather: { item: 'leather', icon: '👜', front: V(17.3, 0, TAN.out.z - 1.1), dir: V(0, 0, 1), side: V(.4, 0, 0), face: -Math.PI / 2, from: LEATHER_ROUTE, exit: LEATHER_ROUTE, at: TAN.out, coat: 0xc9a06b, coin: 'coinLeather',
+  leather: { item: 'leather', icon: '👜', front: V(13, 0, 7.4), dir: V(1, 0, 0), side: V(0, 0, .4), face: Math.PI, from: V(30, 0, 7.6), exit: V(30, 0, 7.8), at: TAN.out, coat: 0xc9a06b, coin: 'coinLeather', clerk: 'leatherClerk',
     open: () => S.lv.artisan > 0 && hidesOn() && S.stage >= 2, stock: () => S.leather, take: () => S.leather--, stat: 'soldLeather' },
-  pizza: { item: 'pizza', icon: '🍕', front: V(27.3, 0, -6.6), dir: V(0, 0, 1), side: V(.4, 0, 0), face: -Math.PI / 2, from: V(34, 0, 9), exit: V(34, 0, 9), at: P.pizzaShop, coat: 0xe8a0a0, clerk: 'pizzaClerk', coin: 'coinPizza',
+  pizza: { item: 'pizza', icon: '🍕', front: V(22.4, 0, -11.2), dir: V(1, 0, 0), side: V(0, 0, -.4), face: 0, from: V(36, 0, -12.6), exit: V(36, 0, -12.8), at: P.pizzaShop, coat: 0xe8a0a0, clerk: 'pizzaClerk', coin: 'coinPizza',
     open: () => S.stage >= 3, stock: () => S.pizza, take: () => S.pizza--, stat: 'soldPizza' },
 };
 function spawnCustomer(key) {
@@ -1431,7 +1521,7 @@ function updateCustomers(dt) {
     if (!sh.open()) continue;
     const ck = S.lv[sh.clerk || 'clerk'], serveN = key === 'leather' ? Math.max(T.leatherShop.slots, ST.clerkSlots[ck]) : ST.clerkSlots[ck];
     const queue = customers.filter(c => c.shop === key && c.state === 'queue');
-    const big = key !== 'leather', maxQ = big ? 6 + 2 * S.lv.cabin : T.leatherShop.maxQ, iv = big ? 3.2 - .6 * S.lv.cabin : T.leatherShop.iv;
+    const big = key !== 'leather', maxQ = key === 'fish' ? Math.min(10, 6 + 2 * S.lv.cabin) : big ? 6 + 2 * S.lv.cabin : T.leatherShop.maxQ, iv = big ? 3.2 - .6 * S.lv.cabin : T.leatherShop.iv;
     if (queue.length < maxQ && S.warmth >= 35 && S.started && tick('spawn' + key, iv, dt)) spawnCustomer(key);
     queue.forEach((c, i) => {
       const t = sh.front.clone().addScaledVector(sh.dir, i * 1.1);
@@ -1691,8 +1781,11 @@ function updatePets(dt) {
   });
 }
 function spawnRaid() {
-  const want = 1 + Math.floor(S.storms / 2), n = Math.max(0, want - val('gate') - S.lv.wall);
-  if (want > n) setTimeout(() => toast(`🛡️ 정문이 곰 ${want - n}마리를 막았어요`), 1800);
+  const want = 1 + Math.floor(S.storms / 2), atGate = Math.max(0, want - val('gate') - S.lv.wall);
+  const guarded = Math.min(atGate, S.guard); S.guard -= guarded;
+  const n = atGate - guarded;
+  if (want > n) setTimeout(() => toast(`🛡️ 정문·경비가 곰 ${want - n}마리를 막았어요`), 1800);
+  const supply = pads.find(p => p.key === 'hearth'); if (supply && guardPad(supply)) drawPad(supply);
   for (let i = 0; i < n; i++) {
     const b = makeBear(true);
     b.x = rand(-3, 3); b.z = 17 + i * 2; bears.push(b);
@@ -1717,12 +1810,12 @@ function bearHurt(b, dmg, src = pl) {
   b.lootText = b.boss ? '👑 처치!' : `🥩+${meat}`;
   if (b.wolf) { S.stat.wolves++; if (Math.random() < (b.alpha ? T.alpha.pupChance : .15) && pets.length + pups.length < 1) spawnPup(b.x, b.z); }
   if (b.alpha) { S.coinPile += T.alpha.coins; toast(`🐺 대장 늑대 처치! 보너스 🪙${T.alpha.coins}`); }
-  if (src !== pl && src.carry) { src.n = Math.min(huntCap(), src.n + meat); src.hides = Math.min(hideCap(), src.hides + hides); }
-  else {
-    for (let i = 0; i < meat; i++) dropPickup('meat', b.x + rand(-1.2, 1.2), b.z + rand(-1.2, 1.2));
-    for (let i = 0; i < hides; i++) dropPickup('hide', b.x + rand(-1, 1), b.z + rand(-1, 1));
-  }
-  if (B && B.trophy) { if (src !== pl && src.carry) { S[S.stage >= 3 ? 'forgeRaw' : 'raw'][B.trophy]++; toast(`${MAT_ICON[B.trophy]} 사냥꾼이 ${RAW_NAME[B.trophy]}을(를) 챙겼어요`); } else dropPickup(B.trophy, b.x, b.z); }
+  const heldMeat = src !== pl && src.carry ? Math.min(meat, Math.max(0, huntCap() - src.n)) : 0;
+  const heldHides = src !== pl && src.carry ? Math.min(hides, Math.max(0, hideCap() - src.hides)) : 0;
+  if (src.carry) { src.n += heldMeat; src.hides += heldHides; }
+  for (let i = heldMeat; i < meat; i++) dropPickup('meat', b.x + rand(-1.2, 1.2), b.z + rand(-1.2, 1.2));
+  for (let i = heldHides; i < hides; i++) dropPickup('hide', b.x + rand(-1, 1), b.z + rand(-1, 1));
+  if (B && B.trophy) { if (src !== pl && src.carry) { if (whOn()) S.wh[B.trophy]++; else S[S.lv.smith ? 'forgeRaw' : 'raw'][B.trophy]++; toast(`${MAT_ICON[B.trophy]} 사냥꾼이 ${RAW_NAME[B.trophy]}을(를) 챙겼어요`); } else dropPickup(B.trophy, b.x, b.z); }
   if (B) { const c = B.coins + T.beasts.coinsPer * heroLv(); S.coinPile += c; S.stat.beasts = (S.stat.beasts || 0) + 1; toast(`⚔ ${B.name} 처치! 보너스 🪙${c}`); return true; }
   if (b.boss) { S.stat.boss++; S.coinPile += 300; toast('👑 보스 곰 처치! 보너스 🪙300'); return true; }
   if (b.wolf) return true;
@@ -1801,19 +1894,29 @@ function updateBears(dt) {
 const lerpAngle = (a, b, k) => { let d = ((b - a + Math.PI) % (Math.PI * 2)) - Math.PI; if (d < -Math.PI) d += Math.PI * 2; return a + d * Math.min(1, k); };
 
 const pickups = [];
-// nearest meat/hide on the ground inside the fence that this hunter still has room for
-function campPickup(h) {
+// nearest meat/hide this hunter can carry, including field drops
+function loosePickup(h) {
   let best = null, bd = 1e9;
   for (const pk of pickups) {
-    if (pk.x < CAMP.x1 || pk.x > CAMP.x2 || pk.z < CAMP.z1 || pk.z > CAMP.z2) continue;
     if (pk.type === 'meat' ? h.n >= huntCap() : pk.type === 'hide' ? h.hides >= hideCap() : true) continue;
     const d = Math.hypot(pk.x - h.x, pk.z - h.z);
     if (d < bd) { bd = d; best = pk; }
   }
   return best;
 }
+function lootPath(h, pk) {
+  const outside = z => z > 6.5;
+  return (outside(h.z) === outside(pk.z) ? [] : outside(h.z) ? [GATE_OUT.clone(), GATE_IN.clone()] : [GATE_IN.clone(), GATE_OUT.clone()]).concat([V(pk.x, 0, pk.z)]);
+}
+const ringGeo = new THREE.RingGeometry(.9, 1.2, 28).rotateX(-Math.PI / 2), ringMat = new THREE.MeshBasicMaterial({ color: 0xffb020, side: THREE.DoubleSide });
+const beamGeo = new THREE.CylinderGeometry(.22, .35, 6, 10, 1, true), beamMat = new THREE.MeshBasicMaterial({ color: 0xffe27a, transparent: true, opacity: .32, depthWrite: false, side: THREE.DoubleSide });
 function dropPickup(type, x, z) {
   const m = itemMesh(type); m.position.set(x, .3, z); scene.add(m);
+  if (type === 'pelt' || type === 'tusk') {   // valuable trophies: bigger, glowing, with a light beam that shows from afar
+    m.scale.setScalar(1.7); const beam = new THREE.Mesh(beamGeo, beamMat); beam.position.y = 3 / 1.7; beam.scale.setScalar(1 / 1.7); m.add(beam);
+    const ring = new THREE.Mesh(ringGeo, ringMat); ring.position.y = -.2 / 1.7; ring.scale.setScalar(1 / 1.7); m.add(ring);
+    toast(`✨ ${type === 'pelt' ? '🐯 검치호 가죽' : '🦣 매머드 뿔'}이 떨어졌어요! 빛기둥을 찾아 주우세요`);
+  }
   pickups.push({ type, m, x, z, t: rand(0, 6) });
 }
 
@@ -1979,18 +2082,22 @@ function updatePlayer(dt) {
   updateSwing(dt);
 
   // drop-offs and pick-ups
-  if (S.lv.warehouse && S.stage >= 3) {   // full tiles overflow into the warehouses
-    if (near(P.woodTile, 1.35) && S.wood >= T.max.wood && S.whWood < whCap() && stackHas('log') && tick('whW', .07, dt)) { stackTake('log'); S.whWood++; fly('log', backPos(), V(P.whWood.x, 1, P.whWood.z), .3); }
-    if (near(P.meatTile, 1.35) && S.meat >= T.max.meat && S.whMeat < whCap() && stackHas('meat') && tick('whM', .07, dt)) { stackTake('meat'); S.whMeat++; fly('meat', backPos(), V(P.whMeat.x, 1, P.whMeat.z), .3); }
-    if ((near(P.whWood, 1.5) && stackHas('log') && S.whWood < whCap() || near(P.whMeat, 1.5) && stackHas('meat') && S.whMeat < whCap()) && tick('whDrop', .07, dt)) {
-      const w = near(P.whWood, 1.5); stackTake(w ? 'log' : 'meat'); S[w ? 'whWood' : 'whMeat']++;
-    }
+  if (whOn() && near(P.whIn, 1.35) && tick('whDrop', .07, dt)) {   // the warehouse takes any raw material from the bag, and trophies from the pouch
+    const it = WH_ITEMS.find(t => stackHas(t));
+    if (it && whRoom() > 0) { stackTake(it); S.wh[it]++; fly(it, backPos(), V(P.whIn.x, .5, P.whIn.z), .2); }
+    else { const m = S.raw.pelt ? 'pelt' : S.raw.tusk ? 'tusk' : null; if (m && whRoom() > 0) { S.raw[m]--; S.wh[m]++; fly(m, V(pl.x, 1.4, pl.z), V(P.whIn.x, .5, P.whIn.z), .2); } }
   }
   if (near(P.woodTile, 1.35) && S.wood < T.max.wood && stackHas('log')) {
     if (tick('dropWood', .07, dt)) { stackTake('log'); S.wood++; S.woodIn++; fly('log', backPos(), V(P.woodTile.x, .5, P.woodTile.z), .2); }
   }
-  if (near(P.meatTile, 1.35) && S.meat < T.max.meat && stackHas('meat')) {
-    if (tick('dropMeat', .07, dt)) { stackTake('meat'); S.meat++; S.meatIn++; fly('meat', backPos(), V(P.meatTile.x, .5, P.meatTile.z), .2); play('pop', 60); }
+  if (near(P.meatTile, 1.35) && stackHas('meat')) {
+    if (tick('dropMeat', .07, dt)) {
+      stackTake('meat');
+      if (S.meat < T.max.meat) { S.meat++; S.meatIn++; fly('meat', backPos(), V(P.meatTile.x, .5, P.meatTile.z), .2); }
+      else if (whOn() && whRoom() > 0) { S.wh.meat++; fly('meat', backPos(), V(P.whIn.x, 1, P.whIn.z), .3); }
+      else { S.coinPile += T.price.meat; if (!S.timers.meatToast || S.timers.meatToast <= 0) { toast('🥩 보관함이 가득 차 남는 고기를 팔았어요'); S.timers.meatToast = 5; } }
+      play('pop', 60);
+    }
   }
   if (S.stage >= 2) {
     if (near(P.ovenOut, 1.3) && S.fishRaw < ovenCap() && stackHas('fish') && tick('dropFish', .07, dt)) { stackTake('fish'); S.fishRaw++; fly('fish', backPos(), V(P.oven.x, 1, P.oven.z), .2); play('pop', 60); }
@@ -2004,8 +2111,9 @@ function updatePlayer(dt) {
   if (near(P.grill, 1.9) && stack.length < bagCap() && S.grillItems.some(isReady)) {
     if (tick('pickSteak', .07, dt)) { const it = takeReady(); if (it) { stackAdd(it.type); play('pop', 40); } }
   }
-  if (hidesOn() && S.stage >= 2 && near(P.tanWood, 1.35) && S.tanWood < T.max.tanWood && stackHas('log') && tick('dropTanWood', .07, dt)) {
-    stackTake('log'); S.tanWood++; fly('log', backPos(), V(P.tanWood.x, .5, P.tanWood.z), .2);
+  if ((hidesOn() && S.stage >= 2 || S.lv.smith) && near(TAN.in, 1.35) && tick('dropTan', .08, dt)) {   // workshop tile: logs, then beast trophies
+    if (S.tanWood < T.max.tanWood && stackHas('log')) { stackTake('log'); S.tanWood++; fly('log', backPos(), V(TAN.in.x, .5, TAN.in.z), .2); }
+    else { const m = S.raw.pelt ? 'pelt' : S.raw.tusk ? 'tusk' : null; if (m && S.forgeRaw[m] < T.max.forgeRaw) { S.raw[m]--; S.forgeRaw[m]++; fly(m, V(pl.x, 1.4, pl.z), V(TAN.in.x, .5, TAN.in.z), .2); play('pop', 60); } }
   }
   if (hidesOn() && S.stage >= 2 && near(TAN.in, 1.35) && stackHas('hide') && tick('dropHide', .08, dt)) {
     stackTake('hide');
@@ -2017,18 +2125,14 @@ function updatePlayer(dt) {
     stackTake('steak'); S.counter.steak++; S.steakIn++; fly('steak', backPos(), V(P.counter.x, 1, P.counter.z), .2);
   }
   if (S.stage >= 3) {
-    if (near(P.forgeIn, 1.35) && S.raw.pelt + S.raw.tusk > 0 && tick('dropRaw', .15, dt)) {
-      const m = S.raw.pelt ? 'pelt' : 'tusk';
-      if (S.forgeRaw[m] < T.max.forgeRaw) { S.raw[m]--; S.forgeRaw[m]++; fly(m, V(pl.x, 1.4, pl.z), V(P.forgeIn.x, .5, P.forgeIn.z), .2); play('pop', 60); }
-    }
-    if (near(P.vegCrate, 1.35) && S.vegCrate < T.max.vegCrate && stackHas('veg') && tick('dropVeg', .07, dt)) { stackTake('veg'); S.vegCrate++; fly('veg', backPos(), V(P.vegCrate.x, .5, P.vegCrate.z), .2); }
     if (near(P.pizzaIn, 1.35) && tick('dropPz', .07, dt)) {
       if (S.pzVeg < T.max.pzVeg && stackHas('veg')) { stackTake('veg'); S.pzVeg++; fly('veg', backPos(), V(P.pizzaIn.x, .5, P.pizzaIn.z), .2); }
       else if (S.pzMeat < T.max.pzMeat && stackHas('meat')) { stackTake('meat'); S.pzMeat++; fly('meat', backPos(), V(P.pizzaIn.x, .5, P.pizzaIn.z), .2); }
+      else if (S.pzFish < T.max.pzFish && stackHas('fish')) { stackTake('fish'); S.pzFish++; fly('fish', backPos(), V(P.pizzaIn.x, .5, P.pizzaIn.z), .2); }
+      else if (S.pzWood < T.max.pzWood && stackHas('log')) { stackTake('log'); S.pzWood++; fly('log', backPos(), V(P.pizzaIn.x, .5, P.pizzaIn.z), .2); }
     }
-    if (near(P.pizzaWood, 1.35) && S.pzWood < T.max.pzWood && stackHas('log') && tick('dropPzWood', .07, dt)) { stackTake('log'); S.pzWood++; fly('log', backPos(), V(P.pizzaWood.x, .5, P.pizzaWood.z), .2); }
     if (stack.length < bagCap() && tick('harvest', .12, dt)) for (let i = 0; i < PLOTS.length; i++) if (plotRipe(i) && near(PLOTS[i], 1.0)) {
-      S.plots[i] = 0; stackAdd('veg'); fly('veg', V(PLOTS[i].x, .4, PLOTS[i].z), backPos(), .25); play('pop', 40); break;
+      S.plots[i] = 0; stackAdd('veg'); S.stat.veg = (S.stat.veg || 0) + 1; fly('veg', V(PLOTS[i].x, .4, PLOTS[i].z), backPos(), .25); play('pop', 40); break;
     }
   }
   for (const c of COIN_PILES) if (near(c.at, 1.5) && S[c.key] > 0 && tick('coin', .03, dt)) {
@@ -2038,16 +2142,25 @@ function updatePlayer(dt) {
   for (let i = pickups.length - 1; i >= 0; i--) {
     const p = pickups[i];
     p.t += dt; p.m.position.y = .3 + Math.sin(p.t * 4) * .08; p.m.rotation.y += dt * 2;
+    if ((p.type === 'pelt' || p.type === 'tusk') && Math.random() < dt * 8) burst(p.x + rand(-.4, .4), .5, p.z + rand(-.4, .4), 0xfff3a0, 1, { spd: 1.2, up: 3, life: .6, size: .55 });
     if (MAT_ICON[p.type] && Math.hypot(p.x - pl.x, p.z - pl.z) < 1.4) {   // trophies go straight to the materials pouch
       scene.remove(p.m); pickups.splice(i, 1); S.raw[p.type]++; play('up');
       popText(pl.x, 2.8, pl.z, `${MAT_ICON[p.type]} ${RAW_NAME[p.type]} +1`, '#ffd36b', true); continue;
     }
     if (Math.hypot(p.x - pl.x, p.z - pl.z) < 1.4 && pl.stunFree && stackAdd(p.type)) { scene.remove(p.m); pickups.splice(i, 1); play('pop', 40); if (p.type === 'hide') S.stat.hides++; }
+    else if (Math.hypot(p.x - pl.x, p.z - pl.z) < 1.4 && stack.length >= bagCap() && (!S.timers.bagToast || S.timers.bagToast <= 0)) { toast('🎒 가방이 가득 찼어요. 자원을 내려놓으세요'); S.timers.bagToast = 5; }
   }
   for (const p of pads) {
     if (!p.on) continue;
     const u = UP[p.key], lv = S.lv[p.key];
     if (p.lock) { if (!near(p, 1.3)) p.lock = false; continue; }
+    if (guardPad(p)) {
+      if (padHidden(p) || !near(p, 1.0) || pl.moving || S.coins < guardCost()) { p.dwell = 0; continue; }
+      if ((p.dwell = (p.dwell || 0) + dt) < T.padDwell) continue;
+      S.coins -= guardCost(); S.guard++; p.dwell = 0; p.lock = true; drawPad(p);
+      toast(`🛡️ 경비 보급 완료! 다음 눈보라 습격 곰 ${S.guard}마리 차단`); play('up'); buzz(30);
+      continue;
+    }
     if (padHidden(p) || !near(p, 1.0) || S.coins <= 0 || pl.moving || !matsOk(p.key)) { p.dwell = 0; continue; }
     if ((p.dwell = (p.dwell || 0) + dt) < T.padDwell) continue;
     if (!tick('pad', .03, dt)) continue;
@@ -2149,7 +2262,10 @@ function levelUp(key) {
   if (key === 'wall') applyStage(false);
   if (key === 'staffHouse') buildHouses();
   if (key === 'farmer') addFarmer();
-  if (key === 'pizzaChef') addPizzaCook();
+  if (key === 'pizzaChef') addPizzaChef();
+  if (key === 'courier') addCourier();
+  if (key === 'leatherClerk') syncClerks();
+  if (key === 'fire') { applyStage(false); addCourier(); burst(P.fire.x, 1.5, P.fire.z, 0xffb347, 30, { spd: 5, up: 8, life: 1 }); }
   if (key === 'smith') addSmith();
   if (key === 'pizzaClerk') syncClerks();
   if (key === 'fisher2') addFisher();
@@ -2166,7 +2282,7 @@ function levelUp(key) {
   }
   const pad = pads.find(p => p.key === key);
   burst(pad.x, .5, pad.z, 0xffc83d, 14, { spd: 4, up: 7, life: .8 }); play('up'); buzz([20, 40, 20]);
-  const msg = { bag: `가방 용량 ${bagCap()}`, axe: `도끼 Lv${S.lv.axe + 1}: 공격력 ${val('axe')}`, cape: `최대 체력 ${S.maxHp}`, saberCoat: `검치호 갑옷 Lv${S.lv.saberCoat}: 막기 ${pct(blockChance())}, 체력 ${S.maxHp}`, tuskAxe: `매머드 뿔 도끼 Lv${S.lv.tuskAxe}: 공격력 ${axeDmg()}`, statue: `명성 +${val('statue')}%: 모든 판매가 상승`, hearth: `3단계 확장!`, fisher2: `두 번째 낚시꾼이 일을 시작합니다`, farmer: `농부 Lv${S.lv.farmer}: 채소를 거둡니다`, pizzaChef: `피자 요리사 Lv${S.lv.pizzaChef}: 재료를 나릅니다`, pizzaClerk: `피자 점원 Lv${S.lv.pizzaClerk}`, smith: `대장장이 Lv${S.lv.smith}: 전리품을 가공합니다`, helper3: `세 번째 나무꾼이 일을 시작합니다`, warehouse: `마을 창고 Lv${S.lv.warehouse}: ${whCap()}칸`, wall: `돌담 Lv${S.lv.wall}`, bank: `은행 개점! 점원이 수금해요`, staffHouse: `직원 숙소 ${S.lv.staffHouse}채`, hunter3: `세 번째 사냥꾼이 사냥을 나갑니다`, boots: `이동 속도 ↑ · 막기 ${pct(blockChance())}`, coat: `외투 Lv${S.lv.coat}: 막기 ${pct(blockChance())}`, gate: S.lv.gate > 3 ? `감시탑 Lv${towerLv()} 가동!` : `습격 곰 −${val('gate')}마리`, helper: `나무꾼 Lv${S.lv.helper}: 장작 ${ST.helperCarry[S.lv.helper]}개씩`, server: `서빙 직원 Lv${S.lv.server}: 한 번에 ${ST.serverCarry[S.lv.server]}개`, hunter: `사냥꾼 Lv${S.lv.hunter}: 공격력 ${ST.hunterDmg[S.lv.hunter]}`, cabin: `손님이 더 많이, 더 자주 옵니다`, fishing: `2단계 확장!`, clerk: `판매 점원 Lv${S.lv.clerk}: 손님 ${ST.clerkSlots[S.lv.clerk]}명 동시 응대`, artisan: S.lv.artisan === 1 ? `가죽 공방 가동! 가죽 제품을 팔아요` : `가죽 제품을 더 빨리 만들어요`, fisher: `낚시꾼 Lv${S.lv.fisher}: 생선 상자를 채웁니다`, fishClerk: `생선 점원 Lv${S.lv.fishClerk}: 손님 ${ST.clerkSlots[S.lv.fishClerk]}명 동시 응대`, helper2: `두 번째 나무꾼이 일을 시작합니다`, oven: `생선을 ${T.ovenTime[S.lv.oven]}초마다 굽고, 위에 ${ovenCap()}마리까지 올려요`, hunter2: `두 번째 사냥꾼이 사냥을 나갑니다` }[key];
+  const msg = { bag: `가방 용량 ${bagCap()}`, axe: `⚔️ ${weaponLook().name}! 공격력 ${axeDmg()}`, cape: `최대 체력 ${S.maxHp}`, saberCoat: `검치호 갑옷 Lv${S.lv.saberCoat}: 막기 ${pct(blockChance())}, 체력 ${S.maxHp}`, tuskAxe: `🦣 ${weaponLook().name}! 공격력 ${axeDmg()}`, statue: `명성 +${val('statue')}%: 모든 판매가 상승`, hearth: `3단계 확장!`, fisher2: `두 번째 낚시꾼이 일을 시작합니다`, farmer: `농부 Lv${S.lv.farmer}: 채소를 거둡니다`, pizzaChef: `피자 쉐프 Lv${S.lv.pizzaChef}: 피자를 굽습니다`, pizzaOven: `피자 화덕 Lv${S.lv.pizzaOven + 1}: ${T.pizzaTime[S.lv.pizzaOven]}초`, courier: `배달 트럭 ${courierCount()}대`, leatherClerk: `가죽 점원 Lv${S.lv.leatherClerk}`, fire: `모닥불 Lv${S.lv.fire + 1}!`, pizzaClerk: `피자 점원 Lv${S.lv.pizzaClerk}`, smith: `대장장이 Lv${S.lv.smith}: 전리품을 가공합니다`, helper3: `세 번째 나무꾼이 일을 시작합니다`, warehouse: `큰 창고 ${whCap()}칸: 재료가 모두 여기로 모여요`, wall: `돌담 Lv${S.lv.wall}`, bank: `은행 개점! 점원이 수금해요`, staffHouse: `직원 숙소 ${S.lv.staffHouse}채`, hunter3: `세 번째 사냥꾼이 사냥을 나갑니다`, boots: `이동 속도 ↑ · 막기 ${pct(blockChance())}`, coat: `외투 Lv${S.lv.coat}: 막기 ${pct(blockChance())}`, gate: S.lv.gate > 3 ? `감시탑 Lv${towerLv()} 가동!` : `습격 곰 −${val('gate')}마리`, helper: `나무꾼 Lv${S.lv.helper}: 장작 ${ST.helperCarry[S.lv.helper]}개씩`, server: `서빙 직원 Lv${S.lv.server}: 한 번에 ${ST.serverCarry[S.lv.server]}개`, hunter: `사냥꾼 Lv${S.lv.hunter}: 공격력 ${ST.hunterDmg[S.lv.hunter]}`, cabin: `손님이 더 많이, 더 자주 옵니다`, fishing: `2단계 확장!`, clerk: `판매 점원 Lv${S.lv.clerk}: 손님 ${ST.clerkSlots[S.lv.clerk]}명 동시 응대`, artisan: S.lv.artisan === 1 ? `가죽 공방 가동! 가죽 제품을 팔아요` : `가죽 제품을 더 빨리 만들어요`, fisher: `낚시꾼 Lv${S.lv.fisher}: 생선 상자를 채웁니다`, fishClerk: `생선 점원 Lv${S.lv.fishClerk}: 손님 ${ST.clerkSlots[S.lv.fishClerk]}명 동시 응대`, helper2: `두 번째 나무꾼이 일을 시작합니다`, oven: `생선을 ${T.ovenTime[S.lv.oven]}초마다 굽고, 위에 ${ovenCap()}마리까지 올려요`, hunter2: `두 번째 사냥꾼이 사냥을 나갑니다` }[key];
   if (key !== 'fishing') toast(`${u.icon} ${u.name} 업그레이드! ${msg}`);
 }
 
@@ -2174,7 +2290,7 @@ function levelUp(key) {
 function updateFire(dt) {
   const burn = (S.phase === 'storm' ? T.stormBurn : 1) * Math.min(T.burnMax, 1 + T.burnGrow * S.storms);
   decoFlames.forEach((f, i) => f.scale.setScalar(S.fuel > 0 ? .8 + Math.sin(performance.now() / 80 + i) * .25 : .01));
-  if (S.fuel < 2 && S.wood > 0) { S.wood--; S.fuel += T.logFuel; }
+  if (S.fuel < 2 && S.wood > 0) { S.wood--; S.fuel += logFuel(); }
   S.fuel = Math.max(0, S.fuel - dt * burn);
   const lit = S.fuel > 0;
   if (lit && S.meat > 0 && S.grillItems.length < T.max.grill && (S.cookT += dt) >= .6) {
@@ -2192,7 +2308,7 @@ function updateFire(dt) {
   if (lit) S.warmth = Math.min(100, S.warmth + 8 * dt);
   else S.warmth = Math.max(0, S.warmth - (S.phase === 'storm' ? 7 : 1.2) * dt);
   if (S.phase === 'storm' && !lit) S.stormFireOut = true;
-  const total = S.fuel + S.wood * T.logFuel;
+  const total = S.fuel + S.wood * logFuel();
   const f = lit ? .55 + .45 * Math.min(1, S.fuel / 4) : 0, now = performance.now();
   flameO.visible = flameI.visible = lit;
   flameO.scale.set(f * (1 + Math.sin(now / 70) * .08), f * (1 + Math.sin(now / 53) * .12), f);
@@ -2268,12 +2384,14 @@ function updateHud(dt) {
   if (toastT > 0 && (toastT -= dt) <= 0) toastEl.classList.remove('show');
   if (S.timers.eatToast) S.timers.eatToast -= dt;
   if (S.timers.burnToast) S.timers.burnToast -= dt;
+  if (S.timers.bagToast) S.timers.bagToast -= dt;
+  if (S.timers.meatToast) S.timers.meatToast -= dt;
   updateGoals();
   setText(coinsEl, `🪙 ${S.coins}`);
   setText(hpEl, `⚔${heroLv()} ` + (S.maxHp > 5 ? `♥ ${Math.max(0, S.hp)}/${S.maxHp}` : '♥'.repeat(clamp(S.hp, 0, 20)) + '♡'.repeat(clamp(S.maxHp - S.hp, 0, 20))));
   const t = Math.ceil(S.phaseT);
   stormEl.className = 'pill' + (S.phase === 'warn' ? ' warn' : S.phase === 'storm' ? ' on' : '');
-  setText(stormEl, S.phase === 'calm' ? `❄ 다음 눈보라 ${Math.floor(t / 60)}:${String(t % 60).padStart(2, '0')}` : S.phase === 'warn' ? `⚠ 눈보라 접근 ${t}` : `🌨 눈보라 ${t}초`);
+  setText(stormEl, (S.phase === 'calm' ? `❄ 다음 눈보라 ${Math.floor(t / 60)}:${String(t % 60).padStart(2, '0')}` : S.phase === 'warn' ? `⚠ 눈보라 접근 ${t}` : `🌨 눈보라 ${t}초`) + (S.guard ? ` · 🛡️${S.guard}` : ''));
   warmFill.style.width = S.warmth.toFixed(0) + '%';
   warmEl.classList.toggle('cold', S.warmth < 35);
   setText(bagEl, `🎒 ${stack.length} / ${bagCap()}` + (S.raw.pelt + S.raw.tusk + S.mats.pelt + S.mats.tusk ? ` · 🐯${S.raw.pelt} 🦣${S.raw.tusk} ✨${S.mats.pelt}/${S.mats.tusk}` : ''));
@@ -2310,6 +2428,11 @@ const GOALS = [
   { text: '보스 곰 처치', cur: () => S.stat.boss, n: 1, reward: 400 },
   { text: '늑대 펫 Lv3 키우기', cur: () => (pets[0] ? pets[0].lv + 1 : 0), n: 3, reward: 300 },
   { text: '오두막 3채 짓기', cur: () => S.lv.cabin, n: 3, reward: 500 },
+  { text: '3단계: 큰 화로', cur: () => S.stage >= 3 ? 1 : 0, n: 1, reward: 500 },
+  { text: '채소 10개 수확', cur: () => S.stat.veg || 0, n: 10, reward: 200 },
+  { text: '큰 창고 짓기', cur: () => S.lv.warehouse, n: 1, reward: 300 },
+  { text: '피자 5판 판매', cur: () => S.stat.soldPizza, n: 5, reward: 400 },
+  { text: '대장장이로 전리품 가공', cur: () => S.stat.forged || 0, n: 1, reward: 500 },
 ];
 function updateGoals() {
   const g = GOALS[S.goal];
@@ -2323,9 +2446,9 @@ const SAVE_KEY = 'winter-rush-v1';
 function save() {
   try {
     const counter = { ...S.counter };
-    const keys = ['coins', 'bank', 'strike', 'whWood', 'whMeat', 'mats', 'raw', 'forgeRaw', 'plots', 'vegCrate', 'pzVeg', 'pzMeat', 'pzWood', 'pzFuel', 'pzT', 'pizza', 'smithT', 'coinPizza', 'coinPile', 'coinFish', 'coinLeather', 'tanWood', 'wood', 'meat', 'fuel', 'warmth', 'grillItems', 'lv', 'storms', 'stat', 'goal', 'tut', 'woodIn', 'meatIn', 'steakIn', 'served', 'bought', 'hide', 'fishCrate', 'fishRaw', 'ovenWood', 'fishSmoked', 'fishStock', 'smokeFuel', 'tanFuel', 'leather', 'stage', 'petCount', 'petHits', 'packs', 'tanT', 'hp', 'phase', 'phaseT', 'stormFireOut'];
+    const keys = ['coins', 'guard', 'bank', 'strike', 'paydayT', 'wh', 'mats', 'raw', 'forgeRaw', 'plots', 'pzFish', 'pzVeg', 'pzMeat', 'pzWood', 'pzFuel', 'pzT', 'pizza', 'smithT', 'coinPizza', 'coinPile', 'coinFish', 'coinLeather', 'tanWood', 'wood', 'meat', 'fuel', 'warmth', 'grillItems', 'lv', 'storms', 'stat', 'goal', 'tut', 'woodIn', 'meatIn', 'steakIn', 'served', 'bought', 'hide', 'fishCrate', 'fishRaw', 'ovenWood', 'fishSmoked', 'fishStock', 'smokeFuel', 'tanFuel', 'leather', 'stage', 'petCount', 'petHits', 'packs', 'tanT', 'hp', 'phase', 'phaseT', 'stormFireOut'];
     const data = Object.fromEntries(keys.map(k => [k, S[k]]));
-    data.counter = counter; data.paid = pads.map(p => p.paid);
+    data.counter = counter; data.paid = Object.fromEntries(pads.map(p => [p.key, p.paid]));
     data.player = { x: pl.x, z: pl.z };
     data.stackTypes = stack.map(i => i.type);
     data.raiders = bears.filter(b => b.raider || b.boss).map(b => ({ raider: b.raider, boss: b.boss, x: b.x, z: b.z, hp: b.hp }));
@@ -2338,14 +2461,24 @@ function load() {
   if (!d) return false;
   const { paid, lv, stat, counter, player: savedPlayer, stackTypes, raiders, ...rest } = d;
   Object.assign(S, rest); S.mats = Object.assign({ pelt: 0, tusk: 0 }, S.mats); S.raw = Object.assign({ pelt: 0, tusk: 0 }, S.raw); S.forgeRaw = Object.assign({ pelt: 0, tusk: 0 }, S.forgeRaw); Object.assign(S.lv, lv || {}); Object.assign(S.stat, stat || {}); Object.assign(S.counter, counter || {});
-  (paid || []).forEach((v, i) => { if (pads[i]) pads[i].paid = v; });
+  if (Array.isArray(paid)) {
+    // older saves stored payments in pad order; map them back by the pad order of that version
+    const base = ['bag', 'boots', 'axe', 'helper', 'helper2', 'gate', 'hunter', 'hunter2', 'server', 'cabin', 'fishing', 'clerk', 'artisan', 'fisher', 'fishClerk', 'oven', 'coat', 'cape'];
+    const v12 = base.concat(['hearth', 'fisher2', 'farmer', 'pizzaChef', 'pizzaClerk', 'smith', 'helper3', 'hunter3']);
+    const order = paid.length === 33 ? v12.concat(['warehouse', 'wall', 'bank', 'staffHouse', 'saberCoat', 'tuskAxe', 'statue'])
+      : paid.length === 29 ? v12.concat(['saberCoat', 'tuskAxe', 'statue']) : base.concat(['saberCoat', 'tuskAxe', 'statue']);
+    paid.forEach((v, i) => { const p = pads.find(q => q.key === order[i]); if (p) p.paid = v; });
+  } else if (paid) {
+    pads.forEach(p => { if (Number.isFinite(paid[p.key])) p.paid = paid[p.key]; });
+  }
   for (let i = 0; i < 4; i++) addHelper();
   for (let i = 0; i < val('server'); i++) addServer();
   for (let i = 0; i < 4; i++) addHunter();
   for (let i = 0; i < S.lv.cabin; i++) buildCabin(i);
   for (let i = 0; i < Math.min(1, S.petCount); i++) addPet();
   for (let i = 0; i < 3; i++) addFisher();
-  if (S.lv.farmer) addFarmer(); if (S.lv.pizzaChef) addPizzaCook(); if (S.lv.smith) addSmith();
+  if (S.lv.farmer) addFarmer(); if (S.lv.pizzaChef) addPizzaChef(); if (S.lv.smith) addSmith(); addCourier();
+  S.wh = Object.assign({ log: 0, meat: 0, fish: 0, veg: 0, hide: 0, pelt: 0, tusk: 0 }, S.wh); S.wh.log += S.whWood || 0; S.wh.meat += S.whMeat || 0; S.wh.veg += S.vegCrate || 0; S.whWood = S.whMeat = S.vegCrate = 0;
   if (S.lv.artisan) addArtisan();
   syncClerks(); applyGear();
   S.grillItems = S.grillItems.filter(it => it.type === 'steak');
@@ -2374,8 +2507,9 @@ function frame(now) {
   if (S.hitstop > 0) { S.hitstop -= dt; g = dt * .08; }
   if (S.started) {
     updatePhase(g); updatePlayer(g); updateFire(g); updateBears(g);
-    updateCustomers(g); updateHelpers(g); updateServers(g); updateHunters(g); updateShots(g); updatePets(g); updateTannery(g); updateFishers(g); updateOven(g); updateTowers(g); updateAnnex(g); updateWarehouses(g); updateBank(g);
+    updateCustomers(g); updateHelpers(g); updateServers(g); updateHunters(g); updateShots(g); updatePets(g); updateTannery(g); updateFishers(g); updateOven(g); updateTowers(g); updateAnnex(g); updateHearth3(g); updateBank(g);
   }
+  const glow = .5 + .5 * Math.sin(performance.now() / 160); IMAT.pelt.emissive.setRGB(.45 * glow, .3 * glow, 0); IMAT.tusk.emissive.setRGB(.45 * glow, .42 * glow, .25 * glow);   // trophies pulse
   updateTrees(g); updateFlyers(g); updateParts(g); updatePops(dt); updateShock(dt); updateCabins(dt); updateSnow(dt); updateHud(dt);
   woodPile.set(S.wood); meatPile.set(S.meat); renderGrill();
   counterPile.set(S.counter.steak);
@@ -2408,29 +2542,26 @@ $('vib').addEventListener('click', e => { SND.vib = !SND.vib; e.currentTarget.cl
 function footprints() {
   const box = (n, x, z, w, d) => [n, x - w / 2, x + w / 2, z - d / 2, z + d / 2];
   const two = S.stage >= 2, f = [];
-  const stage2Only = ['fisher', 'artisan', 'fishClerk', 'helper2', 'hunter2', 'oven', 'hearth', 'fisher2'], three = S.stage >= 3;
-  const stage3Only = ['farmer', 'pizzaChef', 'pizzaClerk', 'smith', 'helper3', 'hunter3', 'warehouse', 'wall', 'bank', 'staffHouse'];
-  pads.forEach(p => { if (S.lv[p.key] < UP[p.key].costs.length && (two || !stage2Only.includes(p.key)) && (three || !stage3Only.includes(p.key))) f.push(box('pad:' + p.key, p.x, p.z, 1.9, 1.9)); });
+  const stage2Only = ['fisher', 'artisan', 'fishClerk', 'helper2', 'hunter2', 'oven', 'hearth', 'fisher2', 'leatherClerk'], three = S.stage >= 3;
+  const stage3Only = ['farmer', 'pizzaChef', 'pizzaClerk', 'smith', 'helper3', 'hunter3', 'warehouse', 'wall', 'bank', 'staffHouse', 'courier', 'pizzaOven'];
+  pads.forEach(p => { if ((guardPad(p) || S.lv[p.key] < UP[p.key].costs.length) && (two || !stage2Only.includes(p.key)) && (three || !stage3Only.includes(p.key))) f.push(box('pad:' + p.key, p.x, p.z, 1.9, 1.9)); });
   f.push(box('woodTile', P.woodTile.x, P.woodTile.z, 1.9, 1.9), box('meatTile', P.meatTile.x, P.meatTile.z, 1.9, 1.9));
   f.push(box('fire', P.fire.x, P.fire.z, two ? 2.6 : 2.2, two ? 2.6 : 2.2), ['grill', grillBox.x1, grillBox.x2, grillBox.z1, grillBox.z2], ['counter', counterBox.x1, counterBox.x2, counterBox.z1, counterBox.z2]);
   f.push(box('counterStand', P.counterStand.x, P.counterStand.z, 1.2, 1.2), box('coinPile', P.coinPile.x, P.coinPile.z, 1.3, 1.3));
   if (S.lv.clerk) f.push(box('clerk', 6.6, -8.7, .8, .8));
-  f.push(box('statue', -.4, -8.8, 1, 1));
-  if (two) f.push(box('fishClerk', 9.6, -8.8, .8, .8), box('artisanSpot', TAN.home.x, TAN.home.z, .8, .8));
+  f.push(box('statue', -.4, -5.9, 1, 1));
+  if (two) f.push(box('fishClerk', 9.6, -8.8, .8, .8), box('artisanSpot', TAN.home.x, TAN.home.z, .8, .8), box('leatherClerk', TAN.clerk.x, TAN.clerk.z, .8, .8), box('anvil', TAN.anvil.x, TAN.anvil.z, .9, .9));
   if (two) {
     f.push(box('fishShop', P.fishShop.x, P.fishShop.z, 2.6, 1.1), box('oven', P.oven.x, P.oven.z - .3, 1.4, 1.85), box('ovenWood', P.ovenWood.x, P.ovenWood.z, 1.9, 1.9), box('fishCrate', P.fishCrate.x, P.fishCrate.z, 1.9, 1.9));
-    f.push(box('tanWood', P.tanWood.x, P.tanWood.z, 1.9, 1.9), box('tanCoin', P.tanCoin.x, P.tanCoin.z, 1.3, 1.3), box('fishCoin', P.fishCoin.x, P.fishCoin.z, 1.3, 1.3));
-    f.push(box('tanFire', TAN.fire.x, TAN.fire.z, .9, .9), box('pond', 12.5, .6, 4.8, 4.8), box('tanIn', TAN.in.x, TAN.in.z, 1.9, 1.9), box('leatherShop', TAN.out.x, TAN.out.z, 1.1, 2.6));
+    f.push(box('tanCoin', P.tanCoin.x, P.tanCoin.z, 1.3, 1.3), box('fishCoin', P.fishCoin.x, P.fishCoin.z, 1.3, 1.3));
+    f.push(box('tanFire', TAN.fire.x, TAN.fire.z, .9, .9), box('pond', 12.6, 0, 4, 4), box('tanIn', TAN.in.x, TAN.in.z, 1.9, 1.9), box('leatherShop', TAN.out.x, TAN.out.z, 2.6, 1.1));
   }
   if (three) {
     PLOTS.forEach((pp, i) => f.push(box('plot' + i, pp.x, pp.z, 1.6, 1.6)));
-    for (const k of ['vegCrate', 'pizzaWood', 'pizzaIn', 'forgeIn']) f.push(box(k, P[k].x, P[k].z, 1.9, 1.9));
-    f.push(box('pizzaOven', P.pizzaOven.x, P.pizzaOven.z, 1.4, 1.4), box('pizzaShop', P.pizzaShop.x, P.pizzaShop.z, 1.1, 2.6), box('pizzaCoin', P.pizzaCoin.x, P.pizzaCoin.z, 1.3, 1.3), box('anvil', P.anvil.x, P.anvil.z, .9, .9));
-    if (S.lv.pizzaClerk) f.push(box('pizzaClerk', 23.9, -5.4, .8, .8));
-    if (S.lv.warehouse) f.push(box('whWood', P.whWood.x, P.whWood.z, 1.7, 1.7), box('whMeat', P.whMeat.x, P.whMeat.z, 1.7, 1.7), ['beltW1', .45, 2.9, -6.2, -5.6], ['beltW2', 2.3, 2.9, -5.6, -3.95], ['beltM', 8.35, 9.15, -3.1, -2.5]);
-    if (S.lv.bank) f.push(box('bank', P.bank.x, P.bank.z, 1.9, 1.9), box('vault', P.vault.x, P.vault.z, .8, .8));
+    f.push(box('pizzaIn', P.pizzaIn.x, P.pizzaIn.z, 1.9, 1.9), box('pizzaOven', P.pizzaOven.x, P.pizzaOven.z, 1.4, 1.4), box('pizzaShop', P.pizzaShop.x, P.pizzaShop.z, 2.6, 1.1), box('pizzaCoin', P.pizzaCoin.x, P.pizzaCoin.z, 1.3, 1.3), box('pizzaClerk', 23.8, -8.8, .8, .8));
+    f.push(box('wh', P.wh.x, P.wh.z, 2.8, 2.2), box('whIn', P.whIn.x, P.whIn.z, 1.9, 1.9), box('bank', P.bank.x, P.bank.z, 1.9, 1.9), box('vault', P.vault.x, P.vault.z, .8, .8));
   }
   return f;
 }
-window.__winter = { payday, get clerkNpc() { return clerkNpc; }, get farmer() { return farmer; }, get pizzaCook() { return pizzaCook; }, PLOTS, bearHurt, spawnBeast, dropPickup, pickups, footprints, spawnPup, addPet, spawnPack, applyPetLook, pups, stackAdd, pets, fishers, SHOPS, P, S, pl, stack, bears, trees, customers, pads, helpers, servers, hunters, camera, T, save, levelUp };
+window.__winter = { payday, get clerkNpc() { return clerkNpc; }, get farmer() { return farmer; }, couriers, whPut, PLOTS, bearHurt, spawnBeast, dropPickup, pickups, footprints, spawnPup, addPet, spawnPack, applyPetLook, pups, stackAdd, pets, fishers, SHOPS, P, S, pl, stack, bears, trees, customers, pads, helpers, servers, hunters, camera, T, save, levelUp };
 })();
