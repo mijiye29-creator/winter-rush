@@ -38,3 +38,4 @@
 - v0.5: 화덕 체인 `S.fishCrate → S.fishRaw(+S.ovenWood) → S.fishSmoked → S.fishStock`, 쉐프 작업 선택 `CHEF_JOBS`/`chooseChefJob`, 장인 `S.tanFuel`과 장작 운반, 생선 점원 `fishClerk`(SHOPS.fish.clerk), 칸 결제는 정지 0.5초 후(`p.dwell`)
 - v0.6: 화덕 위 굽기(`fishRawPile`이 화덕 위, 완성 즉시 `S.fishStock`), 쉐프 작업은 `steak`/`fishIn` 두 가지, `helper2`/`hunter2`(2단계, `addHelper`/`addHunter`가 인원 수 판단)
 - v0.7: `makeWolf(alpha)`/`T.alpha`(`S.packs` 카운터), 새끼 늑대 `u.fed`/`T.pet.tameMeat`, 펫 외형 `PET_LOOKS`/`applyPetLook`
+- v0.8: 화덕 레벨 `UP.oven`/`T.ovenTime`/`T.ovenCap`(`ovenCap()`), 쉐프 `chooseChefJob(w)`는 `queuedNeed`·`w.since`·`w.want` 사용, 눈보라 장작 배율 `T.stormBurn`·`T.smoke.stormUse`
