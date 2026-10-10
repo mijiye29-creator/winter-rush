@@ -1609,7 +1609,7 @@ function spawnCustomer(key) {
   const b = sprite(160, 120, 1.3, .98); b.sp.position.y = 2.6; p.g.add(b.sp);
   const need = key === 'main'
     ? 1 + Math.floor(Math.random() * Math.min(4 + S.lv.cabin, 1 + S.served / 6)) + (Math.random() < S.lv.cabin * .2 ? 1 : 0)
-    : 1 + Math.floor(Math.random() * 3);
+    : 1 + Math.floor(Math.random() * (key === 'leather' ? 2 : 3));
   const c = { ...p, b, shop: key, need, wait: 0, x: sh.from.x, z: sh.from.z, state: 'queue', mood: '' };
   p.g.position.set(c.x, 0, c.z); customers.push(c); drawBubble(c);
 }
@@ -1625,7 +1625,8 @@ function updateCustomers(dt) {
     const ck = S.lv[sh.clerk || 'clerk'], serveN = key === 'leather' ? Math.max(T.leatherShop.slots, ST.clerkSlots[ck]) : ST.clerkSlots[ck];
     const queue = customers.filter(c => c.shop === key && c.state === 'queue');
     const big = key !== 'leather', maxQ = key === 'fish' ? Math.min(10, 6 + 2 * S.lv.cabin) : big ? 6 + 2 * S.lv.cabin : T.leatherShop.maxQ, iv = big ? 3.2 - .6 * S.lv.cabin : T.leatherShop.iv;
-    if (queue.length < maxQ && S.warmth >= 35 && S.started && tick('spawn' + key, iv, dt)) spawnCustomer(key);
+    const stockOk = key !== 'leather' || S.leather + S.hide > queue.reduce((n, c) => n + c.need, 0);   // no leather queue piling up with nothing to sell
+    if (queue.length < maxQ && stockOk && S.warmth >= 35 && S.started && tick('spawn' + key, iv, dt)) spawnCustomer(key);
     queue.forEach((c, i) => {
       const t = sh.front.clone().addScaledVector(sh.dir, i * 1.1);
       if (i >= serveN) t.add(sh.side);
@@ -2444,8 +2445,9 @@ function updateFire(dt) {
   if (S.fuel < 2 && S.wood > 0) { S.wood--; S.fuel += logFuel(); }
   S.fuel = Math.max(0, S.fuel - dt * burn);
   const lit = S.fuel > 0;
-  if (lit && S.meat > 0 && S.grillItems.length < T.max.grill && (S.cookT += dt) >= .6) {
-    S.cookT = 0; S.meat--;
+  const mps = T.meatPerSteak[S.stage - 1];
+  if (lit && S.meat >= mps && S.grillItems.length < T.max.grill && (S.cookT += dt) >= T.grillFeed) {
+    S.cookT = 0; S.meat -= mps;
     S.grillItems.push({ type: 'steak', t: 0 });
     fly('meat', V(P.meatTile.x, .5, P.meatTile.z), V(P.grill.x, .3, P.grill.z), .3);
   }

@@ -1,8 +1,9 @@
 window.WinterRushData = {
   T: {
-    logFuel: 8,
+    logFuel: 6,                   // seconds of fire per log (before hearth levels)
     cook: { steak: 2.5 }, burn: 35,
-    price: { steak: 10, sfish: 18, leather: 25, hide: 4, meat: 2, pizza: 70 },
+    meatPerSteak: [1, 2, 2], grillFeed: .45,   // by village stage: raw meat per steak; seconds between grill loads
+    price: { steak: 12, sfish: 18, leather: 32, hide: 4, meat: 2, pizza: 100 },
     guard: { baseCost: 600, costPerStorm: 200, max: 3 },
     burnGrow: .15, burnMax: 2.2,   // fire burns faster each blizzard survived (×1 → ×2.2)
     smoke: { time: 3.5, fishPerLog: 1, stormUse: 1.5 },   // oven: 1 log per fish, 1.5 logs in a blizzard
@@ -27,8 +28,8 @@ window.WinterRushData = {
     stormBurn: 3.5, stormSlow: .35,
     fieldBears: 5, maxFieldBears: 9, bearRespawn: 5, bearHp: 4, bossEvery: 4,
     wolfPackSize: 3, maxWolves: 10, wolfSpawn: 14, wolfStartSold: 8, hurtGrace: .8,
-    hideChance: { bear: .35, wolf: .2 },   // hides drop only sometimes; bosses/alpha/beasts always drop theirs
-    leatherShop: { iv: 2.4, maxQ: 6, slots: 2 },
+    hideChance: { bear: .6, wolf: .35 },   // hides drop only sometimes; bosses/alpha/beasts always drop theirs
+    leatherShop: { iv: 3.5, maxQ: 5, slots: 2 },   // customers only come while there is stock (leather + hides) to serve them
     axeChop: [.42, .34, .27, .21, .19, .17, .15],   // seconds per chop by axe level
     // hero power = axe + boots + coat + cape levels; field animals get tougher and new beasts appear
     powerHp: { bear: .6, wolf: .34, alpha: 1, boss: 2 },
@@ -44,7 +45,7 @@ window.WinterRushData = {
     // stage 3 (큰 화로): garden → veg, veg + meat + logs → pizza, smith processes beast trophies
     garden: { grow: 12 },          // seconds for a plot to ripen
     pizzaTime: [3.2, 2.4, 1.7],    // seconds per pizza batch by pizza oven level (1 log per batch)
-    pizzaRecipe: { veg: 1, meat: 3, fish: 2 },   // per pizza
+    pizzaRecipe: { veg: 2, meat: 4, fish: 3 },   // per pizza
     smithTime: [0, 8, 4],          // seconds per trophy processed by smith level
     warehouse: { cap: [0, 800, 800], perFire: 200 },   // +200 slots per hearth level
     courier: { carry: [0, 8, 12, 16], speed: [0, 4.6, 5.3, 6] },   // delivery trucks
