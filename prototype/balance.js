@@ -52,7 +52,7 @@ window.WinterRushData = {
     pizzaRecipe: { veg: 2, meat: 4, fish: 3 },   // per pizza
     smithTime: [0, 8, 4],          // seconds per trophy processed by smith level
     warehouse: { cap: [0, 800, 800], perFire: 200 },   // +200 slots per hearth level
-    courier: { carry: [0, 8, 12, 16], speed: [0, 4.6, 5.3, 6] },   // delivery trucks
+    courier: { carry: [0, 12, 14, 16], speed: [0, 5.5, 5.8, 6.2] },   // delivery trucks
     fireLv: .25,                  // each hearth level: a log burns 25% longer
     wage: { every: 60, per: 8, interest: .005, maxInterest: 50 },   // per staff each payday (stage 3)
     staffHouse: .15,               // staff speed bonus per heated house

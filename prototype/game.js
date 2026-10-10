@@ -899,6 +899,9 @@ function updateCourier(c, dt) {
     c.n -= k; c.job = null; if (c.n) { c.state = 'stash'; c.path = viaGate(c, V(P.whIn.x, 0, P.whIn.z - 1.3)); return; } c.state = 'idle';   // leftovers go back to the warehouse (or on to another tile)
   }
   if (!whOn()) return;
+  if (whRoom() > 0 && S.fishCrate >= T.max.fishCrate && fishers.some(f => f.state === 'toShop' && f.n > 0) && !couriers.some(o => o !== c && o.state === 'haul' && o.haulKey === 'fishCrate')) {
+    c.state = 'haul'; c.haulKey = 'fishCrate'; c.item = 'fish'; c.path = viaGate(c, V(P.fishCrate.x - 1.3, 0, P.fishCrate.z)); return;
+  }
   let best = null, br = .6;
   for (const t of DELIVER) {
     if ((t.on && !t.on()) || S.wh[t.item] <= 0 || couriers.some(o => o !== c && o.job === t)) continue;
