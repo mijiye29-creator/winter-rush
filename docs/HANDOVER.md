@@ -35,3 +35,4 @@
 - 가죽은 `hidesOn()`(사냥꾼 Lv3) && 2단계에서만. `UP.*.stage`로 레벨별 필요 단계 지정, `padHidden()`은 최대 레벨/단계 미달 칸 숨김
 - 훈제: `S.fishRaw`(투입 칸) → `updateSmoker` → `S.fishStock`(가게, `sfish`). 장작은 모닥불 장작 더미(`S.wood`)에서 가져감
 - 배치 점검: `window.__winter.footprints()`가 바닥 시설·업그레이드 칸의 사각형 목록을 돌려줌. 업데이트 후 1·2단계 모두에서 겹침이 없는지 확인할 것 (연못은 원으로 판정)
+- v0.5: 화덕 체인 `S.fishCrate → S.fishRaw(+S.ovenWood) → S.fishSmoked → S.fishStock`, 쉐프 작업 선택 `CHEF_JOBS`/`chooseChefJob`, 장인 `S.tanFuel`과 장작 운반, 생선 점원 `fishClerk`(SHOPS.fish.clerk), 칸 결제는 정지 0.5초 후(`p.dwell`)
