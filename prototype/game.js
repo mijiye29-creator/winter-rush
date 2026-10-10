@@ -921,7 +921,7 @@ makePad('clerk', 4.5, -.2); makePad('artisan', 6.6, 4.2); makePad('fisher', 4.5,
 makePad('coat', -2.4, 2); makePad('cape', -6.6, 4.2);
 makePad('hearth', 8.7, -.2); makePad('fisher2', 8.7, 2);   // stage 2 column east of the right block
 makePad('farmer', 19.4, -.2); makePad('pizzaChef', 21.5, -.2); makePad('pizzaClerk', 23.6, -.2); makePad('smith', 19.4, 2); makePad('helper3', 21.5, 2); makePad('hunter3', 23.6, 2);   // stage 3 annex
-makePad('warehouse', 8.7, -.2); makePad('wall', 17.2, -6); makePad('bank', 17.2, -3.8); makePad('staffHouse', 17.2, -1.6);   // stage 3
+makePad('warehouse', 8.7, -5.6); makePad('wall', 17.2, -6); makePad('bank', 17.2, -3.8); makePad('staffHouse', 17.2, -1.6);   // stage 3
 makePad('saberCoat', -6.6, -7.8); makePad('tuskAxe', -4.5, -7.8); makePad('statue', -2.4, -7.8);   // legend row, north-west
 const PAD_POS2 = {};   // pads that move when the village grows
 const REVEAL = {
