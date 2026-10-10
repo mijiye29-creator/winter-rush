@@ -218,6 +218,7 @@ const sfx = {
   chop: () => { noise(.09, 2200, 1.5, .3); tone(260, .07, 'triangle', .12, 150); },
   swing: () => noise(.12, 3500, .7, .06),
   hit: () => { tone(140, .14, 'sine', .55, 45); noise(.08, 900, 1, .4); },
+  pain: () => tone(190, .2, 'sawtooth', .12, 85),
   crit: () => { tone(180, .22, 'square', .22, 50); noise(.15, 600, .8, .5); },
   kill: () => { tone(110, .45, 'sawtooth', .2, 35); noise(.3, 400, .7, .35); },
   coin: () => tone(1400 + Math.random() * 300, .06, 'square', .05, 2000),
@@ -633,7 +634,7 @@ shock.visible = false; scene.add(shock);
 const swoosh = new THREE.Mesh(new THREE.RingGeometry(.7, 1.35, 18, 1, -Math.PI * .8, Math.PI * .6).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0, side: THREE.DoubleSide, depthWrite: false }));
 swoosh.position.y = .95; swoosh.visible = false; player.g.add(swoosh);
 const stackG = new THREE.Group(); stackG.position.set(0, 0, -.5); player.g.add(stackG);
-const pl = { combo: 0, comboT: 0, x: 0, z: 0, rot: Math.PI, swing: 0, moving: false };
+const pl = { combo: 0, comboT: 0, manual: 0, focus: null, x: 0, z: 0, rot: Math.PI, swing: 0, moving: false };
 player.g.position.set(0, 0, 0);
 const stack = [];
 function layoutStack() {
@@ -933,10 +934,11 @@ const hpBarGeo = new THREE.PlaneGeometry(1.2, .14);
 const outlineMat = new THREE.MeshBasicMaterial({ color: 0x2b3440, side: THREE.BackSide });
 function makeBear(raider, boss = false) {
   const g = new THREE.Group(); scene.add(g);
+  const body = new THREE.Group(); g.add(body);
   const fur = new THREE.MeshLambertMaterial({ color: boss ? 0xdcd3f0 : raider ? 0xc3cad8 : 0xfffaf0 });
   const m = (geo, x, y, z, material = fur) => {
-    const o = mesh(geo, material, x, y, z); g.add(o);
-    if (material === fur) { const ol = new THREE.Mesh(geo, outlineMat); ol.position.copy(o.position); ol.scale.setScalar(1.09); g.add(ol); }
+    const o = mesh(geo, material, x, y, z); body.add(o);
+    if (material === fur) { const ol = new THREE.Mesh(geo, outlineMat); ol.position.copy(o.position); ol.scale.setScalar(1.09); body.add(ol); }
     return o;
   };
   m(new THREE.BoxGeometry(1.15, .95, 1.8), 0, 1.0, 0);
@@ -954,7 +956,7 @@ function makeBear(raider, boss = false) {
   bar.visible = false; bar.renderOrder = 11; fill.renderOrder = 12;
   if (boss) { m(new THREE.ConeGeometry(.32, .45, 5), 0, 1.9, 1.05, mat(0xffc83d, { emissive: 0x664400 })); g.scale.setScalar(1.7); }
   const hp = boss ? 30 + 10 * S.stat.boss : T.bearHp + Math.floor(S.storms / 2);
-  return { g, fur, bar, fill, raider, boss, hp, maxHp: hp, x: 0, z: 0, tx: 0, tz: 0, cd: 0, flash: 0, squash: 0, wander: 0, eatT: 0 };
+  return { g, body, fur, bar, fill, raider, boss, hp, maxHp: hp, x: 0, z: 0, tx: 0, tz: 0, cd: 0, flash: 0, squash: 0, recoil: 0, stagger: 0, wander: 0, eatT: 0 };
 }
 function spawnFieldBear() {
   const b = makeBear(false);
@@ -964,10 +966,11 @@ function spawnFieldBear() {
 for (let i = 0; i < T.fieldBears; i++) spawnFieldBear();
 function makeWolf() {
   const g = new THREE.Group(); scene.add(g);
+  const body = new THREE.Group(); g.add(body);
   const fur = new THREE.MeshLambertMaterial({ color: 0x8e98a8 });
   const m = (geo, x, y, z, material = fur) => {
-    const o = mesh(geo, material, x, y, z); g.add(o);
-    if (material === fur) { const ol = new THREE.Mesh(geo, outlineMat); ol.position.copy(o.position); ol.rotation.copy(o.rotation); ol.scale.setScalar(1.12); g.add(ol); }
+    const o = mesh(geo, material, x, y, z); body.add(o);
+    if (material === fur) { const ol = new THREE.Mesh(geo, outlineMat); ol.position.copy(o.position); ol.rotation.copy(o.rotation); ol.scale.setScalar(1.12); body.add(ol); }
     return o;
   };
   m(new THREE.BoxGeometry(.55, .5, 1.1), 0, .72, 0);
@@ -984,7 +987,7 @@ function makeWolf() {
   const fill = new THREE.Mesh(hpBarGeo, new THREE.MeshBasicMaterial({ color: 0xe5484d, depthTest: false })); fill.position.z = .01; bar.add(fill);
   bar.visible = false; bar.renderOrder = 11; fill.renderOrder = 12;
   const hp = 2 + Math.floor(S.storms / 3);
-  return { g, fur, bar, fill, wolf: true, raider: false, boss: false, hp, maxHp: hp, x: 0, z: 0, tx: 0, tz: 0, cd: 0, flash: 0, squash: 0, wander: 0 };
+  return { g, body, fur, bar, fill, wolf: true, raider: false, boss: false, hp, maxHp: hp, x: 0, z: 0, tx: 0, cd: 0, flash: 0, squash: 0, recoil: 0, stagger: 0, wander: 0 };
 }
 function spawnPack() {
   const x = rand(-10, 10), z = rand(15, 22);
@@ -1060,10 +1063,10 @@ function spawnRaid() {
   }
 }
 function bearHurt(b, dmg, src = pl) {
-  b.hp -= dmg; b.flash = .12; b.squash = .18; b.bar.visible = true;
+  b.hp -= dmg; b.flash = .2; b.squash = .22; b.recoil = .28; b.stagger = .2; b.bar.visible = true;
   const dx = b.x - src.x, dz = b.z - src.z, d = Math.hypot(dx, dz) || 1, kb = b.boss ? .15 : .45;
   b.x += dx / d * kb; b.z += dz / d * kb;
-  if (b.hp > 0) { if (Math.random() < .3) play('growl', 400); return false; }
+  if (b.hp > 0) { play('pain', 130); return false; }
   scene.remove(b.g); bears.splice(bears.indexOf(b), 1);
   disposeActor(b.g, hpBarGeo);
   b.fur.dispose(); b.bar.children.forEach(o => o.material.dispose());
@@ -1117,7 +1120,8 @@ function updateBears(dt) {
     if (b.wolf && !chase && !chaseH) sp = 1.6;
     if (chase) { b.tx = pl.x; b.tz = pl.z; sp = (b.wolf ? 3.4 : 2.5) + .8 * S.stormK; }
     const dx = b.tx - b.x, dz = b.tz - b.z, d = Math.hypot(dx, dz);
-    if (d > (chase || chaseH ? 1.3 : .1)) {
+    b.stagger = Math.max(0, b.stagger - dt);
+    if (b.stagger <= 0 && d > (chase || chaseH ? 1.3 : .1)) {
       b.x += dx / d * Math.min(d, sp * dt); b.z += dz / d * Math.min(d, sp * dt);
       b.g.rotation.y = lerpAngle(b.g.rotation.y, Math.atan2(dx, dz), dt * 8);
     }
@@ -1128,11 +1132,16 @@ function updateBears(dt) {
       if (sd < 1.6 && sd > 0) { b.x += sx / sd * (1.6 - sd) * .5; b.z += sz / sd * (1.6 - sd) * .5; }
     }
     b.cd -= dt;
-    if (dist < 1.7 && b.cd <= 0 && pl.stunFree && S.hurtCd <= 0) { b.cd = 1.3; hurtPlayer(b); }
-    for (const h of hunters) if (h.down <= 0 && b.cd <= 0 && Math.hypot(h.x - b.x, h.z - b.z) < 1.7) { b.cd = 1.3; hurtHunter(h, b); }
+    if (b.stagger <= 0 && dist < 1.7 && b.cd <= 0 && pl.stunFree && S.hurtCd <= 0) { b.cd = 1.3; hurtPlayer(b); }
+    for (const h of hunters) if (b.stagger <= 0 && h.down <= 0 && b.cd <= 0 && Math.hypot(h.x - b.x, h.z - b.z) < 1.7) { b.cd = 1.3; hurtHunter(h, b); }
     b.squash -= dt;
-    const sq = Math.max(0, b.squash) / .18, bs = b.boss ? 1.7 : 1;
+    const sq = Math.max(0, b.squash) / .22, bs = b.boss ? 1.7 : 1;
     b.g.scale.set(bs * (1 + .25 * sq), bs * (1 - .22 * sq), bs * (1 + .25 * sq));
+    b.recoil = Math.max(0, b.recoil - dt);
+    const pain = Math.sin(Math.PI * b.recoil / .28);
+    b.body.rotation.x = -.35 * pain;
+    b.body.rotation.z = .16 * pain;
+    b.body.position.y = .2 * pain;
     b.flash -= dt;
     b.fur.emissive.setHex(b.flash > 0 ? 0xff4040 : 0x000000);
     b.g.position.set(b.x, Math.abs(Math.sin(performance.now() / 160 + b.x)) * (d > .2 ? .06 : 0), b.z);
@@ -1170,11 +1179,16 @@ addEventListener('keyup', e => { keys[e.key.toLowerCase()] = false; });
 const joyEl = document.getElementById('joy'), knob = document.getElementById('knob');
 let joyId = null, jx0 = 0, jy0 = 0, jdx = 0, jdy = 0;
 const cv = renderer.domElement;
-let tapT = 0;
+const tapStarts = new Map();
 const ray = new THREE.Raycaster(), groundPlane = new THREE.Plane(V(0, 1, 0), 0), tapNdc = new THREE.Vector2();
 const tapMark = new THREE.Mesh(new THREE.RingGeometry(.35, .5, 20).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ color: 0xffc83d, transparent: true, opacity: .9 }));
 tapMark.position.y = .05; tapMark.visible = false; scene.add(tapMark);
-cv.addEventListener('pointerdown', e => { tapT = performance.now(); joyId = e.pointerId; jx0 = e.clientX; jy0 = e.clientY; jdx = jdy = 0; joyEl.style.display = 'block'; joyEl.style.left = jx0 + 'px'; joyEl.style.top = jy0 + 'px'; knob.style.transform = ''; });
+cv.addEventListener('pointerdown', e => {
+  tapStarts.set(e.pointerId, { x: e.clientX, y: e.clientY, t: performance.now() });
+  if (joyId !== null) return;
+  joyId = e.pointerId; jx0 = e.clientX; jy0 = e.clientY; jdx = jdy = 0;
+  joyEl.style.display = 'block'; joyEl.style.left = jx0 + 'px'; joyEl.style.top = jy0 + 'px'; knob.style.transform = '';
+});
 addEventListener('pointermove', e => {
   if (e.pointerId !== joyId) return;
   let dx = e.clientX - jx0, dy = e.clientY - jy0; const d = Math.hypot(dx, dy), R = 50;
@@ -1184,10 +1198,27 @@ addEventListener('pointermove', e => {
 function setTapTarget(e) {
   tapNdc.set(e.clientX / innerWidth * 2 - 1, -(e.clientY / innerHeight) * 2 + 1);
   ray.setFromCamera(tapNdc, camera);
+  let hitBear = null, nearest = Infinity;
+  for (const b of bears) {
+    const hit = ray.intersectObject(b.body, true)[0];
+    if (hit && hit.distance < nearest) { hitBear = b; nearest = hit.distance; }
+  }
+  if (hitBear && S.started) {
+    pl.focus = hitBear; pl.manual = Math.min(4, pl.manual + 1);
+    pl.target = { enemy: hitBear, t: 6 };
+    tapMark.position.set(hitBear.x, .05, hitBear.z); tapMark.visible = true;
+    return;
+  }
+  pl.focus = null; pl.manual = 0;
   const hit = ray.ray.intersectPlane(groundPlane, V(0, 0, 0));
   if (hit) { pl.target = { x: hit.x, z: hit.z, t: 6 }; tapMark.position.set(hit.x, .05, hit.z); tapMark.visible = true; }
 }
-const joyEnd = e => { if (e.pointerId === joyId) { if (Math.hypot(jdx, jdy) < .2 && performance.now() - tapT < 350) setTapTarget(e); joyId = null; jdx = jdy = 0; joyEl.style.display = 'none'; } };
+function joyEnd(e) {
+  const tap = tapStarts.get(e.pointerId);
+  if (e.type === 'pointerup' && tap && Math.hypot(e.clientX - tap.x, e.clientY - tap.y) < 18 && performance.now() - tap.t < 350) setTapTarget(e);
+  tapStarts.delete(e.pointerId);
+  if (e.pointerId === joyId) { joyId = null; jdx = jdy = 0; joyEl.style.display = 'none'; }
+}
 addEventListener('pointerup', joyEnd); addEventListener('pointercancel', joyEnd);
 
 function collide() {
@@ -1218,6 +1249,8 @@ function updatePlayer(dt) {
   S.hurtCd = Math.max(0, S.hurtCd - dt);
   if ((pl.comboT -= dt) <= 0) pl.combo = 0;
   pl.stunFree = S.stun <= 0;
+  if (!pl.stunFree) { pl.manual = 0; pl.focus = null; }
+  if (pl.focus && !bears.includes(pl.focus)) { pl.manual = 0; pl.focus = null; }
   let ix = Math.hypot(jdx, jdy) < .2 ? 0 : jdx, iz = Math.hypot(jdx, jdy) < .2 ? 0 : jdy;
   if (keys.a || keys.arrowleft) ix -= 1; if (keys.d || keys.arrowright) ix += 1;
   if (keys.w || keys.arrowup) iz -= 1; if (keys.s || keys.arrowdown) iz += 1;
@@ -1225,8 +1258,15 @@ function updatePlayer(dt) {
   if (il > 1) { ix /= il; iz /= il; }
   if (il > .1) { pl.target = null; tapMark.visible = false; }
   else if (pl.target) {
-    const dx = pl.target.x - pl.x, dz = pl.target.z - pl.z, d = Math.hypot(dx, dz);
-    if (d < .25 || (pl.target.t -= dt) <= 0 || !pl.stunFree) { pl.target = null; tapMark.visible = false; } else { ix = dx / d; iz = dz / d; il = 1; }
+    const enemy = pl.target.enemy;
+    if (enemy && !bears.includes(enemy)) { pl.target = null; pl.focus = null; pl.manual = 0; tapMark.visible = false; }
+    else {
+      const tx = enemy ? enemy.x : pl.target.x, tz = enemy ? enemy.z : pl.target.z;
+      const dx = tx - pl.x, dz = tz - pl.z, d = Math.hypot(dx, dz);
+      if (enemy) tapMark.position.set(tx, .05, tz);
+      if (d < (enemy ? 1.8 : .25) || (pl.target.t -= dt) <= 0 || !pl.stunFree) { pl.target = null; tapMark.visible = false; }
+      else { ix = dx / d; iz = dz / d; il = 1; }
+    }
   }
   pl.moving = il > .1 && pl.stunFree;
   if (pl.moving) {
@@ -1242,13 +1282,21 @@ function updatePlayer(dt) {
   stackG.rotation.x = pl.moving ? -.06 : 0;
 
   // combat beats chopping
-  let target = null, best = 2.1;
-  for (const b of bears) { const d = Math.hypot(b.x - pl.x, b.z - pl.z) - (b.boss ? .8 : 0); if (d < best) { best = d; target = b; } }
+  const manual = pl.manual > 0 && pl.focus && bears.includes(pl.focus);
+  let target = manual ? pl.focus : null, best = manual ? T.combat.tapRange : 2.1;
+  if (!manual) for (const b of bears) { const d = Math.hypot(b.x - pl.x, b.z - pl.z) - (b.boss ? .8 : 0); if (d < best) { best = d; target = b; } }
+  if (manual && Math.hypot(target.x - pl.x, target.z - pl.z) - (target.boss ? .8 : 0) > best) target = null;
   if (target && pl.stunFree) {
-    if (!pl.moving) pl.rot = lerpAngle(pl.rot, Math.atan2(target.x - pl.x, target.z - pl.z), dt * 14);
-    if ((!pl.sw || pl.sw.hit) && tick('atk', .45, dt)) {
-      const power = pl.combo % 4 === 3;
-      startSwing(power ? .45 : .3, () => { if (power) powerSlam(); else if (bears.includes(target)) playerHit(target); }, power);
+    if (manual || !pl.moving) pl.rot = lerpAngle(pl.rot, Math.atan2(target.x - pl.x, target.z - pl.z), dt * 20);
+    if (manual) {
+      resetTick('atk');
+      if (!pl.sw) {
+        pl.manual--;
+        const power = pl.combo % T.combat.slamEvery === T.combat.slamEvery - 1;
+        startSwing(power ? .36 : T.combat.manualSwing, () => { if (power) powerSlam(); else if (bears.includes(target)) playerHit(target, true); }, power);
+      }
+    } else if (!pl.sw && tick('atk', T.combat.autoInterval, dt)) {
+      startSwing(.38, () => { if (bears.includes(target)) playerHit(target, false); });
     }
   } else {
     resetTick('atk');
@@ -1367,16 +1415,20 @@ function powerSlam() {
   popText(pl.x, 3.4, pl.z, hits > 1 ? `💥 강타 ×${hits}` : '💥 강타!', '#ffd36b', true);
   S.hitstop = .16; shakeK(.6); play('crit'); play('kill'); buzz([30, 20, 110]);
 }
-function playerHit(b) {
-  pl.combo++; pl.comboT = 1.6;
-  if (pl.combo >= 2) popText(pl.x - .6, 2.4, pl.z, pl.combo % 4 === 3 ? '⚡ 강타 준비' : `${pl.combo} 콤보`, '#ffb347');
-  const crit = Math.random() < .15, dmg = val('axe') * (crit ? 2 : 1), by = b.boss ? 4 : 2.6;
+function playerHit(b, manual) {
+  if (manual) {
+    pl.combo++; pl.comboT = T.combat.comboWindow;
+    if (pl.combo >= 2) popText(pl.x - .6, 2.4, pl.z, pl.combo % T.combat.slamEvery === T.combat.slamEvery - 1 ? '⚡ 강타 준비' : `${pl.combo} 콤보`, '#ffb347');
+  }
+  const crit = manual && Math.random() < T.combat.critChance;
+  const dmg = val('axe') * (crit ? 2 : 1), by = b.boss ? 4 : 2.6;
   const killed = bearHurt(b, dmg, pl);
   popText(b.x, by, b.z, crit ? `${dmg}!` : `${dmg}`, crit ? '#ffd36b' : '#ffffff', crit);
-  burst(b.x, 1.3, b.z, 0xffffff, crit ? 10 : 6, { spd: 5, up: 5, life: .45, size: .9 });
-  burst(b.x, 1.3, b.z, 0xe5484d, crit ? 5 : 2, { spd: 4, up: 4, life: .35, size: .7 });
-  S.hitstop = crit ? .09 : .055; shakeK(crit ? .35 : .2);
-  play(crit ? 'crit' : 'hit'); buzz(crit ? [25, 20, 45] : 30);
+  burst(b.x, 1.3, b.z, 0xffffff, crit ? 14 : manual ? 9 : 4, { spd: 5, up: 5, life: .45, size: .9 });
+  if (manual) burst(b.x, 1.3, b.z, 0xe5484d, crit ? 7 : 4, { spd: 4, up: 4, life: .35, size: .7 });
+  S.hitstop = manual ? crit ? .12 : .075 : .025;
+  shakeK(manual ? crit ? .4 : .26 : .08);
+  play(crit ? 'crit' : 'hit'); buzz(manual ? crit ? [25, 20, 55] : 35 : 10);
   if (killed) {
     S.hitstop = .14; shakeK(.5); play('kill'); buzz([40, 30, 90]);
     burst(b.x, 1, b.z, 0xffffff, 18, { spd: 6, up: 7, life: .7, size: 1.2 });
@@ -1647,5 +1699,5 @@ function footprints() {
   }
   return f;
 }
-window.__winter = { footprints, spawnPup, addPet, pets, fishers, SHOPS, P, S, pl, stack, bears, trees, customers, pads, helpers, servers, hunters, T, save, levelUp };
+window.__winter = { footprints, spawnPup, addPet, pets, fishers, SHOPS, P, S, pl, stack, bears, trees, customers, pads, helpers, servers, hunters, camera, T, save, levelUp };
 })();

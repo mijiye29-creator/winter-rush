@@ -13,6 +13,7 @@ window.WinterRushData = {
       clerkSlots: [1, 2, 2, 3], clerkIv: [.35, .28, .2, .14],
       fisherCatch: [0, 2.2, 1.4], fisherCarry: [0, 6, 10],
     },
+    combat: { autoInterval: .75, manualSwing: .24, comboWindow: 1.6, critChance: .15, slamEvery: 4, tapRange: 2.7 },
     pet: { hits: [0, 15, 40, 80, 140], dmg: [1, 2, 3, 4, 6], cd: [1, .9, .8, .7, .6], scale: [.55, .65, .78, .9, 1.05] },
     calmTime: 70, firstCalm: 80, warnTime: 8, stormTime: 25,
     stormBurn: 2.5, stormSlow: .35,
