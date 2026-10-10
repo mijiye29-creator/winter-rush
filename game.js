@@ -661,28 +661,41 @@ function addCourier() {
     const c = carrier(0x2b4f8a, 0x3a2a22, WH_ITEMS, P.whIn.x + couriers.length * 1.2, P.whIn.z - 1.6);
     const person = c.body, vis = new THREE.Group(), walker = new THREE.Group(), truck = new THREE.Group();
     c.g.add(vis); vis.add(walker, truck); c.g.remove(person); walker.add(person); c.g.remove(c.carry); walker.add(c.carry);
-    person.add(mesh(new THREE.CylinderGeometry(.37, .46, .55, 10), mat(0x2f7fe0), 0, .75, 0), mesh(new THREE.TorusGeometry(.42, .05, 5, 14).rotateX(Math.PI / 2), mat(0xe8ff6a, { emissive: 0x556600 }), 0, .62, 0));   // vest + reflective stripe
-    person.add(mesh(new THREE.SphereGeometry(.3, 10, 6, 0, Math.PI * 2, 0, Math.PI / 2), mat(0x2f7fe0), 0, 1.55, -.02));   // cap
-    // vest details: second reflective band, shoulder straps, chest pocket + badge, brand lettering on the back
-    person.add(mesh(new THREE.TorusGeometry(.4, .04, 5, 14).rotateX(Math.PI / 2), mat(0xe8ff6a, { emissive: 0x556600 }), 0, .9, 0));
-    for (const sx of [-1, 1]) person.add(mesh(new THREE.BoxGeometry(.1, .05, .5), mat(0xe8ff6a, { emissive: 0x556600 }), sx * .2, 1.06, 0));
-    person.add(mesh(new THREE.BoxGeometry(.2, .16, .04), mat(0x1f5fb0), -.15, .82, .41), mesh(new THREE.BoxGeometry(.12, .08, .03), mat(0xffffff), .16, .9, .4));
-    { const back = new THREE.Mesh(new THREE.PlaneGeometry(.62, .2), new THREE.MeshBasicMaterial({ map: vestSignTex, transparent: true })); back.position.set(0, .82, -.45); back.rotation.y = Math.PI; person.add(back); }
-    // green flatbed hand trolley pulled behind the courier, the load rides on the deck
-    walker.add(mesh(new THREE.BoxGeometry(.95, .08, 1.1), mat(0x2fa84f), 0, .32, -1.15));   // deck
-    walker.add(mesh(new THREE.CylinderGeometry(.035, .035, .7, 8), mat(0xeee6cf, { emissive: 0x222018 }), -.42, .65, -.62), mesh(new THREE.CylinderGeometry(.035, .035, .7, 8), mat(0xeee6cf, { emissive: 0x222018 }), .42, .65, -.62), mesh(new THREE.CylinderGeometry(.035, .035, .88, 8).rotateZ(Math.PI / 2), mat(0xeee6cf, { emissive: 0x222018 }), 0, 1.0, -.62));   // ivory steel handle frame on the green deck
-    walker.add(mesh(new THREE.CylinderGeometry(.03, .03, .45, 8).rotateX(Math.PI / 2), mat(0xeee6cf, { emissive: 0x222018 }), .2, .75, -.4));   // pull bar to the hand
-    for (const [x, z] of [[-.4, -.7], [.4, -.7], [-.4, -1.6], [.4, -1.6]]) walker.add(mesh(new THREE.CylinderGeometry(.11, .11, .08, 10).rotateZ(Math.PI / 2), mat(0x2b2f3a), x, .12, z));
+    // uniform (reference: blue delivery vest with silver reflective stripes over a teal shirt, blue cap)
+    const vest = mat(0x2448c8), silver = mat(0xd8dde3, { emissive: 0x303438 });
+    person.add(mesh(new THREE.CylinderGeometry(.35, .45, .97, 10), mat(0x3aa0d8), 0, .62, -.005));   // teal shirt
+    person.add(mesh(new THREE.CylinderGeometry(.37, .465, .62, 10), vest, 0, .74, 0));   // vest
+    person.add(mesh(new THREE.TorusGeometry(.43, .035, 5, 16).rotateX(Math.PI / 2), silver, 0, .58, 0), mesh(new THREE.TorusGeometry(.41, .035, 5, 16).rotateX(Math.PI / 2), silver, 0, .74, 0));   // horizontal reflective bands
+    for (const sx of [-1, 1]) person.add(mesh(new THREE.BoxGeometry(.07, .5, .04), silver, sx * .17, .86, .39), mesh(new THREE.BoxGeometry(.07, .5, .04), silver, sx * .17, .86, -.39));   // vertical bands front + back
+    person.add(mesh(new THREE.BoxGeometry(.16, .14, .04), vest, -.2, .66, .44), mesh(new THREE.BoxGeometry(.16, .14, .04), vest, .2, .66, .44));   // lower pockets
+    person.add(mesh(new THREE.TorusGeometry(.22, .05, 5, 12).rotateX(Math.PI / 2), mat(0x1b1b22), 0, 1.13, 0));   // black polo collar
+    person.add(mesh(new THREE.SphereGeometry(.3, 10, 6, 0, Math.PI * 2, 0, Math.PI / 2), mat(0x2f7fe0), 0, 1.55, -.02), mesh(new THREE.BoxGeometry(.34, .04, .2), mat(0x2f7fe0), 0, 1.57, .3));   // cap + brim
+    { const back = new THREE.Mesh(new THREE.PlaneGeometry(.62, .2), new THREE.MeshBasicMaterial({ map: vestSignTex, transparent: true })); back.position.set(0, 1.0, -.43); back.rotation.y = Math.PI; person.add(back); }
+    // platform trolley (reference): green deck, white tube handle with two cross bars, red caster wheels
+    const tube = mat(0xf2efe6), deckG = new THREE.Group(); deckG.position.z = -1.15; walker.add(deckG);
+    deckG.add(mesh(new THREE.BoxGeometry(.95, .1, 1.25), mat(0x3f8f4a), 0, .3, 0), mesh(new THREE.BoxGeometry(.85, .02, 1.1), mat(0x4aa058), 0, .36, 0));
+    for (const sx of [-1, 1]) deckG.add(mesh(new THREE.CylinderGeometry(.035, .035, 1.0, 8), tube, sx * .4, .82, .58));
+    for (const y of [.75, 1.0, 1.32]) deckG.add(mesh(new THREE.CylinderGeometry(.03, .03, .8, 8).rotateZ(Math.PI / 2), tube, 0, y, .58));
+    for (const [x, z] of [[-.38, .5], [.38, .5], [-.38, -.5], [.38, -.5]]) {
+      deckG.add(mesh(new THREE.BoxGeometry(.1, .1, .08), mat(0xb8bcc4), x, .2, z));
+      deckG.add(mesh(new THREE.CylinderGeometry(.11, .11, .07, 12).rotateZ(Math.PI / 2), mat(0xc0302a), x, .11, z), mesh(new THREE.CylinderGeometry(.05, .05, .08, 8).rotateZ(Math.PI / 2), mat(0xd8dde3), x, .11, z));
+    }
+    walker.add(mesh(new THREE.CylinderGeometry(.03, .03, .5, 8).rotateX(Math.PI / 2), tube, .25, 1.0, -.45));   // hand reaching back to the handle
     c.carry.position.set(0, 0, -1.15);
-    c.carry.children.forEach(m => { const i = m.userData.i; m.position.set((i % 3 - 1) * .28, .4 + Math.floor(i / 3) * ITEM_H[m.userData.t], (Math.floor(i / 3) % 2) * .2 - .1); });
-    // white box truck with a blue stripe (generic delivery look)
-    truck.add(mesh(new THREE.BoxGeometry(1.25, 1.2, 1.7), mat(0xf7f8fa), 0, 1.0, -.35));   // cargo box
-    truck.add(mesh(new THREE.BoxGeometry(1.27, .16, 1.72), mat(0x2f7fe0), 0, .72, -.35), mesh(new THREE.BoxGeometry(1.27, .06, 1.72), mat(0xffc83d), 0, .84, -.35));
-    for (const sx of [-1, 1]) { const sign = new THREE.Mesh(new THREE.PlaneGeometry(1.6, .5), new THREE.MeshBasicMaterial({ map: truckSignTex, transparent: true })); sign.position.set(sx * .63, 1.15, -.35); sign.rotation.y = sx * Math.PI / 2; truck.add(sign); }   // our own delivery brand on both sides and the back
-    { const back = new THREE.Mesh(new THREE.PlaneGeometry(1.15, .36), new THREE.MeshBasicMaterial({ map: truckSignTex, transparent: true })); back.position.set(0, 1.2, -1.21); back.rotation.y = Math.PI; truck.add(back); }
-    truck.add(mesh(new THREE.BoxGeometry(1.2, .85, .8), mat(0xf7f8fa), 0, .8, .85), mesh(new THREE.BoxGeometry(1.05, .35, .05), mat(0x9fd8ff), 0, 1.0, 1.26));
-    truck.add(mesh(new THREE.BoxGeometry(1.3, .3, 2.6), mat(0x3a3f4a), 0, .32, 0));
-    for (const [x, z] of [[-.62, .8], [.62, .8], [-.62, -.75], [.62, -.75]]) truck.add(mesh(new THREE.CylinderGeometry(.26, .26, .2, 12).rotateZ(Math.PI / 2), mat(0x1b1b22), x, .26, z));
+    c.carry.children.forEach(m => { const i = m.userData.i; m.position.set((i % 3 - 1) * .28, .42 + Math.floor(i / 3) * ITEM_H[m.userData.t], (Math.floor(i / 3) % 2) * .2 - .25); });
+    // white box truck (reference: small cab with roof deflector, tall white cargo box, rear door seams, silver wheels)
+    const white = mat(0xf7f8fa);
+    truck.add(mesh(new THREE.BoxGeometry(1.3, 1.35, 1.8), white, 0, 1.12, -.4));   // cargo box
+    truck.add(mesh(new THREE.BoxGeometry(1.32, .05, 1.82), mat(0xd8dde3), 0, .47, -.4), mesh(new THREE.BoxGeometry(1.32, .05, 1.82), mat(0xd8dde3), 0, 1.78, -.4));   // rails
+    truck.add(mesh(new THREE.BoxGeometry(.03, 1.2, .04), mat(0xb8bcc4), 0, 1.12, -1.31), mesh(new THREE.BoxGeometry(.04, .04, .9), mat(0xb8bcc4), .3, 1.12, -1.31));   // rear door seam + latch
+    for (const sx of [-1, 1]) { const sign = new THREE.Mesh(new THREE.PlaneGeometry(1.6, .5), new THREE.MeshBasicMaterial({ map: truckSignTex, transparent: true })); sign.position.set(sx * .66, 1.2, -.4); sign.rotation.y = sx * Math.PI / 2; truck.add(sign); }
+    { const back = new THREE.Mesh(new THREE.PlaneGeometry(1.15, .36), new THREE.MeshBasicMaterial({ map: truckSignTex, transparent: true })); back.position.set(.25, 1.45, -1.32); back.rotation.y = Math.PI; truck.add(back); }
+    truck.add(mesh(new THREE.BoxGeometry(1.2, .9, .85), white, 0, .82, .9), mesh(new THREE.BoxGeometry(1.05, .38, .05), mat(0x5a7a94), 0, 1.02, 1.33));   // cab + windshield
+    for (const sx of [-1, 1]) truck.add(mesh(new THREE.BoxGeometry(.04, .32, .5), mat(0x5a7a94), sx * .61, 1.02, .95), mesh(new THREE.BoxGeometry(.06, .16, .1), mat(0x2b2f3a), sx * .7, 1.0, 1.22));   // side windows + mirrors
+    truck.add(mesh(new THREE.BoxGeometry(1.15, .45, .55).translate(0, 0, 0), white, 0, 1.42, .72));   // roof wind deflector
+    truck.add(mesh(new THREE.BoxGeometry(1.2, .14, .06), mat(0x9aa0aa), 0, .52, 1.33), mesh(new THREE.BoxGeometry(.18, .1, .04), mat(0xffd36b, { emissive: 0x664400 }), -.45, .7, 1.34), mesh(new THREE.BoxGeometry(.18, .1, .04), mat(0xffd36b, { emissive: 0x664400 }), .45, .7, 1.34));   // bumper + lights
+    truck.add(mesh(new THREE.BoxGeometry(1.0, .22, 2.7), mat(0x2b2f3a), 0, .36, -.05));   // chassis
+    for (const [x, z] of [[-.62, .85], [.62, .85], [-.62, -.85], [.62, -.85]]) truck.add(mesh(new THREE.CylinderGeometry(.27, .27, .2, 14).rotateZ(Math.PI / 2), mat(0x1b1b22), x, .27, z), mesh(new THREE.CylinderGeometry(.15, .15, .22, 10).rotateZ(Math.PI / 2), mat(0xd8dde3), x, .27, z));
     Object.assign(c, { body: vis, walker, truck, inside: true }); truck.visible = false;
     couriers.push(c);
   }
