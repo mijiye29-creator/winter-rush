@@ -3,7 +3,7 @@ window.WinterRushData = {
     logFuel: 6,                   // seconds of fire per log (before hearth levels)
     cook: { steak: 2.5 }, burn: 35,
     meatPerSteak: [1, 2, 2], grillFeed: .45,   // by village stage: raw meat per steak; seconds between grill loads
-    price: { steak: 12, sfish: 18, leather: 32, hide: 4, meat: 2, pizza: 100, sushi: 150 },
+    price: { steak: 12, sfish: 18, leather: 32, hide: 4, meat: 2, pizza: 100, sushi: 150, craft: 280 },
     guard: { baseCost: 600, costPerStorm: 200, max: 3 },
     burnGrow: .15, burnMax: 2.2,   // fire burns faster each blizzard survived (×1 → ×2.2)
     smoke: { time: 3.5, fishPerLog: 1, stormUse: 1.5 },   // oven: 1 log per fish, 1.5 logs in a blizzard
@@ -36,8 +36,8 @@ window.WinterRushData = {
     beasts: {
       every: 25, coinsPer: 3,
       penguin: { name: '난폭한 펭귄', power: 0, hp: 3, hpPer: .4, dmg: 1, spd: 3.6, scale: 1, meat: 0, coins: 8, hides: 0, max: 15 },
-      seal:    { name: '바다표범', power: 0, hp: 10, hpPer: 1, dmg: 1, spd: 3, scale: 1, meat: 2, coins: 20, hides: 0, max: 2, blubber: 2 },
-      walrus:  { name: '바다코끼리 대장', power: 0, hp: 60, hpPer: 4, dmg: 3, spd: 2.2, scale: 1, meat: 6, coins: 300, hides: 0, max: 1, blubber: 3, trophy: 'tusk' },
+      seal:    { name: '바다표범', power: 0, hp: 10, hpPer: 1, dmg: 1, spd: 3, scale: 1, meat: 2, coins: 20, hides: 0, max: 2, blubber: 2, loot: { whide: 1 } },
+      walrus:  { name: '바다코끼리 대장', power: 0, hp: 60, hpPer: 4, dmg: 3, spd: 2.2, scale: 1, meat: 6, coins: 300, hides: 0, max: 1, blubber: 3, loot: { ivory: 2, whide: 2 } },
       orca:    { name: '범고래', power: 0, hp: 90, hpPer: 5, dmg: 3, spd: 4.2, scale: 1, meat: 0, coins: 500, hides: 0, max: 1, blubber: 4 },
       chief:   { name: '대장 곰', power: 4,  hp: 20, hpPer: 3, dmg: 2, spd: 2.8, scale: 1.45, meat: 6,  coins: 60,  hides: 1, max: 1 },
       saber:   { name: '검치호',  power: 7,  hp: 12, hpPer: 2, dmg: 2, spd: 4.4, scale: 1.1,  meat: 4,  coins: 50,  hides: 1, max: 2, trophy: 'pelt' },
@@ -66,8 +66,12 @@ window.WinterRushData = {
       harpoon: .7, schoolSize: 4,
       sushiRecipe: { tuna: 1, fish: 1, veg: 2, log: 1 }, boatLogs: [0, 1, 2, 3], lighthouseLogEvery: 8,   // log sinks: boat fuel per trip, lighthouse lamp
     },
+    craftTime: 5,                  // walrus ivory (smith) / walrus hide (artisan) → 🏺 craft goods sold at the leather stall
+    trade: { every: 120, max: 40, keep: 20, price: { log: 2, veg: 3, meat: 3, fish: 4, hide: 6 } },   // stage 4 trade ship buys warehouse surplus above `keep`
+    feast: { every: 180, dur: 60, need: { meat: 15, veg: 15, fish: 10, log: 10 }, saleMul: 1.3, staffMul: 1.2 },   // stage 3+ village feast
+    staffBurn: .04,                // the main hearth burns 4% faster per staff member
     armor: { boots: [0, .04, .08, .12, .16, .2], coat: [0, .08, .16, .24, .3, .36] },   // chance to block a hit
-    max: { suWood: 10, suTuna: 10, suFish: 10, suVeg: 10, sushi: 16, blubber: 10, vegCrate: 20, pzVeg: 12, pzMeat: 24, pzFish: 16, pzWood: 12, pizza: 16, forgeRaw: 10, tanWood: 16, wood: 40, meat: 30, grill: 18, counter: 16, hide: 20, fishCrate: 20, fishRaw: 30, ovenWood: 12, fishSmoked: 12, fishStock: 20, leather: 16, tanFuel: 8 },
+    max: { ivory: 10, whide: 10, craft: 10, suWood: 10, suTuna: 10, suFish: 10, suVeg: 10, sushi: 16, blubber: 10, vegCrate: 20, pzVeg: 12, pzMeat: 24, pzFish: 16, pzWood: 12, pizza: 16, forgeRaw: 10, tanWood: 16, wood: 40, meat: 30, grill: 18, counter: 16, hide: 20, fishCrate: 20, fishRaw: 30, ovenWood: 12, fishSmoked: 12, fishStock: 20, leather: 16, tanFuel: 8 },
   },
   UP: {
     bag:     { name: '가방',      icon: '🎒', costs: [30, 60, 120, 240, 500], vals: [10, 16, 22, 30, 40, 50] },
