@@ -498,8 +498,9 @@ const counterPile = pile('steak', T.max.counter, V(P.counter.x, .9, P.counter.z)
 // stage 2 east district: ice fishing, smokehouse and the smoked-fish shop (north fence)
 const eastG = new THREE.Group(); scene.add(eastG);
 eastG.add(mesh(new THREE.PlaneGeometry(8, 16).rotateX(-Math.PI / 2), mat(0xd99c86), 12, .011, -2, false));
-eastG.add(mesh(new THREE.CylinderGeometry(2, 2, .06, 28), mat(0x8fc4e6), 12.6, .03, 0, false));
-P.holes.forEach(h => eastG.add(mesh(new THREE.CylinderGeometry(.55, .55, .07, 16), mat(0x1d4f73), h.x, .05, h.z, false)));
+const POND = { x: 12.6, z: 0, r: 2 };
+const pondMesh = mesh(new THREE.CylinderGeometry(2, 2, .06, 28), mat(0x8fc4e6), POND.x, .03, POND.z, false); eastG.add(pondMesh);
+const holeMeshes = P.holes.map(h => { const m = mesh(new THREE.CylinderGeometry(.55, .55, .07, 16), mat(0x1d4f73), h.x, .05, h.z, false); eastG.add(m); return m; });
 function stall(x, z, color) {
   const g = new THREE.Group(); g.position.set(x, 0, z);
   g.add(mesh(new THREE.BoxGeometry(2.6, .2, 1.1), mat(0xe2a35a), 0, .8, 0));
@@ -1273,8 +1274,9 @@ function updateSushiChef(dt, canSushi) {
 function updateRowboat(dt) {
   if (!rowboat.parent) player.g.add(rowboat);
   if (S.stage < 4) { pl.boat = false; rowboat.visible = false; return; }
-  if (!pl.boat && near(HB.boardSpot, .9) && pl.stunFree) { pl.boat = true; pl.x = 45.4; pl.z = -2; toast('🚣 배를 탔어요! 참치 떼(짙은 그림자)에 다가가면 작살로 잡아요. 부두로 돌아오면 내려요'); }
-  if (pl.boat && pl.x < 44.6 && Math.abs(pl.z + 2) < 1.4) { pl.boat = false; pl.x = 42.6; pl.z = -2; toast('⚓ 부두에 내렸어요'); }
+  if (pl.boardLock && !near(HB.boardSpot, 1.4)) pl.boardLock = false;   // must step off the boarding tile before boarding again
+  if (!pl.boat && !pl.boardLock && near(HB.boardSpot, .9) && pl.stunFree) { pl.boat = true; pl.x = 45.6; pl.z = -2; toast('🚣 배를 탔어요! 참치 떼(짙은 그림자)에 다가가면 작살로 잡아요. 부두 끝으로 돌아오면 내려요'); }
+  if (pl.boat && pl.x < 45 && Math.abs(pl.z + 2) < 2.2) { pl.boat = false; pl.boardLock = true; pl.x = 41.6; pl.z = -2; pl.target = null; toast('⚓ 부두에 내렸어요'); }
   rowboat.visible = !!pl.boat;
   if (!pl.boat) return;
   for (const s of schools) {
@@ -1458,13 +1460,28 @@ function applyStage(fanfare) {
       burst(P.fire.x, 1, P.fire.z, 0xffb347, 30, { spd: 5, up: 8, life: 1, size: 1.2 });
     }
   }
+  if (four && !applyStage.moved4) {   // stage 4: the hearth moves to the middle of the whole village; the ice pond takes its old spot
+    applyStage.moved4 = true;
+    const from = V(P.fire.x, 0, P.fire.z), dx = 13.1 - P.fire.x, dz = -.4 - P.fire.z;
+    for (const v of [P.woodTile, P.fire, P.meatTile, P.grill, P.serverGrill, P.serverWay]) { v.x += dx; v.z += dz; }
+    for (const g of [woodTile.g, meatTile.g, woodPile.g, meatPile.g, fireG, grillG]) { g.position.x += dx; g.position.z += dz; }
+    grillSlots.forEach(m => { m.position.x += dx; m.position.z += dz; });
+    grillBox.x1 += dx; grillBox.x2 += dx; grillBox.z1 += dz; grillBox.z2 += dz; circles[0].x += dx; circles[0].z += dz;
+    const px = from.x, pz = from.z - .6, ox = POND.x, oz = POND.z;
+    POND.x = px; POND.z = pz; pondMesh.position.set(px, .03, pz);
+    P.holes.forEach((h, i) => { h.x += px - ox; h.z += pz - oz; holeMeshes[i].position.set(h.x, .05, h.z); });
+    if (fanfare) { burst(from.x, 1, from.z, 0x9aa0aa, 24, { spd: 3, up: 4, life: .8, size: 1.3 }); burst(P.fire.x, 1.5, P.fire.z, 0xffb347, 40, { spd: 6, up: 10, life: 1.1, size: 1.4 }); }
+  }
   if (three && !applyStage.moved3) { applyStage.moved3 = true; for (const p of pads) if (PAD_POS3[p.key]) { [p.x, p.z] = PAD_POS3[p.key]; p.m.position.set(p.x, .03, p.z); } }
   if (!fanfare) return;
   if (four) {
+    const flash = document.createElement('div');
+    flash.style.cssText = 'position:fixed;inset:0;background:#fff;opacity:.9;pointer-events:none;transition:opacity .9s';
+    document.body.appendChild(flash); requestAnimationFrame(() => (flash.style.opacity = 0)); setTimeout(() => flash.remove(), 1000);
     for (let x = 26; x <= 34; x += 2) { burst(x, 1.4, -10, 0x9fd8ff, 5, { spd: 2, up: 6, life: .9 }); burst(x, 1.4, 6, 0x9fd8ff, 5, { spd: 2, up: 6, life: .9 }); }
     for (let x = 35; x <= 44; x += 1.5) burst(x, .8, -2, 0xbfe3f5, 6, { spd: 3, up: 6, life: 1 });
     popText(pl.x, 3.4, pl.z, '뿅!', '#ffd36b', true);
-    toast('⚓ 4단계! 빙하 항구가 열렸어요: 부두 끝 🚣 칸에서 배를 타고, 어선·초밥 가게를 키워 보세요');
+    toast('⚓ 4단계! 모닥불이 마을 한가운데로 옮겨지고 빙하 항구가 열렸어요: 부두 끝 🚣 칸에서 배를 타 보세요');
     play('up'); play('kill'); buzz([40, 30, 40, 30, 120]); shakeK(.5); return;
   }
   if (three) {
@@ -3073,7 +3090,7 @@ function footprints() {
   if (two) {
     f.push(box('fishShop', P.fishShop.x, P.fishShop.z, 2.6, 1.1), box('oven', P.oven.x, P.oven.z - .3, 1.4, 1.85), box('ovenWood', P.ovenWood.x, P.ovenWood.z, 1.9, 1.9), box('fishCrate', P.fishCrate.x, P.fishCrate.z, 1.9, 1.9));
     f.push(box('tanCoin', P.tanCoin.x, P.tanCoin.z, 1.3, 1.3), box('fishCoin', P.fishCoin.x, P.fishCoin.z, 1.3, 1.3));
-    f.push(box('tanFire', TAN.fire.x, TAN.fire.z, .9, .9), box('pond', 12.6, 0, 4, 4), box('tanIn', TAN.in.x, TAN.in.z, 1.9, 1.9), box('leatherShop', TAN.out.x, TAN.out.z, 2.6, 1.1));
+    f.push(box('tanFire', TAN.fire.x, TAN.fire.z, .9, .9), box('pond', POND.x, POND.z, 4, 4), box('tanIn', TAN.in.x, TAN.in.z, 1.9, 1.9), box('leatherShop', TAN.out.x, TAN.out.z, 2.6, 1.1));
   }
   if (three) {
     PLOTS.forEach((pp, i) => f.push(box('plot' + i, pp.x, pp.z, 1.6, 1.6)));
