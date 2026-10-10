@@ -51,7 +51,7 @@ const DESC = {
   pizzaOven: (a, b) => `피자 화덕 Lv${b + 1}: ${T.pizzaTime[a]}초 → ${T.pizzaTime[b]}초`,
   courier: (a, b) => a ? `배달 직원 ${b}명: ${T.courier.carry[b]}개씩, 더 빠르게` : `배달 직원 고용: 창고 → 모닥불·화덕·공방·피자 재료 칸 자동 배달`,
   leatherClerk: (a, b) => a ? `가죽 점원 숙련 Lv${b}: 동시 손님 ${Math.max(T.leatherShop.slots, ST.clerkSlots[b])}명` : `가죽 가게 점원 고용 (판매, 은행 입금)`,
-  fire: (a, b) => `모닥불 Lv${b + 1}: 장작 지속 +${Math.round(T.fireLv * 100 * b)}%, 창고 +${T.warehouse.perFire * b}칸` + (b % 2 ? '' : ', 배달 트럭 +1'),
+  fire: (a, b) => `모닥불 Lv${b + 1} (${['쇠 테두리', '황동 기둥', '푸른 수정', '첨단 고리'][b - 1]}): 장작 지속 +${Math.round(T.fireLv * 100 * b)}%, 창고 +${T.warehouse.perFire * b}칸` + (b % 2 ? '' : ', 배달 트럭 +1'),
   pizzaClerk: (a, b) => a ? `피자 점원 숙련 Lv${b}: 동시 손님 ${ST.clerkSlots[a]} → ${ST.clerkSlots[b]}명` : `피자 가게 점원 고용 (판매 속도 ↑)`,
   smith: (a, b) => a ? `가공 속도 ${T.smithTime[a]}초 → ${T.smithTime[b]}초` : `대장장이 고용 (가죽 공방 옆): 맹수 전리품 → 전설 장비 재료 (${T.smithTime[1]}초)`,
   helper3: () => `세 번째 나무꾼 고용`,
@@ -653,6 +653,7 @@ function carrier(coat, hair, types, x, z) {
 }
 function showCarry(w) { w.carry.children.forEach(m => (m.visible = m.userData.t === w.item && m.userData.i < w.n)); }
 function addFarmer() { if (!farmer) { farmer = carrier(0x6b9e3a, 0x8a5a2a, ['veg'], 17.4, -1.4); farmer.body.add(mesh(new THREE.CylinderGeometry(.5, .5, .05, 12), mat(0xe8c86a), 0, 1.68, 0)); } }
+const truckSignTex = (() => { const t = canvasTex(320, 100); t.draw((c, w, h) => { c.textAlign = 'center'; c.textBaseline = 'middle'; c.font = `bold 58px ${FONT}`; c.fillStyle = '#2f7fe0'; c.fillText('❄ 윈터배송', w / 2, h / 2 + 3); }); return t.tex; })();
 // couriers: inside the fence a courier in a delivery vest pulls a hand cart; outside it drives a white box truck
 function addCourier() {
   while (couriers.length < courierCount()) {
@@ -661,14 +662,18 @@ function addCourier() {
     c.g.add(vis); vis.add(walker, truck); c.g.remove(person); walker.add(person); c.g.remove(c.carry); walker.add(c.carry);
     person.add(mesh(new THREE.CylinderGeometry(.37, .46, .55, 10), mat(0x2f7fe0), 0, .75, 0), mesh(new THREE.TorusGeometry(.42, .05, 5, 14).rotateX(Math.PI / 2), mat(0xe8ff6a, { emissive: 0x556600 }), 0, .62, 0));   // vest + reflective stripe
     person.add(mesh(new THREE.SphereGeometry(.3, 10, 6, 0, Math.PI * 2, 0, Math.PI / 2), mat(0x2f7fe0), 0, 1.55, -.02));   // cap
-    // hand cart behind the courier
-    walker.add(mesh(new THREE.BoxGeometry(.9, .12, .9), mat(0x8a5a3a), 0, .45, -1.1), mesh(new THREE.BoxGeometry(.06, .06, .7), mat(0x5a3a28), -.3, .6, -.55), mesh(new THREE.BoxGeometry(.06, .06, .7), mat(0x5a3a28), .3, .6, -.55));
-    for (const x of [-.5, .5]) walker.add(mesh(new THREE.CylinderGeometry(.22, .22, .08, 10).rotateZ(Math.PI / 2), mat(0x2b2f3a), x, .22, -1.1));
-    c.carry.position.set(0, 0, -1.1);
-    c.carry.children.forEach(m => { const i = m.userData.i; m.position.set((i % 3 - 1) * .28, .52 + Math.floor(i / 3) * ITEM_H[m.userData.t], 0); });
+    // green flatbed hand trolley pulled behind the courier, the load rides on the deck
+    walker.add(mesh(new THREE.BoxGeometry(.95, .08, 1.1), mat(0x2fa84f), 0, .32, -1.15));   // deck
+    walker.add(mesh(new THREE.BoxGeometry(.06, .7, .06), mat(0x2fa84f), -.42, .65, -.62), mesh(new THREE.BoxGeometry(.06, .7, .06), mat(0x2fa84f), .42, .65, -.62), mesh(new THREE.BoxGeometry(.9, .06, .06), mat(0x2fa84f), 0, 1.0, -.62));   // front handle frame
+    walker.add(mesh(new THREE.BoxGeometry(.06, .06, .45), mat(0x2b2f3a), .2, .75, -.4));   // pull bar to the hand
+    for (const [x, z] of [[-.4, -.7], [.4, -.7], [-.4, -1.6], [.4, -1.6]]) walker.add(mesh(new THREE.CylinderGeometry(.11, .11, .08, 10).rotateZ(Math.PI / 2), mat(0x2b2f3a), x, .12, z));
+    c.carry.position.set(0, 0, -1.15);
+    c.carry.children.forEach(m => { const i = m.userData.i; m.position.set((i % 3 - 1) * .28, .4 + Math.floor(i / 3) * ITEM_H[m.userData.t], (Math.floor(i / 3) % 2) * .2 - .1); });
     // white box truck with a blue stripe (generic delivery look)
     truck.add(mesh(new THREE.BoxGeometry(1.25, 1.2, 1.7), mat(0xf7f8fa), 0, 1.0, -.35));   // cargo box
     truck.add(mesh(new THREE.BoxGeometry(1.27, .16, 1.72), mat(0x2f7fe0), 0, .72, -.35), mesh(new THREE.BoxGeometry(1.27, .06, 1.72), mat(0xffc83d), 0, .84, -.35));
+    for (const sx of [-1, 1]) { const sign = new THREE.Mesh(new THREE.PlaneGeometry(1.6, .5), new THREE.MeshBasicMaterial({ map: truckSignTex, transparent: true })); sign.position.set(sx * .63, 1.15, -.35); sign.rotation.y = sx * Math.PI / 2; truck.add(sign); }   // our own delivery brand on both sides and the back
+    { const back = new THREE.Mesh(new THREE.PlaneGeometry(1.15, .36), new THREE.MeshBasicMaterial({ map: truckSignTex, transparent: true })); back.position.set(0, 1.2, -1.21); back.rotation.y = Math.PI; truck.add(back); }
     truck.add(mesh(new THREE.BoxGeometry(1.2, .85, .8), mat(0xf7f8fa), 0, .8, .85), mesh(new THREE.BoxGeometry(1.05, .35, .05), mat(0x9fd8ff), 0, 1.0, 1.26));
     truck.add(mesh(new THREE.BoxGeometry(1.3, .3, 2.6), mat(0x3a3f4a), 0, .32, 0));
     for (const [x, z] of [[-.62, .8], [.62, .8], [-.62, -.75], [.62, -.75]]) truck.add(mesh(new THREE.CylinderGeometry(.26, .26, .2, 12).rotateZ(Math.PI / 2), mat(0x1b1b22), x, .26, z));
@@ -838,6 +843,33 @@ function updateCourier(c, dt) {
   const pk = whRoom() > 0 && nearestPickup(c);
   if (pk) { c.state = 'collect'; c.item = pk.type; c.target = pk; c.path = viaGate(c, V(pk.x, 0, pk.z)); }
 }
+// hearth levels change the fire's style, never its footprint: iron ring → brass posts → blue crystals → floating tech halo
+const fireLookG = new THREE.Group(); fireG.add(fireLookG);
+function applyFireLook() {
+  fireLookG.clear(); const lv = S.lv.fire; fireLookG.userData.spin = [];
+  if (lv >= 1) {
+    fireLookG.add(mesh(new THREE.TorusGeometry(.92, .06, 6, 24).rotateX(Math.PI / 2), mat(0x3a3f4a), 0, .2, 0, false));
+    for (let i = 0; i < 8; i++) { const a = i / 8 * Math.PI * 2; fireLookG.add(mesh(new THREE.BoxGeometry(.1, .14, .1), mat(0x6e6a72), Math.cos(a) * .92, .22, Math.sin(a) * .92, false)); }
+  }
+  if (lv >= 2) for (const a of [Math.PI / 4, Math.PI * 3 / 4, Math.PI * 5 / 4, Math.PI * 7 / 4]) {
+    const x = Math.cos(a) * .95, z = Math.sin(a) * .95;
+    fireLookG.add(mesh(new THREE.CylinderGeometry(.05, .07, .7, 6), mat(0xc9a040, { emissive: 0x3a2a00 }), x, .35, z));
+    fireLookG.add(mesh(new THREE.SphereGeometry(.09, 8, 6), new THREE.MeshBasicMaterial({ color: lv >= 3 ? 0x8fe3ff : 0xffd36b }), x, .76, z));
+  }
+  if (lv >= 3) {
+    const ring = new THREE.Group(); ring.position.y = .55; fireLookG.add(ring); fireLookG.userData.spin.push([ring, 0, .6, 0]);
+    for (let i = 0; i < 6; i++) { const a = i / 6 * Math.PI * 2; ring.add(mesh(new THREE.OctahedronGeometry(.12), new THREE.MeshLambertMaterial({ color: 0x8fe3ff, emissive: 0x2a8fbf }), Math.cos(a) * .7, Math.sin(i * 1.7) * .08, Math.sin(a) * .7)); }
+  }
+  if (lv >= 4) {
+    for (const [r, y, tilt, sp] of [[.62, 2.0, .35, 1.4], [.42, 2.35, -.5, -2]]) {
+      const halo = new THREE.Group(); halo.position.y = y; halo.rotation.x = tilt; fireLookG.add(halo); fireLookG.userData.spin.push([halo, 0, sp, 0]);
+      halo.add(new THREE.Mesh(new THREE.TorusGeometry(r, .035, 6, 32).rotateX(Math.PI / 2), new THREE.MeshBasicMaterial({ color: r > .5 ? 0x8fe3ff : 0xffd36b })));
+    }
+    fireLookG.add(new THREE.Mesh(new THREE.SphereGeometry(.12, 10, 8), new THREE.MeshBasicMaterial({ color: 0xffffff })).translateY(2.75));
+  }
+  fireLight.color.setHex(lv >= 3 ? 0xa8d8ff : 0xff8a3a);
+}
+function spinFireLook(dt) { for (const [g, x, y, z] of fireLookG.userData.spin || []) { g.rotation.y += y * dt; } }
 // stage 3 grand hearth: gold ring, four tall blue-flame torches and drifting embers
 const fire3G = new THREE.Group(); fire3G.visible = false; fireG.add(fire3G);
 fire3G.add(mesh(new THREE.TorusGeometry(1.05, .09, 6, 28).rotateX(Math.PI / 2), mat(0xffc83d, { emissive: 0x664400 }), 0, .14, 0, false));
@@ -849,6 +881,7 @@ for (const a of [Math.PI / 3, Math.PI * 2 / 3, Math.PI * 4 / 3, Math.PI * 5 / 3]
   const f = new THREE.Mesh(new THREE.ConeGeometry(.12, .4, 6), new THREE.MeshBasicMaterial({ color: 0x8fd8ff })); f.position.set(x, 1.8, z); fire3G.add(f); torchFlames.push(f);
 }
 function updateHearth3(dt) {
+  spinFireLook(dt);
   fire3G.visible = S.stage >= 3;
   if (!fire3G.visible) return;
   torchFlames.forEach((f, i) => f.scale.setScalar(.85 + Math.sin(performance.now() / 70 + i) * .15));
@@ -1071,7 +1104,7 @@ function applyStage(fanfare) {
   fence1.visible = !two; fence2.visible = two && !three; fence3.visible = three && !S.lv.wall; stoneFence.forEach((f, i) => (f.visible = three && S.lv.wall === i + 1)); walls = three ? WALLS3 : two ? WALLS2 : WALLS1;
   CAMP.x2 = three ? 26 : two ? 16 : 8; BOUNDS.x2 = three ? 29 : 18; eastG.visible = decoG.visible = two; annexG.visible = farTrees.visible = three;
   eastBorder.forEach(t => (t.g.visible = !three));
-  fireDeco.visible = two; fireG.scale.setScalar((three ? 1.4 : two ? 1.15 : 1) * (1 + .08 * S.lv.fire)); circles[0].r = three ? 1.3 : two ? 1.1 : .95;
+  fireDeco.visible = two; fireG.scale.setScalar(two ? 1.15 : 1); circles[0].r = two ? 1.1 : .95; applyFireLook();
   if (two && !applyStage.moved) {
     applyStage.moved = true;
     const from = V(P.fire.x, 0, P.fire.z);
@@ -2300,7 +2333,7 @@ function levelUp(key) {
   if (key === 'pizzaChef') addPizzaChef();
   if (key === 'courier') addCourier();
   if (key === 'leatherClerk') syncClerks();
-  if (key === 'fire') { applyStage(false); addCourier(); burst(P.fire.x, 1.5, P.fire.z, 0xffb347, 30, { spd: 5, up: 8, life: 1 }); }
+  if (key === 'fire') { applyFireLook(); addCourier(); burst(P.fire.x, 1.5, P.fire.z, 0xffb347, 30, { spd: 5, up: 8, life: 1 }); }
   if (key === 'smith') addSmith();
   if (key === 'pizzaClerk') syncClerks();
   if (key === 'fisher2') addFisher();
