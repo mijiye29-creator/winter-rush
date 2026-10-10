@@ -703,7 +703,7 @@ function addCourier() {
 // a passing courier takes raw supplies off the hero's back or a hunter's hands and hauls them to the warehouse
 function courierPickup(c, dt) {
   const cap = T.courier.carry[S.lv.courier];
-  if (!whOn() || c.n >= cap || c.state === 'drop' || (c.n && c.state !== 'stash' && c.state !== 'collect') || !tick('handoff' + couriers.indexOf(c), .06, dt)) return;
+  if (!whOn() || whRoom() <= 0 || c.n >= cap || c.state === 'drop' || (c.n && c.state !== 'stash' && c.state !== 'collect') || !tick('handoff' + couriers.indexOf(c), .06, dt)) return;
   const take = (type, from) => {
     if (c.n && c.item !== type) return false;
     if (!c.n) { c.item = type; c.job = null; c.target = null; }
@@ -801,13 +801,14 @@ function updateFarmer(dt) {
     f.state = 'idle';
   }
   if (f.state === 'unload') {   // into the warehouse, or straight onto the pizza tile before there is one
-    const k = whOn() ? whPut('veg', f.n, V(f.x, 1.3, f.z)) : Math.min(f.n, T.max.pzVeg - S.pzVeg);
-    if (!whOn() && k > 0) { S.pzVeg += k; fly('veg', V(f.x, 1.3, f.z), V(P.pizzaIn.x, .4, P.pizzaIn.z)); }
+    if (whOn() && whRoom() <= 0 && Math.hypot(f.x - P.whIn.x, f.z - P.whIn.z) < 2.5) { f.path = [V(P.pizzaIn.x, 0, P.pizzaIn.z + 1.3)]; return; }   // warehouse full: take the veg to the pizza tile
+    const toWh = whOn() && whRoom() > 0, k = toWh ? whPut('veg', f.n, V(f.x, 1.3, f.z)) : Math.min(f.n, T.max.pzVeg - S.pzVeg);
+    if (!toWh && k > 0) { S.pzVeg += k; fly('veg', V(f.x, 1.3, f.z), V(P.pizzaIn.x, .4, P.pizzaIn.z)); }
     f.n -= k; if (f.n) return; f.state = 'idle';
   }
   let best = -1, bd = 1e9;
   PLOTS.forEach((p, i) => { const d = Math.hypot(p.x - f.x, p.z - f.z); if (plotRipe(i) && d < bd) { bd = d; best = i; } });
-  if (f.n >= ST.farmerCarry[lv] || (f.n && best < 0)) { const to = whOn() ? P.whIn : P.pizzaIn; f.state = 'unload'; f.path = [V(to.x, 0, to.z + (whOn() ? -1.3 : 1.3))]; return; }
+  if (f.n >= ST.farmerCarry[lv] || (f.n && best < 0)) { const toWh = whOn() && whRoom() > 0, to = toWh ? P.whIn : P.pizzaIn; f.state = 'unload'; f.path = [V(to.x, 0, to.z + (toWh ? -1.3 : 1.3))]; return; }
   if (best >= 0) { f.state = 'harvest'; f.plot = best; f.path = [V(PLOTS[best].x, 0, PLOTS[best].z + .95)]; }
 }
 // couriers: warehouse → whichever input tile is running lowest
@@ -841,7 +842,15 @@ function updateCourier(c, dt) {
     c.target = null; c.state = 'stash'; c.path = viaGate(c, V(P.whIn.x, 0, P.whIn.z - 1.3)); return;
   }
   if (c.state === 'haul') { const k = Math.min(T.courier.carry[lv], S.fishCrate, whRoom()); S.fishCrate -= k; c.n = k; c.item = 'fish'; c.state = 'stash'; c.path = viaGate(c, V(P.whIn.x, 0, P.whIn.z - 1.3)); return; }
-  if (c.state === 'stash') { const k = whPut(c.item, c.n, V(c.x, 1.2, c.z)); c.n -= k; if (c.n) return; c.state = 'idle'; }
+  if (c.state === 'stash') {
+    const k = whPut(c.item, c.n, V(c.x, 1.2, c.z)); c.n -= k;
+    if (c.n) {   // warehouse full: hand the load to whichever tile needs it most
+      const t = DELIVER.filter(d => d.item === c.item && (!d.on || d.on()) && d.get() < d.max()).sort((a, b) => a.get() / a.max() - b.get() / b.max())[0];
+      if (t) { c.job = t; c.state = 'drop'; c.path = viaGate(c, V(t.at().x, 0, t.at().z + 1.3)); }
+      return;
+    }
+    c.state = 'idle';
+  }
   if (c.state === 'load') {
     const t = c.job, k = Math.min(T.courier.carry[lv], S.wh[t.item], t.max() - t.get());
     if (k <= 0) { c.state = 'idle'; c.job = null; return; }
@@ -850,7 +859,7 @@ function updateCourier(c, dt) {
   if (c.state === 'drop') {
     const t = c.job, k = Math.min(c.n, t.max() - t.get());
     if (k > 0) { t.add(k); fly(c.item, V(c.x, 1.3, c.z), V(t.at().x, .4, t.at().z)); }
-    c.n -= k; if (c.n) whPut(c.item, c.n); c.n = 0; c.state = 'idle'; c.job = null;
+    c.n -= k; c.job = null; if (c.n) { c.state = 'stash'; c.path = viaGate(c, V(P.whIn.x, 0, P.whIn.z - 1.3)); return; } c.state = 'idle';   // leftovers go back to the warehouse (or on to another tile)
   }
   if (!whOn()) return;
   let best = null, br = .6;
@@ -1305,7 +1314,7 @@ const WOOD_SPOTS = [
 ];
 const WH_SPOT = { wh: true, at: () => P.whIn, on: () => whOn() };   // with a warehouse, woodcutters only ever unload there
 function woodSpot(skip) {
-  if (whOn()) return WH_SPOT;
+  if (whOn() && whRoom() > 0 && skip !== WH_SPOT) return WH_SPOT;
   const open = WOOD_SPOTS.filter(w => w !== skip && w.on() && S[w.key] < w.max());
   const ovenLow = open.find(w => w.key === 'ovenWood' && S.ovenWood < T.max.ovenWood / 2 && S.ovenWood * 3 < S.wood);
   return ovenLow || open.find(w => w.key === 'wood') || open.sort((a, b) => S[a.key] / a.max() - S[b.key] / b.max())[0] || skip || WOOD_SPOTS[0];
@@ -1333,10 +1342,11 @@ function updateHelpers(dt) {
       }
     } else if (h.state === 'deliver') {   // unload; when this tile is full, walk on to another wood tile that still has room
       if (h.spot.wh && !whOn()) h.spot = woodSpot();
+      if (h.spot.wh && whRoom() <= 0) { h.spot = woodSpot(WH_SPOT); if (!h.spot.wh) { h.path = [V(h.spot.at().x - .4, 0, h.spot.at().z - 1.3)]; continue; } }   // warehouse full: take the logs where they are needed
       const w = h.spot, k = w.wh ? whPut('log', h.n) : Math.min(w.max() - S[w.key], h.n);
       if (k > 0) { if (!w.wh) S[w.key] += k; h.n -= k; fly('log', V(h.x, 1.3, h.z), V(w.at().x, .4, w.at().z)); }
       if (!h.n) helperToTree(h);
-      else if (!w.wh) { const nx = woodSpot(w); if (nx !== w) { h.spot = nx; h.path = [V(nx.at().x - .4, 0, nx.at().z - 1.3)]; } }
+      else { const nx = woodSpot(w.wh ? WH_SPOT : w); if (nx !== w) { h.spot = nx; h.path = [V(nx.at().x - .4, 0, nx.at().z - 1.3)]; } }
     } else helperToTree(h);
     h.carry.children.forEach((m, i) => (m.visible = i < h.n));
     h.g.position.set(h.x, 0, h.z);
@@ -1505,8 +1515,13 @@ function updateHunters(dt) {
     if (h.state === 'out') { if (walkPath(h, dt, 3.4)) h.state = 'hunt'; continue; }
     if (h.state === 'home') {
       if (!walkPath(h, dt, 3.4)) continue;
-      if (whOn()) { h.n -= whPut('meat', h.n, V(h.x, 1.3, h.z)); h.hides -= whPut('hide', h.hides); }
-      const k = whOn() ? 0 : Math.min(h.n, T.max.meat - S.meat);
+      const useWh = whOn() && !h.noWh;
+      if (useWh) {
+        h.n -= whPut('meat', h.n, V(h.x, 1.3, h.z)); h.hides -= whPut('hide', h.hides);
+        if (h.n > 0) { h.noWh = true; h.path = [V(P.meatTile.x, 0, P.meatTile.z + 1.3)]; continue; }   // warehouse full: carry the meat to the meat tile
+      }
+      h.noWh = false;
+      const k = useWh ? 0 : Math.min(h.n, T.max.meat - S.meat);
       if (k > 0) { S.meat += k; h.n -= k; fly('meat', V(h.x, 1.3, h.z), V(P.meatTile.x, .5, P.meatTile.z)); }
       if (h.n > 0) { S.coinPile += h.n * T.price.meat; h.n = 0; }   // nowhere left to put it: sell the surplus
       if (h.n === 0) { if (h.hides) { h.state = 'hides'; h.path = [V(TAN.in.x - 1.3, 0, TAN.in.z)]; } else huntOut(h); }

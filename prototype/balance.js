@@ -46,7 +46,7 @@ window.WinterRushData = {
     pizzaTime: [3.2, 2.4, 1.7],    // seconds per pizza batch by pizza oven level (1 log per batch)
     pizzaRecipe: { veg: 1, meat: 3, fish: 2 },   // per pizza
     smithTime: [0, 8, 4],          // seconds per trophy processed by smith level
-    warehouse: { cap: [0, 400, 400], perFire: 100 },   // +100 slots per hearth level
+    warehouse: { cap: [0, 800, 800], perFire: 200 },   // +200 slots per hearth level
     courier: { carry: [0, 8, 12, 16], speed: [0, 4.6, 5.3, 6] },   // delivery trucks
     fireLv: .25,                  // each hearth level: a log burns 25% longer
     wage: { every: 60, per: 8, interest: .005, maxInterest: 50 },   // per staff each payday (stage 3)
