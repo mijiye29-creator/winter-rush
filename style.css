@@ -38,6 +38,11 @@ body { background: var(--night); color: var(--snow); font-family: var(--display)
 
 #toast { position: fixed; left: 50%; top: 32%; transform: translate(-50%, -50%); background: rgba(19,37,61,.85); padding: 10px 18px; border-radius: 14px; font-size: 19px; text-align: center; max-width: 86vw; pointer-events: none; opacity: 0; transition: opacity .25s; }
 #toast.show { opacity: 1; }
+#spot { position: fixed; left: 50%; top: 22%; transform: translate(-50%, -50%) scale(.85); background: linear-gradient(160deg, #fff8e6, #ffe2a8); color: #3a2410; border: 3px solid #ffb347; padding: 14px 22px 16px; border-radius: 20px; text-align: center; width: min(340px, 86vw); pointer-events: none; opacity: 0; transition: opacity .3s, transform .3s; box-shadow: 0 10px 30px rgba(0,0,0,.25); }
+#spot.show { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+#spot .ic { font-size: 46px; line-height: 1.1; }
+#spot b { display: block; font-size: 24px; margin: 4px 0; }
+#spot span { display: block; font-size: 15px; line-height: 1.35; }
 #frost { position: fixed; inset: 0; pointer-events: none; opacity: 0; background: radial-gradient(ellipse at center, transparent 45%, rgba(225,240,255,.85) 100%); }
 #hurt { position: fixed; inset: 0; pointer-events: none; opacity: 0; background: radial-gradient(ellipse at center, transparent 40%, rgba(229,72,77,.6) 100%); transition: opacity .3s; }
 
@@ -52,4 +57,4 @@ body { background: var(--night); color: var(--snow); font-family: var(--display)
 .card button { font-family: var(--display); font-size: 22px; border: 0; border-radius: 16px; padding: 14px; background: var(--ember); color: #3a1c00; cursor: pointer; box-shadow: 0 5px 0 #b8611a; }
 .card button:focus-visible { outline: 3px solid var(--ice); outline-offset: 3px; }
 .card .keys { font-size: 13px; color: rgba(246,251,255,.6); }
-@media (prefers-reduced-motion: reduce) { #toast, .warm i, #hurt { transition: none; } }
+@media (prefers-reduced-motion: reduce) { #toast, #spot, .warm i, #hurt { transition: none; } }
