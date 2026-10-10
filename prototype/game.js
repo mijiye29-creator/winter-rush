@@ -1427,15 +1427,15 @@ const PAD_POS2 = {};   // pads that move when the village grows
 const PAD_POS3 = { helper2: [18, 2], cape: [18, 4.2], hunter2: [20.2, 4.2], hunter: [22.3, 4.2], helper: [24.4, -4.8] };   // stage 3: clear the bottom-left corner for the warehouse and bank
 const REVEAL = {
   bag: () => true, axe: () => true,
-  boots: () => S.bought >= 1,
-  coat: () => S.stage >= 2 && S.bought >= 2,
-  cape: () => S.stage >= 2 && S.bought >= 3,
+  boots: () => true,
+  coat: () => true,
+  cape: () => true,   // gear pieces unlock one per stage via UP.*.stage
   saberCoat: () => S.raw.pelt + S.forgeRaw.pelt + S.mats.pelt > 0 || S.lv.saberCoat > 0,
   tuskAxe: () => S.raw.tusk + S.forgeRaw.tusk + S.mats.tusk > 0 || S.lv.tuskAxe > 0,
   hearth: () => S.lv.hearth > 0 || S.stage >= 2 && S.stat.sold >= 60,
   fisher2: () => S.stage >= 2 && S.lv.fisher >= 1,
   farmer: () => S.stage >= 3, pizzaChef: () => S.stage >= 3, pizzaClerk: () => S.lv.bank > 0, smith: () => S.stage >= 3,
-  harbor: () => S.stage >= 3 && S.stat.soldPizza >= 10, boat: () => S.stage >= 4, boat2: () => S.lv.boat >= 2, crane: () => S.lv.boat >= 1, freezer: () => S.stage >= 4, lighthouse: () => S.stage >= 4, sushiChef: () => S.stage >= 4, sushiClerk: () => S.lv.sushiChef > 0 && S.lv.bank > 0,
+  harbor: () => S.stage >= 3 && S.stat.soldPizza >= 10, boat: () => S.stage >= 4, boat2: () => S.lv.boat >= 2, crane: () => S.lv.boat >= 1, freezer: () => S.stage >= 4, lighthouse: () => S.stage >= 4, sushiChef: () => S.stage >= 4, sushiClerk: () => S.lv.bank > 0,
   courier: () => S.stage >= 3 && S.lv.warehouse > 0, pizzaOven: () => S.lv.pizzaChef > 0, leatherClerk: () => S.lv.artisan > 0 && S.lv.bank > 0, fire: () => S.bought >= 2,
   warehouse: () => S.stage >= 3, wall: () => S.stage >= 3, bank: () => S.stage >= 3, staffHouse: () => S.stage >= 3,
   helper3: () => S.stage >= 3 && S.lv.helper2 >= 1, hunter3: () => S.stage >= 3 && S.lv.hunter2 >= 1,

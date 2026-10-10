@@ -75,10 +75,10 @@ window.WinterRushData = {
   },
   UP: {
     bag:     { name: '가방',      icon: '🎒', costs: [30, 60, 120, 240, 500], vals: [10, 16, 22, 30, 40, 50] },
-    axe:     { name: '무기',      icon: '⚔️', costs: [40, 90, 200, 450, 900, 1600, 3500, 7000], vals: [1, 2, 3, 4, 6, 8, 11, 15, 20], stage: [1, 2, 2, 3, 3, 3, 4, 4] },   // Lv8-9: glacier trident, aurora greatsword
-    boots:   { name: '장화',      icon: '🥾', costs: [30, 80, 200, 2000, 4000], vals: [5, 5.8, 6.6, 7.4, 8.2, 9], stage: [1, 2, 3, 4, 4] },
-    cape:    { name: '망토',      icon: '🦸', costs: [100, 300, 700, 1200, 3000, 6000], vals: [5, 6, 7, 8, 9, 11, 13], stage: [2, 2, 3, 3, 4, 4] },   // max HP
-    coat:    { name: '외투',      icon: '🧥', costs: [60, 180, 400, 2500, 5000], vals: [0, 1, 2, 3, 4, 5], stage: [2, 2, 3, 4, 4] },
+    axe:     { name: '무기',      icon: '⚔️', costs: [40, 90, 200, 450, 900, 1600, 3500, 7000], vals: [1, 2, 3, 4, 6, 8, 11, 15, 20], stage: [3, 3, 3, 3, 4, 4, 4, 4] },   // Lv8-9: glacier trident, aurora greatsword
+    boots:   { name: '장화',      icon: '🥾', costs: [30, 80, 200, 2000, 4000], vals: [5, 5.8, 6.6, 7.4, 8.2, 9], stage: [2, 2, 3, 4, 4] },
+    cape:    { name: '망토',      icon: '🦸', costs: [100, 300, 700, 1200, 3000, 6000], vals: [5, 6, 7, 8, 9, 11, 13], stage: [4, 4, 4, 4, 4, 4] },   // max HP
+    coat:    { name: '외투',      icon: '🧥', costs: [60, 180, 400, 2500, 5000], vals: [0, 1, 2, 3, 4, 5], stage: [1, 2, 3, 4, 4] },
     gate:    { name: '정문 강화',  icon: '🛡️', costs: [80, 200, 450, 900, 1800, 3200], vals: [0, 1, 2, 3, 3, 3, 3], stage: [1, 1, 1, 2, 2, 2] },   // Lv4+ watchtowers
     helper:  { name: '나무꾼',    icon: '👷', costs: [100, 220, 450],    vals: [0, 1, 2, 3] },
     server:  { name: '서빙 직원',  icon: '🧑‍🍳', costs: [150, 300, 600],    vals: [0, 1, 2, 3] },
