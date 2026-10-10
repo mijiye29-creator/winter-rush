@@ -1464,7 +1464,7 @@ makePad('smith', 4.5, 4.2); makePad('artisan', 6.6, 4.2); makePad('leatherClerk'
 makePad('farmer', 18, -.2);   // couriers come with warehouse levels
 makePad('pizzaChef', 24.4, -4.8); makePad('pizzaOven', 24.4, -2.6); makePad('pizzaClerk', 24.4, -.2);
 makePad('staffHouse', 22.3, 4.2); makePad('harbor', 24.4, 4.2);
-makePad('warehouse', -4.3, 2.5); makePad('bank', -6.4, 4.7);   // these pads become the warehouse drop tile and the bank tile
+makePad('warehouse', -6.6, -.2); makePad('bank', -6.4, 4.7);   // warehouse pad (3 levels) just above the warehouse; the bank pad becomes the bank tile
 // stage 4 harbor: dock row (boats, crane), storage row (freezer, lighthouse), sushi row
 makePad('boat', 27.4, -8.2); makePad('boat2', 29.5, -8.2); makePad('crane', 31.6, -8.2); makePad('freezer', 27.4, -2.4); makePad('lighthouse', 29.5, -2.4);
 makePad('sushiChef', 27.4, .6); makePad('sushiClerk', 29.5, .6);
