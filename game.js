@@ -732,23 +732,24 @@ function addCourier() {
     truck.add(mesh(new THREE.BoxGeometry(1.2, .14, .06), mat(0x9aa0aa), 0, .52, 1.33), mesh(new THREE.BoxGeometry(.18, .1, .04), mat(0xffd36b, { emissive: 0x664400 }), -.45, .7, 1.34), mesh(new THREE.BoxGeometry(.18, .1, .04), mat(0xffd36b, { emissive: 0x664400 }), .45, .7, 1.34));   // bumper + lights
     truck.add(mesh(new THREE.BoxGeometry(1.0, .22, 2.7), mat(0x2b2f3a), 0, .36, -.05));   // chassis
     for (const [x, z] of [[-.62, .85], [.62, .85], [-.62, -.85], [.62, -.85]]) truck.add(mesh(new THREE.CylinderGeometry(.27, .27, .2, 14).rotateZ(Math.PI / 2), mat(0x1b1b22), x, .27, z), mesh(new THREE.CylinderGeometry(.15, .15, .22, 10).rotateZ(Math.PI / 2), mat(0xd8dde3), x, .27, z));
-    Object.assign(c, { body: vis, walker, truck, inside: true }); truck.visible = false;
+    Object.assign(c, { body: vis, walker, truck, inside: true, cargo: {}, stops: [] }); truck.visible = false;
     couriers.push(c);
   }
 }
 // a passing courier takes raw supplies off the hero's back or a hunter's hands and hauls them to the warehouse
 function courierPickup(c, dt) {
-  const cap = T.courier.carry[S.lv.warehouse];
-  if (!whOn() || whRoom() <= 0 || c.n >= cap || c.state === 'drop' || (c.n && c.state !== 'stash' && c.state !== 'collect') || !tick('handoff' + couriers.indexOf(c), .06, dt)) return;
+  const cap = courierCap();
+  if (!whOn() || whRoom() <= 0 || cargoN(c) >= cap || !tick('handoff' + couriers.indexOf(c), .06, dt)) return;
   const take = (type, from) => {
-    if (c.n && c.item !== type) return false;
-    if (!c.n) { c.item = type; c.job = null; c.target = null; c.src = null; }
-    c.n++; fly(type, from, V(c.x, 1.2, c.z), .2);
-    if (c.state !== 'stash') { c.state = 'stash'; c.path = viaGate(c, V(P.whIn.x, 0, P.whIn.z - 1.3)); popText(c.x, 2.4, c.z, '🛵 대신 가져갈게요!', '#9fd8ff'); }
+    cargoAdd(c, type, 1); fly(type, from, V(c.x, 1.2, c.z), .2);
+    if (!c.stops.length || c.stops[c.stops.length - 1].kind !== 'stash') {   // make sure the trip ends at the warehouse
+      if (!c.stops.length) { c.path = viaGate(c, stopPos(c, STASH)); popText(c.x, 2.4, c.z, '🛵 대신 가져갈게요!', '#9fd8ff'); }
+      c.stops.push(STASH);
+    }
     return true;
   };
   if (Math.hypot(pl.x - c.x, pl.z - c.z) < 1.6) {
-    const t = (c.n ? [c.item] : WH_ITEMS).find(k => stackHas(k));
+    const t = WH_ITEMS.find(k => stackHas(k));
     if (t && take(t, backPos())) { stackTake(t); return; }
   }
   for (const h of hunters) {
@@ -759,10 +760,10 @@ function courierPickup(c, dt) {
 }
 const inVillage = w => w.x > CAMP.x1 - .3 && w.x < CAMP.x2 + .3 && w.z > CAMP.z1 - .3 && w.z < CAMP.z2 + .3;
 const viaGate = (from, to) => from.z > 6.5 && to.z < 6 ? [GATE_OUT.clone(), GATE_IN.clone(), to] : from.z < 6 && to.z > 6.5 ? [GATE_IN.clone(), GATE_OUT.clone(), to] : [to];
-function nearestPickup(c, type) {
+function nearestPickup(c, type, skip = []) {
   let best = null, bd = 1e9;
   for (const pk of pickups) {
-    if (!['meat', 'hide', 'pelt', 'tusk', 'blubber', 'tuna', 'ivory', 'whide'].includes(pk.type) || (type && pk.type !== type) || couriers.some(o => o !== c && o.target === pk)) continue;
+    if (!['meat', 'hide', 'pelt', 'tusk', 'blubber', 'tuna', 'ivory', 'whide'].includes(pk.type) || (type && pk.type !== type) || skip.includes(pk) || claimed(c, pk)) continue;
     if (pk.x < BOUNDS.x1 || pk.x > BOUNDS.x2 || pk.z > 23) continue;
     const d = Math.hypot(pk.x - c.x, pk.z - c.z); if (d < bd) { bd = d; best = pk; }
   }
@@ -892,79 +893,117 @@ function sellSurplus(item, n, x, z) {
   const v = Math.max(1, Math.round(n * (T.trade.price[item] || 2)));
   S.coinPile += v; popText(x, 2.4, z, `🪙 남는 재료 판매 +${v}`, '#ffd36b');
 }
-function updateCourier(c, dt) {
-  const lv = S.lv.warehouse;
-  c.inside = inVillage(c); c.walker.visible = c.inside; c.truck.visible = !c.inside;   // cart in the village, truck outside
-  showCarry(c);
-  courierPickup(c, dt);
-  if (!walkPath(c, dt, T.courier.speed[lv] * (c.inside ? 1 : 1.6))) return;
-  if (c.state === 'collect') {   // scoop up meat / hides / trophies lying around and haul them to the warehouse
-    for (let i = pickups.length - 1; i >= 0; i--) {
-      const pk = pickups[i];
-      if (pk.type !== c.item || c.n >= T.courier.carry[lv] || Math.hypot(pk.x - c.x, pk.z - c.z) > 1.5) continue;
-      scene.remove(pk.m); pickups.splice(i, 1); c.n++; play('pop', 40);
-    }
-    const next = c.n < T.courier.carry[lv] && nearestPickup(c, c.item);
-    if (next) { c.target = next; c.path = viaGate(c, V(next.x, 0, next.z)); return; }
-    c.target = null; c.state = 'stash'; c.path = viaGate(c, V(P.whIn.x, 0, P.whIn.z - 1.3)); return;
-  }
-  if (c.state === 'reap') {
-    const cap = T.courier.carry[lv];
-    PLOTS.forEach((pp, i) => { if (c.n < cap && plotRipe(i) && Math.hypot(pp.x - c.x, pp.z - c.z) < 2.6) { S.plots[i] = 0; c.n++; S.stat.veg = (S.stat.veg || 0) + 1; burst(pp.x, .5, pp.z, 0x6fbf4a, 4, { spd: 2, up: 3, life: .4 }); } });
-    const next = c.n < cap && PLOTS.findIndex((_, i) => plotRipe(i));
-    if (next >= 0 && next !== false) { c.path = [V(PLOTS[next].x, 0, PLOTS[next].z + .95)]; return; }
-    c.state = 'stash'; c.path = viaGate(c, V(P.whIn.x, 0, P.whIn.z - 1.3)); return;
-  }
-  // hauls: the meat tile keeps a working stock (70%), crates are emptied into the warehouse
-  if (c.state === 'haul') { const key = c.haulKey || 'fishCrate', k = Math.max(0, Math.min(T.courier.carry[lv], key === 'meat' ? S.meat - Math.floor(T.max.meat * .7) : S[key], whRoom())); S[key] -= k; c.n = k; c.state = 'stash'; c.path = viaGate(c, V(P.whIn.x, 0, P.whIn.z - 1.3)); return; }
-  if (c.state === 'stash') {
-    const k = whPut(c.item, c.n, V(c.x, 1.2, c.z)); c.n -= k;
-    if (c.n) {   // warehouse full: hand the load to whichever tile needs it most
-      const t = DELIVER.filter(d => d.item === c.item && (!d.on || d.on()) && d.get() < d.max()).sort((a, b) => a.get() / a.max() - b.get() / b.max())[0];
-      if (t) { c.job = t; c.state = 'drop'; c.path = viaGate(c, V(t.at().x, 0, t.at().z + 1.3)); return; }
-      sellSurplus(c.item, c.n, c.x, c.z); c.n = 0;   // nothing anywhere has room
-    }
-    c.state = 'idle';
-  }
-  if (c.state === 'fetch') {   // straight from an overflowing crate/tile to the tile that is short
-    const t = c.job, src = c.src, k = Math.max(0, Math.min(T.courier.carry[lv], S[src.key] - src.keep(), t.max() - t.get()));
-    c.src = null;
-    if (k <= 0) { c.state = 'idle'; c.job = null; return; }
-    S[src.key] -= k; c.n = k; c.item = t.item; c.state = 'drop'; c.path = viaGate(c, V(t.at().x, 0, t.at().z + 1.3)); return;
-  }
-  if (c.state === 'load') {
-    const t = c.job, k = Math.min(T.courier.carry[lv], S.wh[t.item], t.max() - t.get());
-    if (k <= 0) { c.state = 'idle'; c.job = null; return; }
-    S.wh[t.item] -= k; c.n = k; c.item = t.item; c.state = 'drop'; c.path = [V(t.at().x, 0, t.at().z + 1.3)]; return;
-  }
-  if (c.state === 'drop') {
-    const t = c.job, k = Math.min(c.n, t.max() - t.get());
-    if (k > 0) { t.add(k); fly(c.item, V(c.x, 1.3, c.z), V(t.at().x, .4, t.at().z)); }
-    c.n -= k; c.job = null; if (c.n) { c.state = 'stash'; c.path = viaGate(c, V(P.whIn.x, 0, P.whIn.z - 1.3)); return; } c.state = 'idle';   // leftovers go back to the warehouse (or on to another tile)
-  }
-  if (!whOn()) return;
-  if (whRoom() > 0 && S.fishCrate >= T.max.fishCrate && fishers.some(f => f.state === 'toShop' && f.n > 0) && !couriers.some(o => o !== c && o.state === 'haul' && o.haulKey === 'fishCrate')) {
-    c.state = 'haul'; c.haulKey = 'fishCrate'; c.item = 'fish'; c.path = viaGate(c, V(P.fishCrate.x - 1.3, 0, P.fishCrate.z)); return;
-  }
-  let best = null, br = whTotal() >= whCap() * .9 ? .98 : .6;   // a nearly full warehouse spreads its stock to every tile with room
-  for (const t of DELIVER) {
-    if ((t.on && !t.on()) || S.wh[t.item] <= 0 || couriers.some(o => o !== c && o.job === t)) continue;
-    const r = t.get() / t.max(); if (r < br) { br = r; best = t; }
-  }
-  if (best) { c.job = best; c.state = 'load'; c.path = viaGate(c, V(P.whIn.x - .6 + couriers.indexOf(c) * .6, 0, P.whIn.z - 1.3)); return; }
-  for (const t of DELIVER) {   // the warehouse has none of it: fetch from wherever it is piling up
-    if ((t.on && !t.on()) || t.get() / t.max() >= .5 || couriers.some(o => o !== c && o.job === t)) continue;
-    const src = SOURCES.find(s => s.item === t.item && s.on() && s.at() !== t.at() && S[s.key] - s.keep() > 0 && !couriers.some(o => o !== c && o.src === s));
-    if (src) { c.job = t; c.src = src; c.state = 'fetch'; c.path = viaGate(c, V(src.at().x - 1.3, 0, src.at().z)); return; }
-  }
-  const busy = couriers.some(o => o !== c && o.state === 'haul'), cap4 = T.harbor.dockCap[S.lv.freezer];
-  const haul = whRoom() > 0 && !busy && (S.fishCrate >= T.max.fishCrate * .5 ? ['fishCrate', 'fish', P.fishCrate] : S.stage >= 4 && S.dockFish >= cap4 * .4 ? ['dockFish', 'fish', P.dockCrate] : S.stage >= 4 && S.dockTuna >= cap4 * .4 ? ['dockTuna', 'tuna', P.dockCrate] : S.meat >= T.max.meat * .9 ? ['meat', 'meat', P.meatTile] : null);
-  const ripe = whRoom() > 0 && S.stage >= 3 && !couriers.some(o => o !== c && o.state === 'reap') && PLOTS.filter((_, i) => plotRipe(i)).length >= 3;
-  if (ripe) { const i = PLOTS.findIndex((_, j) => plotRipe(j)); c.state = 'reap'; c.item = 'veg'; c.path = viaGate(c, V(PLOTS[i].x, 0, PLOTS[i].z + .95)); return; }   // ripe garden → warehouse
-  if (haul) { c.state = 'haul'; c.haulKey = haul[0]; c.item = haul[1]; c.path = viaGate(c, V(haul[2].x - 1.3, 0, haul[2].z)); return; }   // surplus fish/tuna from the pond and dock crates → warehouse   // surplus fish from the pond crate → warehouse
-  const pk = whRoom() > 0 && nearestPickup(c);
-  if (pk) { c.state = 'collect'; c.item = pk.type; c.target = pk; c.path = viaGate(c, V(pk.x, 0, pk.z)); }
+// couriers carry a mixed load: one trip loads several items for several tiles at the warehouse,
+// drops them off along the shortest route, then fills up again with surpluses on the way back
+const cargoN = c => Object.values(c.cargo).reduce((a, b) => a + b, 0);
+const cargoAdd = (c, it, k) => { c.cargo[it] = (c.cargo[it] || 0) + k; };
+const courierCap = () => T.courier.carry[S.lv.warehouse];
+const STASH = { kind: 'stash', at: () => P.whIn };
+const claimed = (c, ref) => couriers.some(o => o !== c && o.stops.some(s => s.ref === ref));
+function showCargo(c) {
+  const tot = cargoN(c), sc = tot > 14 ? 14 / tot : 1, shown = {};
+  for (const [it, n] of Object.entries(c.cargo)) if (n > 0) shown[it] = Math.max(1, Math.round(n * sc));
+  let y = 1.1;
+  for (const m of c.carry.children) m.visible = false;
+  for (const it of Object.keys(shown)) for (const m of c.carry.children) if (m.userData.t === it && m.userData.i < shown[it]) { m.visible = true; m.position.y = y; y += ITEM_H[it]; }
 }
+function stopPos(c, s) {
+  const i = couriers.indexOf(c), at = s.at();
+  if (s.kind === 'stash' || s.kind === 'load') return V(at.x - .6 + i * .6, 0, at.z - 1.3);
+  if (s.kind === 'give') return V(at.x, 0, at.z + 1.3);
+  if (s.kind === 'take') return V(at.x - 1.3, 0, at.z);
+  if (s.kind === 'reap') return V(at.x, 0, at.z + .95);
+  return V(at.x, 0, at.z);
+}
+// nearest-neighbour order from a starting point (short routes without backtracking)
+function routeOrder(list, from) {
+  const out = [], rest = list.slice(); let x = from.x, z = from.z;
+  while (rest.length) {
+    let bi = 0, bd = 1e9;
+    rest.forEach((s, i) => { const a = s.at(), d = Math.hypot(a.x - x, a.z - z); if (d < bd) { bd = d; bi = i; } });
+    const s = rest.splice(bi, 1)[0]; out.push(s); x = s.at().x; z = s.at().z;
+  }
+  return out;
+}
+function planTrip(c) {
+  const cap = courierCap(), spread = whTotal() >= whCap() * .9, lim = spread ? .98 : .6, fill = spread ? 1 : .85;
+  let room = cap - cargoN(c);
+  const load = { kind: 'load', at: () => P.whIn, items: {} }, takes = [], gives = [], left = { ...S.wh };
+  const needs = DELIVER.filter(t => (!t.on || t.on()) && t.get() / t.max() < lim && !claimed(c, t)).sort((a, b) => a.get() / a.max() - b.get() / b.max());
+  for (const t of needs) {   // what the warehouse can cover, most urgent first, until the cart is full
+    const k = Math.min(room, left[t.item] || 0, Math.ceil(t.max() * fill) - t.get());
+    if (k <= 0) continue;
+    left[t.item] -= k; room -= k; load.items[t.item] = (load.items[t.item] || 0) + k; gives.push({ kind: 'give', ref: t, at: t.at });
+  }
+  for (const t of needs) {   // what it lacks: straight from wherever that item is piling up
+    if (room <= 0 || t.get() / t.max() >= .5 || gives.some(g => g.ref === t)) continue;
+    const src = SOURCES.find(s => s.item === t.item && s.on() && s.at() !== t.at() && S[s.key] - s.keep() > 0 && !claimed(c, s));
+    const k = src ? Math.min(room, S[src.key] - src.keep(), Math.ceil(t.max() * fill) - t.get()) : 0;
+    if (k <= 0) continue;
+    room -= k; takes.push({ kind: 'take', ref: src, at: src.at, n: k, keep: src.keep() }); gives.push({ kind: 'give', ref: t, at: t.at });
+  }
+  // the way back: crates and tiles that are overflowing, ripe vegetables, loot on the ground (only while the warehouse has room)
+  const back = []; let space = whRoom() > 0 ? cap - cargoN(c) : 0;
+  const cap4 = T.harbor.dockCap[S.lv.freezer];
+  const hauls = [[SOURCES[0], S.fishCrate >= T.max.fishCrate * .5, 0], [SOURCES[1], S.stage >= 4 && S.dockFish >= cap4 * .4, 0], [SOURCES[2], S.stage >= 4 && S.dockTuna >= cap4 * .4, 0], [SOURCES[3], S.meat >= T.max.meat * .9, Math.floor(T.max.meat * .7)]];
+  for (const [src, on, keep] of hauls) {
+    if (space <= 0 || !on || claimed(c, src) || takes.some(t => t.ref === src)) continue;
+    const k = Math.min(space, S[src.key] - keep); if (k <= 0) continue;
+    space -= k; back.push({ kind: 'take', ref: src, at: src.at, n: k, keep });
+  }
+  const ripe = PLOTS.map((p, i) => i).filter(i => plotRipe(i));
+  if (space > 0 && S.stage >= 3 && ripe.length >= 3 && !claimed(c, PLOTS)) { back.push({ kind: 'reap', ref: PLOTS, at: () => PLOTS[ripe[0]] }); space -= ripe.length; }
+  for (let i = 0; space > 0 && i < 4; i++) {
+    const pk = nearestPickup(c, null, back.map(b => b.ref)); if (!pk) break;
+    back.push({ kind: 'pick', ref: pk, at: () => pk }); space--;
+  }
+  const stops = [];
+  if (Object.keys(load.items).length) stops.push(load);
+  const firstLeg = routeOrder(takes, Object.keys(load.items).length ? P.whIn : c);
+  stops.push(...firstLeg, ...routeOrder(gives, firstLeg.length ? firstLeg[firstLeg.length - 1].at() : Object.keys(load.items).length ? P.whIn : c));
+  const last = stops.length ? stops[stops.length - 1].at() : c;
+  stops.push(...routeOrder(back, last));
+  if (back.length || cargoN(c)) stops.push(STASH);
+  return stops;
+}
+function runStop(c, s) {
+  const cap = courierCap(), from = V(c.x, 1.3, c.z);
+  if (s.kind === 'load') for (const [it, n] of Object.entries(s.items)) { const k = Math.min(n, S.wh[it], cap - cargoN(c)); if (k > 0) { S.wh[it] -= k; cargoAdd(c, it, k); } }
+  if (s.kind === 'take') { const src = s.ref, k = Math.max(0, Math.min(cap - cargoN(c), S[src.key] - s.keep, s.n)); if (k) { S[src.key] -= k; cargoAdd(c, src.item, k); fly(src.item, V(src.at().x, .5, src.at().z), from, .25); } }
+  if (s.kind === 'give') { const t = s.ref, k = Math.min(c.cargo[t.item] || 0, t.max() - t.get()); if (k > 0) { t.add(k); c.cargo[t.item] -= k; fly(t.item, from, V(t.at().x, .4, t.at().z)); } }
+  if (s.kind === 'reap') PLOTS.forEach((pp, i) => { if (cargoN(c) < cap && plotRipe(i) && Math.hypot(pp.x - c.x, pp.z - c.z) < 4.5) { S.plots[i] = 0; cargoAdd(c, 'veg', 1); S.stat.veg = (S.stat.veg || 0) + 1; burst(pp.x, .5, pp.z, 0x6fbf4a, 4, { spd: 2, up: 3, life: .4 }); } });
+  if (s.kind === 'pick') for (let i = pickups.length - 1; i >= 0; i--) {
+    const pk = pickups[i];
+    if (cargoN(c) >= cap || !WH_ITEMS.includes(pk.type) || pk.type === 'log' || Math.hypot(pk.x - c.x, pk.z - c.z) > 1.8) continue;
+    scene.remove(pk.m); pickups.splice(i, 1); cargoAdd(c, pk.type, 1); play('pop', 40);
+  }
+  if (s.kind === 'stash') {
+    let extra = false;
+    for (const it of Object.keys(c.cargo)) {
+      c.cargo[it] -= whPut(it, c.cargo[it], from);
+      if (c.cargo[it] > 0) { const t = sinkFor(it); if (t) { c.stops.push({ kind: 'give', ref: t, at: t.at }); extra = true; } else { sellSurplus(it, c.cargo[it], c.x, c.z); c.cargo[it] = 0; } }   // warehouse full: hand it to a tile, or sell it
+    }
+    if (extra) c.stops.push({ kind: 'sell', at: () => c });
+  }
+  if (s.kind === 'sell') for (const it of Object.keys(c.cargo)) { sellSurplus(it, c.cargo[it], c.x, c.z); c.cargo[it] = 0; }
+  for (const it of Object.keys(c.cargo)) if (c.cargo[it] <= 0) delete c.cargo[it];
+}
+function updateCourier(c, dt) {
+  c.inside = inVillage(c); c.walker.visible = c.inside; c.truck.visible = !c.inside;   // cart in the village, truck outside
+  showCargo(c);
+  courierPickup(c, dt);
+  if (!walkPath(c, dt, T.courier.speed[S.lv.warehouse] * (c.inside ? 1 : 1.6))) return;
+  if (c.stops.length) {
+    runStop(c, c.stops.shift());
+    if (!c.stops.length && cargoN(c)) c.stops.push(STASH);
+    if (c.stops.length) c.path = viaGate(c, stopPos(c, c.stops[0]));
+    return;
+  }
+  if (!whOn() || (c.wait = (c.wait || 0) - dt) > 0) return;
+  c.stops = planTrip(c); c.wait = .5;   // nothing to do: look again in half a second
+  if (c.stops.length) c.path = viaGate(c, stopPos(c, c.stops[0]));
+}
+
 // hearth levels change the fire's style, never its footprint: iron ring → brass posts → blue crystals → floating tech halo
 const fireLookG = new THREE.Group(); fireG.add(fireLookG);
 function applyFireLook() {
@@ -3181,7 +3220,7 @@ function save() {
     const counter = { ...S.counter };
     const keys = ['coins', 'ivory', 'whide', 'craft', 'craftT', 'craftT2', 'feastT', 'dockFish', 'dockTuna', 'suTuna', 'suFish', 'suVeg', 'suWood', 'sushi', 'coinSushi', 'blubber', 'guard', 'bank', 'strike', 'paydayT', 'wh', 'mats', 'raw', 'forgeRaw', 'plots', 'pzFish', 'pzVeg', 'pzMeat', 'pzWood', 'pzFuel', 'pzT', 'pizza', 'smithT', 'coinPizza', 'coinPile', 'coinFish', 'coinLeather', 'tanWood', 'wood', 'meat', 'fuel', 'warmth', 'grillItems', 'lv', 'storms', 'stat', 'goal', 'tut', 'woodIn', 'meatIn', 'steakIn', 'served', 'bought', 'hide', 'fishCrate', 'fishRaw', 'ovenWood', 'fishSmoked', 'fishStock', 'smokeFuel', 'tanFuel', 'leather', 'stage', 'petCount', 'petHits', 'packs', 'tanT', 'hp', 'phase', 'phaseT', 'stormFireOut'];
     const data = Object.fromEntries(keys.map(k => [k, S[k]]));
-    data.wh = { ...S.wh }; couriers.forEach(c => { if (c.n > 0 && c.item in data.wh) data.wh[c.item] += c.n; });   // cargo on a moving truck goes back to the warehouse on save
+    data.wh = { ...S.wh }; couriers.forEach(c => { for (const [it, n] of Object.entries(c.cargo)) if (it in data.wh) data.wh[it] += n; });   // cargo on a moving truck goes back to the warehouse on save
     data.counter = counter; data.paid = Object.fromEntries(pads.map(p => [p.key, p.paid]));
     data.player = { x: pl.x, z: pl.z };
     data.stackTypes = stack.map(i => i.type);

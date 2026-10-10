@@ -52,7 +52,7 @@ window.WinterRushData = {
     pizzaRecipe: { veg: 2, meat: 4, fish: 3 }, pizzaRecipeHarbor: { veg: 1, meat: 4, fish: 3 },
     smithTime: [0, 8, 4],          // seconds per trophy processed by smith level
     warehouse: { cap: [0, 800, 1200, 1600] },   // slots per warehouse level
-    courier: { carry: [0, 12, 14, 16], speed: [0, 5.5, 5.8, 6.2] },   // delivery workers, by warehouse level
+    courier: { carry: [0, 20, 26, 32], speed: [0, 5.5, 5.8, 6.2] },   // delivery workers, by warehouse level: mixed loads up to this many items
     fireLv: .25,                  // each hearth level: a log burns 25% longer
     wage: { every: 60, per: 8, interest: .005, maxInterest: 50 },   // per staff each payday (stage 3)
     staffHouse: .15,               // staff speed bonus per heated house
