@@ -84,7 +84,7 @@ body { background: var(--night); color: var(--snow); font-family: var(--display)
       <li>🌨 눈보라 중엔 불이 3배 빨리 꺼지고, 곰이 마을을 습격합니다</li>
     </ul>
     <button id="go">불 피우러 가기</button>
-    <div class="keys">화면을 드래그해 이동 · PC는 WASD / 방향키</div>
+    <div class="keys">탭하면 그 자리로 이동 · 드래그로 조이스틱 · PC는 WASD</div>
   </div>
 </div>
 
@@ -680,14 +680,24 @@ addEventListener('keyup', e => { keys[e.key.toLowerCase()] = false; });
 const joyEl = document.getElementById('joy'), knob = document.getElementById('knob');
 let joyId = null, jx0 = 0, jy0 = 0, jdx = 0, jdy = 0;
 const cv = renderer.domElement;
-cv.addEventListener('pointerdown', e => { joyId = e.pointerId; jx0 = e.clientX; jy0 = e.clientY; jdx = jdy = 0; joyEl.style.display = 'block'; joyEl.style.left = jx0 + 'px'; joyEl.style.top = jy0 + 'px'; knob.style.transform = ''; });
+let tapT = 0;
+const ray = new THREE.Raycaster(), groundPlane = new THREE.Plane(V(0, 1, 0), 0), tapNdc = new THREE.Vector2();
+const tapMark = new THREE.Mesh(new THREE.RingGeometry(.35, .5, 20).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ color: 0xffc83d, transparent: true, opacity: .9 }));
+tapMark.position.y = .05; tapMark.visible = false; scene.add(tapMark);
+cv.addEventListener('pointerdown', e => { tapT = performance.now(); joyId = e.pointerId; jx0 = e.clientX; jy0 = e.clientY; jdx = jdy = 0; joyEl.style.display = 'block'; joyEl.style.left = jx0 + 'px'; joyEl.style.top = jy0 + 'px'; knob.style.transform = ''; });
 addEventListener('pointermove', e => {
   if (e.pointerId !== joyId) return;
   let dx = e.clientX - jx0, dy = e.clientY - jy0; const d = Math.hypot(dx, dy), R = 50;
   if (d > R) { dx *= R / d; dy *= R / d; }
   jdx = dx / R; jdy = dy / R; knob.style.transform = `translate(${dx}px, ${dy}px)`;
 });
-const joyEnd = e => { if (e.pointerId === joyId) { joyId = null; jdx = jdy = 0; joyEl.style.display = 'none'; } };
+function setTapTarget(e) {
+  tapNdc.set(e.clientX / innerWidth * 2 - 1, -(e.clientY / innerHeight) * 2 + 1);
+  ray.setFromCamera(tapNdc, camera);
+  const hit = ray.ray.intersectPlane(groundPlane, V(0, 0, 0));
+  if (hit) { pl.target = { x: hit.x, z: hit.z, t: 6 }; tapMark.position.set(hit.x, .05, hit.z); tapMark.visible = true; }
+}
+const joyEnd = e => { if (e.pointerId === joyId) { if (Math.hypot(jdx, jdy) < .2 && performance.now() - tapT < 350) setTapTarget(e); joyId = null; jdx = jdy = 0; joyEl.style.display = 'none'; } };
 addEventListener('pointerup', joyEnd); addEventListener('pointercancel', joyEnd);
 
 function collide() {
@@ -716,11 +726,16 @@ const inCamp = () => pl.x > CAMP.x1 && pl.x < CAMP.x2 && pl.z > CAMP.z1 && pl.z 
 function updatePlayer(dt) {
   S.stun = Math.max(0, S.stun - dt);
   pl.stunFree = S.stun <= 0;
-  let ix = jdx, iz = jdy;
+  let ix = Math.hypot(jdx, jdy) < .2 ? 0 : jdx, iz = Math.hypot(jdx, jdy) < .2 ? 0 : jdy;
   if (keys.a || keys.arrowleft) ix -= 1; if (keys.d || keys.arrowright) ix += 1;
   if (keys.w || keys.arrowup) iz -= 1; if (keys.s || keys.arrowdown) iz += 1;
-  const il = Math.hypot(ix, iz);
+  let il = Math.hypot(ix, iz);
   if (il > 1) { ix /= il; iz /= il; }
+  if (il > .1) { pl.target = null; tapMark.visible = false; }
+  else if (pl.target) {
+    const dx = pl.target.x - pl.x, dz = pl.target.z - pl.z, d = Math.hypot(dx, dz);
+    if (d < .25 || (pl.target.t -= dt) <= 0 || !pl.stunFree) { pl.target = null; tapMark.visible = false; } else { ix = dx / d; iz = dz / d; il = 1; }
+  }
   pl.moving = il > .1 && pl.stunFree;
   if (pl.moving) {
     const sp = val('boots') * (1 - T.stormSlow * S.stormK);
