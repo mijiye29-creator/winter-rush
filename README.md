@@ -9,7 +9,7 @@
 - 플레이 가능한 프로토타입: [`prototype/index.html`](prototype/index.html)
 
 ## 프로토타입 실행
-빌드가 필요 없습니다. `prototype/index.html`을 브라우저로 열면 됩니다(three.js를 CDN에서 불러오므로 인터넷 연결 필요).
+빌드가 필요 없습니다. `prototype/index.html`을 브라우저로 열면 됩니다. Three.js는 프로젝트에 포함되어 있어 인터넷 연결 없이도 게임을 시작할 수 있습니다. 웹 글꼴은 연결되지 않으면 기기의 기본 글꼴로 표시됩니다.
 
 ```bash
 cd prototype && python3 -m http.server 8000
