@@ -2,7 +2,7 @@ window.WinterRushData = {
   T: {
     logFuel: 8,
     cook: { steak: 2.5 }, burn: 35,
-    price: { steak: 10, sfish: 18, leather: 25, hide: 4, pizza: 40 },
+    price: { steak: 10, sfish: 18, leather: 25, hide: 4, pizza: 70 },
     burnGrow: .15, burnMax: 2.2,   // fire burns faster each blizzard survived (×1 → ×2.2)
     smoke: { time: 3.5, fishPerLog: 1, stormUse: 1.5 },   // oven: 1 log per fish, 1.5 logs in a blizzard
     ovenTime: [3.5, 2.6, 1.8], ovenCap: [18, 24, 30],   // fish oven level: seconds per fish, fish stacked on top
@@ -42,17 +42,20 @@ window.WinterRushData = {
     tower: { cd: [1.2, .9, .6], dmg: [2, 4, 7], range: 11 },   // gate Lv4-6
     // stage 3 (큰 화로): garden → veg, veg + meat + logs → pizza, smith processes beast trophies
     garden: { grow: 12 },          // seconds for a plot to ripen
-    pizzaTime: 3.2,                // seconds per pizza in the pizza oven (1 veg + 1 meat + 1 log)
+    pizzaTime: [3.2, 2.4, 1.7],    // seconds per pizza batch by pizza oven level (1 log per batch)
+    pizzaRecipe: { veg: 1, meat: 3, fish: 2 },   // per pizza
     smithTime: [0, 8, 4],          // seconds per trophy processed by smith level
-    warehouse: { cap: [0, 80, 160], beltIv: [0, .5, .3], beltSpeed: [0, 2.5, 3.5] },
+    warehouse: { cap: [0, 300, 600] },
+    courier: { carry: [0, 8, 12, 16], speed: [0, 4.6, 5.3, 6] },   // delivery trucks
+    fireLv: .25,                  // each hearth level: a log burns 25% longer
     wage: { every: 60, per: 8, interest: .02, maxInterest: 200 },   // per staff each payday (stage 3)
     staffHouse: .15,               // staff speed bonus per house
     armor: { boots: [0, .04, .08, .12], coat: [0, .08, .16, .24] },   // chance to block a hit
-    max: { vegCrate: 20, pzVeg: 12, pzMeat: 12, pzWood: 12, pizza: 16, forgeRaw: 10, tanWood: 16, wood: 40, meat: 30, grill: 18, counter: 16, hide: 20, fishCrate: 20, fishRaw: 30, ovenWood: 12, fishSmoked: 12, fishStock: 20, leather: 16, tanFuel: 8 },
+    max: { vegCrate: 20, pzVeg: 12, pzMeat: 24, pzFish: 16, pzWood: 12, pizza: 16, forgeRaw: 10, tanWood: 16, wood: 40, meat: 30, grill: 18, counter: 16, hide: 20, fishCrate: 20, fishRaw: 30, ovenWood: 12, fishSmoked: 12, fishStock: 20, leather: 16, tanFuel: 8 },
   },
   UP: {
     bag:     { name: '가방',      icon: '🎒', costs: [30, 60, 120, 240, 500], vals: [10, 16, 22, 30, 40, 50] },
-    axe:     { name: '도끼',      icon: '🪓', costs: [40, 90, 200, 450, 900, 1600], vals: [1, 2, 3, 4, 6, 8, 11], stage: [1, 1, 1, 2, 2, 2] },
+    axe:     { name: '무기',      icon: '⚔️', costs: [40, 90, 200, 450, 900, 1600], vals: [1, 2, 3, 4, 6, 8, 11], stage: [1, 1, 1, 2, 2, 2] },
     boots:   { name: '장화',      icon: '🥾', costs: [30, 80, 200],      vals: [5, 5.8, 6.6, 7.4] },
     cape:    { name: '망토',      icon: '🦸', costs: [100, 300, 700, 1200], vals: [5, 6, 7, 8, 9], stage: [1, 1, 2, 2] },   // max HP
     coat:    { name: '외투',      icon: '🧥', costs: [60, 180, 400],     vals: [0, 1, 2, 3] },
@@ -69,17 +72,21 @@ window.WinterRushData = {
     hunter2: { name: '사냥꾼 2', icon: '🏹', costs: [700], vals: [0, 1], stage: [2] },
     oven:    { name: '화덕',      icon: '🔥', costs: [300, 700],         vals: [0, 1, 2], stage: [2, 2] },
     saberCoat: { name: '검치호 갑옷', icon: '🐯', costs: [600, 1500], mats: { pelt: [2, 4] }, vals: [0, 1, 2], stage: [2, 2] },
-    tuskAxe:   { name: '매머드 뿔 도끼', icon: '🦣', costs: [900, 2200], mats: { tusk: [1, 3] }, vals: [0, 1, 2], stage: [2, 2] },
+    tuskAxe:   { name: '매머드 뿔 창', icon: '🦣', costs: [900, 2200], mats: { tusk: [1, 3] }, vals: [0, 1, 2], stage: [2, 2] },
     statue:    { name: '명성 동상', icon: '🗿', costs: [500, 900, 1600, 2800, 5000, 9000, 16000, 30000], vals: [0, 6, 12, 18, 24, 30, 36, 42, 48], stage: [2, 2, 2, 2, 2, 2, 2, 2] },   // +% to every sale
     fisher2:   { name: '낚시꾼 2', icon: '🪝', costs: [800], vals: [0, 1], stage: [2] },
     hearth:    { name: '큰 화로', icon: '🔥', costs: [3000], vals: [0, 1], stage: [2] },   // → stage 3
     farmer:    { name: '농부', icon: '🧑‍🌾', costs: [600, 1300], vals: [0, 1, 2], stage: [3, 3] },
-    pizzaChef: { name: '피자 요리사', icon: '👨‍🍳', costs: [800, 1600], vals: [0, 1, 2], stage: [3, 3] },
+    pizzaChef: { name: '피자 쉐프', icon: '👨‍🍳', costs: [600, 1400], vals: [0, 1, 2], stage: [3, 3] },
+    pizzaOven: { name: '피자 화덕', icon: '🍕', costs: [800, 1800], vals: [0, 1, 2], stage: [3, 3] },
+    courier:   { name: '배달 직원', icon: '🛵', costs: [800, 1600, 3000], vals: [0, 1, 2, 3], stage: [3, 3, 3] },
+    leatherClerk: { name: '가죽 점원', icon: '🧑‍💼', costs: [300, 700, 1200], vals: [0, 1, 2, 3], stage: [2, 2, 2] },
+    fire:      { name: '모닥불 강화', icon: '🔥', costs: [150, 400, 900, 2000], vals: [0, 1, 2, 3, 4] },
     pizzaClerk: { name: '피자 점원', icon: '🧑‍💼', costs: [500, 1000, 1800], vals: [0, 1, 2, 3], stage: [3, 3, 3] },
     smith:     { name: '대장장이', icon: '⚒️', costs: [700, 1500], vals: [0, 1, 2], stage: [3, 3] },
     helper3:   { name: '나무꾼 3', icon: '👷', costs: [1200], vals: [0, 1], stage: [3] },
     hunter3:   { name: '사냥꾼 3', icon: '🏹', costs: [1500], vals: [0, 1], stage: [3] },
-    warehouse: { name: '마을 창고', icon: '🏚️', costs: [1500, 3000], vals: [0, 1, 2], stage: [3, 3] },
+    warehouse: { name: '큰 창고', icon: '🏚️', costs: [1500, 3000], vals: [0, 1, 2], stage: [3, 3] },
     wall:      { name: '돌담', icon: '🧱', costs: [1500, 3000], vals: [0, 1, 2], stage: [3, 3] },   // −1 raider per level
     bank:      { name: '은행', icon: '🏦', costs: [1200], vals: [0, 1], stage: [3] },
     staffHouse: { name: '직원 숙소', icon: '🏘️', costs: [1000, 2000, 3500], vals: [0, 1, 2, 3], stage: [3, 3, 3] },
