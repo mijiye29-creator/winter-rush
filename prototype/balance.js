@@ -2,7 +2,8 @@ window.WinterRushData = {
   T: {
     logFuel: 8,
     cook: { steak: 2.5 }, burn: 35,
-    price: { steak: 10, sfish: 18, leather: 25, hide: 4, pizza: 40 },
+    price: { steak: 10, sfish: 18, leather: 25, hide: 4, meat: 2, pizza: 40 },
+    guard: { baseCost: 600, costPerStorm: 200, max: 3 },
     burnGrow: .15, burnMax: 2.2,   // fire burns faster each blizzard survived (×1 → ×2.2)
     smoke: { time: 3.5, fishPerLog: 1, stormUse: 1.5 },   // oven: 1 log per fish, 1.5 logs in a blizzard
     ovenTime: [3.5, 2.6, 1.8], ovenCap: [18, 24, 30],   // fish oven level: seconds per fish, fish stacked on top
