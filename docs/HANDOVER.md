@@ -8,7 +8,7 @@
 - **완료 기능**
   - 코어 루프: 벌목 → 모닥불(장작 칸) → 곰 사냥 → 고기 칸 → 그릴(날것/익음/탐) → 카운터 → 손님 → 동전 → 업그레이드 칸
   - 눈보라(평온 70초, 경고 8초, 눈보라 25초), 마을 온기, 습격 곰, 보스 곰(3회마다)
-  - 업그레이드 10종(`UP` 객체): bag, axe, boots, gate, helper, cart, server, hunter, cabin, fishing. 업그레이드 칸은 레벨업 후 잠기며(`p.lock`), 밖으로 나갔다 오면 풀림. 칸에 서면 효과 설명(`DESC`) 표시
+  - 업그레이드 10종(`UP` 객체): bag, axe, boots, gate, helper, cart, server, hunter, cabin, fishing. 업그레이드 칸은 레벨업 후 잠기며(`p.lock`), 밖으로 나갔다 오면 풀림. 칸에 서면 효과 설명(`DESC`) 표시. 칸은 관련 시설 옆에 배치되고 `REVEAL` 조건을 만족하면 순서대로 등장, 돈이 부족하면 흐리게 표시(`updatePads`)
   - NPC: 나무꾼(helpers), 서빙 직원(servers), 사냥꾼(hunters, 화살 shots). 컨베이어는 서빙 직원과 겹쳐 제거됨
   - 얼음 낚시터(동쪽, `fishBarrier` 벽 제거로 해금), 생선구이 주문
   - 손맛: `startSwing`/`updateSwing`(3단 모션), `playerHit`(히트스톱, 흔들림, 진동, 치명타, 피격 숫자), `burst` 파티클, WebAudio 효과음(`sfx`)

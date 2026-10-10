@@ -553,7 +553,8 @@ function makePad(key, x, z) {
   const ct = canvasTex(256, 256);
   const m = new THREE.Mesh(new THREE.PlaneGeometry(1.9, 1.9).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ map: ct.tex, transparent: true }));
   m.position.set(x, .03, z); scene.add(m);
-  const pad = { key, x, z, ct, paid: 0, m };
+  const pad = { key, x, z, ct, paid: 0, m, on: false };
+  m.visible = false;
   pads.push(pad); drawPad(pad); return pad;
 }
 function drawPad(p) {
@@ -572,8 +573,34 @@ function drawPad(p) {
     c.fillText(maxed ? '완료' : `🪙 ${cost - p.paid}`, w / 2, 202);
   });
 }
-makePad('bag', -6, 3.6); makePad('axe', -3.8, 3.6); makePad('boots', 3.8, 3.6); makePad('gate', 6, 3.6); makePad('helper', -6, -8.2);
-makePad('hunter', -6, 1.4); makePad('cabin', -3.8, 1.4); makePad('cart', -3.8, -8.2); makePad('server', -1.6, -8.2); makePad('fishing', 6.4, -.4);
+// pads sit next to what they upgrade and appear one by one
+makePad('bag', -3.6, 1.2); makePad('boots', 3.6, 1.2);
+makePad('axe', -6.2, -4); makePad('helper', -6, -8.2); makePad('cart', -3.8, -8.2);
+makePad('gate', 3.6, 4.2); makePad('hunter', -3.6, 4.2);
+makePad('server', -1, -6.6); makePad('cabin', 6.6, -4.6); makePad('fishing', 6.4, -.4);
+const REVEAL = {
+  bag: () => true, axe: () => true,
+  boots: () => S.bought >= 1,
+  helper: () => S.stat.sold >= 5,
+  gate: () => S.storms >= 1 || S.phase !== 'calm',
+  server: () => S.stat.sold >= 10,
+  cart: () => S.lv.helper >= 1,
+  hunter: () => S.stat.kills >= 5,
+  cabin: () => S.lv.server >= 1,
+  fishing: () => S.bought >= 6,
+};
+function updatePads(dt) {
+  for (const p of pads) {
+    if (!p.on && REVEAL[p.key]()) {
+      p.on = true; p.m.visible = true; p.m.scale.setScalar(S.started ? .01 : 1);
+      if (S.started) { toast(`✨ 새 업그레이드: ${UP[p.key].icon} ${UP[p.key].name}`); burst(p.x, .4, p.z, 0xffc83d, 12, { spd: 3, up: 6, life: .7 }); play('up'); }
+    }
+    if (!p.on) continue;
+    if (p.m.scale.x < 1) p.m.scale.setScalar(Math.min(1, p.m.scale.x + dt * 2.5));
+    const u = UP[p.key], lv = S.lv[p.key], maxed = lv >= u.costs.length;
+    p.m.material.opacity = maxed ? .4 : S.coins >= u.costs[lv] - p.paid ? 1 : .5;
+  }
+}
 
 // ───────────────────────── characters ─────────────────────────
 function makePerson(coat, hair) {
@@ -1101,6 +1128,7 @@ function updatePlayer(dt) {
     if (Math.hypot(p.x - pl.x, p.z - pl.z) < 1.4 && pl.stunFree && stackAdd(p.type)) { scene.remove(p.m); pickups.splice(i, 1); play('pop', 40); }
   }
   for (const p of pads) {
+    if (!p.on) continue;
     const u = UP[p.key], lv = S.lv[p.key];
     if (p.lock) { if (!near(p, 1.3)) p.lock = false; continue; }
     if (lv >= u.costs.length || !near(p, 1.0) || S.coins <= 0) continue;
@@ -1247,7 +1275,7 @@ const TUT = [
   { text: '🐻 정문 밖 곰 옆에 서면 자동으로 공격합니다. 고기를 얻으세요', at: () => V(0, 0, 8.5), done: () => stackHas('meat') || S.meatIn > 0 },
   { text: '🥩 고기를 모닥불 오른쪽 칸에 내려놓으세요', at: () => P.meatTile, done: () => S.meatIn > 0 },
   { text: '🍖 구운 고기를 집어서 카운터로 옮기세요', at: () => (stackHas('steak') ? P.counterStand : P.grill), done: () => S.steakIn > 0 },
-  { text: '🪙 동전을 모아 바닥의 업그레이드 칸에 서세요', at: () => (S.coins > 0 ? V(-6, 0, 3.6) : P.coinPile), done: () => S.bought > 0 },
+  { text: '🪙 동전을 모아 바닥의 업그레이드 칸에 서세요', at: () => (S.coins > 0 ? pads[0] : P.coinPile), done: () => S.bought > 0 },
 ];
 const $ = id => document.getElementById(id);
 const coinsEl = $('coins'), stormEl = $('storm'), hpEl = $('hp'), warmEl = $('warm'), warmFill = $('warmFill'), objEl = $('obj'), bagEl = $('bag'), toastEl = $('toast'), frostEl = $('frost'), hurtEl = $('hurt'), goalEl = $('goal');
@@ -1273,7 +1301,7 @@ function updateHud(dt) {
   if (!cur && S.phase === 'warn') obj = '⚠ 눈보라 중엔 불이 3배 빨리 탑니다. 장작을 채우세요!';
   if (!cur && S.phase === 'storm' && bears.some(b => b.raider)) obj = '🐻 마을에 들어온 곰을 쫓아내세요!';
   if (!cur && S.warmth < 35 && S.phase !== 'storm') obj = '🥶 마을이 얼고 있어요. 모닥불에 장작을!';
-  const onPad = pads.find(p => near(p, 1.0));
+  const onPad = pads.find(p => p.on && near(p, 1.0));
   if (onPad) obj = descOf(onPad.key) + (onPad.lock && S.lv[onPad.key] < UP[onPad.key].costs.length ? ' · 칸 밖으로 나갔다 오면 다음 레벨' : '');
   setText(objEl, obj);
   arrow.visible = !!cur;
@@ -1341,6 +1369,7 @@ function frame(now) {
   woodPile.set(S.wood); meatPile.set(S.meat); fishPile.set(S.fish); renderGrill();
   counterPiles.steak.set(S.counter.steak); counterPiles.fishc.set(S.counter.fishc);
   coinPileV.set(Math.min(72, Math.ceil(S.coinPile / 5)));
+  updatePads(dt);
   woodTile.setFull(S.wood > 0); meatTile.setFull(S.meat > 0); fishTileV.setFull(S.fish > 0);
   const off = camOff.clone().multiplyScalar(camera.aspect < 1 ? 1 : .85);
   const want = V(pl.x, 0, pl.z).add(off);
