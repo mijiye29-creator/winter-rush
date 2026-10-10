@@ -654,6 +654,7 @@ function carrier(coat, hair, types, x, z) {
 function showCarry(w) { w.carry.children.forEach(m => (m.visible = m.userData.t === w.item && m.userData.i < w.n)); }
 function addFarmer() { if (!farmer) { farmer = carrier(0x6b9e3a, 0x8a5a2a, ['veg'], 17.4, -1.4); farmer.body.add(mesh(new THREE.CylinderGeometry(.5, .5, .05, 12), mat(0xe8c86a), 0, 1.68, 0)); } }
 const truckSignTex = (() => { const t = canvasTex(320, 100); t.draw((c, w, h) => { c.textAlign = 'center'; c.textBaseline = 'middle'; c.font = `bold 58px ${FONT}`; c.fillStyle = '#2f7fe0'; c.fillText('❄ 윈터배송', w / 2, h / 2 + 3); }); return t.tex; })();
+const vestSignTex = (() => { const t = canvasTex(256, 80); t.draw((c, w, h) => { c.textAlign = 'center'; c.textBaseline = 'middle'; c.font = `bold 46px ${FONT}`; c.fillStyle = '#ffffff'; c.fillText('윈터배송', w / 2, h / 2 + 3); }); return t.tex; })();
 // couriers: inside the fence a courier in a delivery vest pulls a hand cart; outside it drives a white box truck
 function addCourier() {
   while (couriers.length < courierCount()) {
@@ -662,6 +663,11 @@ function addCourier() {
     c.g.add(vis); vis.add(walker, truck); c.g.remove(person); walker.add(person); c.g.remove(c.carry); walker.add(c.carry);
     person.add(mesh(new THREE.CylinderGeometry(.37, .46, .55, 10), mat(0x2f7fe0), 0, .75, 0), mesh(new THREE.TorusGeometry(.42, .05, 5, 14).rotateX(Math.PI / 2), mat(0xe8ff6a, { emissive: 0x556600 }), 0, .62, 0));   // vest + reflective stripe
     person.add(mesh(new THREE.SphereGeometry(.3, 10, 6, 0, Math.PI * 2, 0, Math.PI / 2), mat(0x2f7fe0), 0, 1.55, -.02));   // cap
+    // vest details: second reflective band, shoulder straps, chest pocket + badge, brand lettering on the back
+    person.add(mesh(new THREE.TorusGeometry(.4, .04, 5, 14).rotateX(Math.PI / 2), mat(0xe8ff6a, { emissive: 0x556600 }), 0, .9, 0));
+    for (const sx of [-1, 1]) person.add(mesh(new THREE.BoxGeometry(.1, .05, .5), mat(0xe8ff6a, { emissive: 0x556600 }), sx * .2, 1.06, 0));
+    person.add(mesh(new THREE.BoxGeometry(.2, .16, .04), mat(0x1f5fb0), -.15, .82, .41), mesh(new THREE.BoxGeometry(.12, .08, .03), mat(0xffffff), .16, .9, .4));
+    { const back = new THREE.Mesh(new THREE.PlaneGeometry(.62, .2), new THREE.MeshBasicMaterial({ map: vestSignTex, transparent: true })); back.position.set(0, .82, -.45); back.rotation.y = Math.PI; person.add(back); }
     // green flatbed hand trolley pulled behind the courier, the load rides on the deck
     walker.add(mesh(new THREE.BoxGeometry(.95, .08, 1.1), mat(0x2fa84f), 0, .32, -1.15));   // deck
     walker.add(mesh(new THREE.CylinderGeometry(.035, .035, .7, 8), mat(0xeee6cf, { emissive: 0x222018 }), -.42, .65, -.62), mesh(new THREE.CylinderGeometry(.035, .035, .7, 8), mat(0xeee6cf, { emissive: 0x222018 }), .42, .65, -.62), mesh(new THREE.CylinderGeometry(.035, .035, .88, 8).rotateZ(Math.PI / 2), mat(0xeee6cf, { emissive: 0x222018 }), 0, 1.0, -.62));   // ivory steel handle frame on the green deck
