@@ -674,7 +674,7 @@ let whShown = '';
 const WH_ITEMS = ['log', 'meat', 'fish', 'veg', 'hide', 'pelt', 'tusk', 'tuna', 'blubber', 'ivory', 'whide'], WH_ICON = { log: '🪵', meat: '🥩', fish: '🐟', veg: '🥬', hide: '🟫', pelt: '🐯', tusk: '🦣', tuna: '🍣', blubber: '🛢️', ivory: '🦷', whide: '🦭' };
 const whOn = () => S.stage >= 3 && S.lv.warehouse > 0;
 const whCap = () => T.warehouse.cap[S.lv.warehouse];   // each warehouse level: more room
-const courierCount = () => S.lv.warehouse;   // and one more delivery worker (warehouse Lv1-3 = 1-3 couriers)
+const courierCount = () => S.lv.warehouse;   // and one more delivery worker (warehouse Lv1-5 = 1-5 couriers)
 const whTotal = () => WH_ITEMS.reduce((s, k) => s + S.wh[k], 0);
 const whRoom = () => Math.max(0, whCap() - whTotal());
 function whPut(item, n, from) { const k = Math.min(n, whRoom()); if (k > 0) { S.wh[item] += k; if (from) fly(item, from, V(P.whIn.x, .5, P.whIn.z), .3); } return k; }
@@ -694,7 +694,7 @@ const vestSignTex = (() => { const t = canvasTex(256, 80); t.draw((c, w, h) => {
 // couriers: inside the fence a courier in a delivery vest pulls a hand cart; outside it drives a white box truck
 function addCourier() {
   while (couriers.length < courierCount()) {
-    const c = carrier(0x2b4f8a, 0x3a2a22, WH_ITEMS, P.whIn.x + couriers.length * 1.2, P.whIn.z - 1.6);
+    const c = carrier(0x2b4f8a, 0x3a2a22, [], P.whIn.x + couriers.length * 1.2, P.whIn.z - 1.6);
     const person = c.body, vis = new THREE.Group(), walker = new THREE.Group(), truck = new THREE.Group();
     c.g.add(vis); vis.add(walker, truck); c.g.remove(person); walker.add(person); c.g.remove(c.carry); walker.add(c.carry);
     // uniform (reference: blue delivery vest with silver reflective stripes over a teal shirt, blue cap)
@@ -718,7 +718,6 @@ function addCourier() {
     }
     walker.add(mesh(new THREE.CylinderGeometry(.03, .03, .5, 8).rotateX(Math.PI / 2), tube, .25, 1.0, -.45));   // hand reaching back to the handle
     c.carry.position.set(0, 0, -1.15);
-    c.carry.children.forEach(m => { const i = m.userData.i; m.position.set((i % 3 - 1) * .28, .42 + Math.floor(i / 3) * ITEM_H[m.userData.t], (Math.floor(i / 3) % 2) * .2 - .25); });
     // white box truck (reference: small cab with roof deflector, tall white cargo box, rear door seams, silver wheels)
     const white = mat(0xf7f8fa);
     truck.add(mesh(new THREE.BoxGeometry(1.3, 1.35, 1.8), white, 0, 1.12, -.4));   // cargo box
@@ -900,12 +899,19 @@ const cargoAdd = (c, it, k) => { c.cargo[it] = (c.cargo[it] || 0) + k; };
 const courierCap = () => T.courier.carry[S.lv.warehouse];
 const STASH = { kind: 'stash', at: () => P.whIn };
 const claimed = (c, ref) => couriers.some(o => o !== c && o.stops.some(s => s.ref === ref));
+// the load sits on the trolley deck like a tidy pallet: a 3 x 3 grid per layer, item type after item type, layers stacked up
+const DECK = { cols: 3, rows: 3, sx: .27, sz: .34, y: .37, show: 27, k: .58 };   // k: items shrink to fit the trolley
 function showCargo(c) {
-  const tot = cargoN(c), sc = tot > 14 ? 14 / tot : 1, shown = {};
-  for (const [it, n] of Object.entries(c.cargo)) if (n > 0) shown[it] = Math.max(1, Math.round(n * sc));
-  let y = 1.1;
-  for (const m of c.carry.children) m.visible = false;
-  for (const it of Object.keys(shown)) for (const m of c.carry.children) if (m.userData.t === it && m.userData.i < shown[it]) { m.visible = true; m.position.y = y; y += ITEM_H[it]; }
+  const tot = cargoN(c), sc = tot > DECK.show ? DECK.show / tot : 1, list = [];
+  for (const it of WH_ITEMS) { const n = c.cargo[it] > 0 ? Math.max(1, Math.round(c.cargo[it] * sc)) : 0; for (let i = 0; i < n; i++) list.push(it); }
+  const key = list.join(); if (key === c.shownKey) return; c.shownKey = key;
+  c.carry.clear();
+  const per = DECK.cols * DECK.rows; let y = DECK.y;
+  for (let l = 0; l * per < list.length; l++) {
+    const layer = list.slice(l * per, (l + 1) * per), h = Math.max(...layer.map(t => ITEM_H[t])) * DECK.k;
+    layer.forEach((t, j) => { const m = itemMesh(t); m.scale.setScalar(DECK.k); m.position.set((j % DECK.cols - 1) * DECK.sx, y + ITEM_H[t] * DECK.k / 2, (Math.floor(j / DECK.cols) - 1) * DECK.sz); c.carry.add(m); });
+    y += h;
+  }
 }
 function stopPos(c, s) {
   const i = couriers.indexOf(c), at = s.at();
@@ -930,6 +936,10 @@ function planTrip(c) {
   let room = cap - cargoN(c);
   const load = { kind: 'load', at: () => P.whIn, items: {} }, takes = [], gives = [], left = { ...S.wh };
   const needs = DELIVER.filter(t => (!t.on || t.on()) && t.get() / t.max() < lim && !claimed(c, t)).sort((a, b) => a.get() / a.max() - b.get() / b.max());
+  if (needs.length > 1) {   // serve the most urgent tile and the short tiles nearest to it, so one cart covers one neighbourhood
+    const a = needs[0].at(), near = t => Math.hypot(t.at().x - a.x, t.at().z - a.z);
+    needs.splice(1, needs.length, ...needs.slice(1).sort((p, q) => near(p) - near(q)));
+  }
   for (const t of needs) {   // what the warehouse can cover, most urgent first, until the cart is full
     const k = Math.min(room, left[t.item] || 0, Math.ceil(t.max() * fill) - t.get());
     if (k <= 0) continue;
