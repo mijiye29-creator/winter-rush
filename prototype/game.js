@@ -16,6 +16,9 @@ const S = {
   timers: {}, paydayT: 0, started: false,
 };
 const val = k => UP[k].vals[S.lv[k]];
+// the economy grows with the village: each stage raises prices and income alike
+const econ = kind => T.econ[kind][Math.min(T.econ[kind].length, S.stage) - 1];
+const costOf = (k, lv = S.lv[k]) => { const c = UP[k].costs[lv] * econ('cost'); return c >= 1000 ? Math.round(c / 50) * 50 : Math.round(c / 10) * 10; };
 const bagCap = () => val('bag') + 4 * pets.length;
 const hidesOn = () => S.lv.fire >= 2 && S.stage >= 2;   // leather is the hearth Lv2 menu
 // one rule for every menu: each hearth (모닥불) level opens the next product line
@@ -889,7 +892,7 @@ function sinkFor(item, w) {
 // nowhere at all to put it: sell it to the villagers rather than stand around holding it
 function sellSurplus(item, n, x, z) {
   if (n <= 0) return;
-  const v = Math.max(1, Math.round(n * (T.trade.price[item] || 2)));
+  const v = Math.max(1, Math.round(n * (T.trade.price[item] || 2) * econ('sale')));
   S.coinPile += v; popText(x, 2.4, z, `🪙 남는 재료 판매 +${v}`, '#ffd36b');
 }
 // couriers carry a mixed load: one trip loads several items for several tiles at the warehouse,
@@ -1068,7 +1071,7 @@ let bankShown = '';
 const staffCount = () => helpers.length + servers.length + hunters.length + fishers.length + couriers.length + (artisan ? 1 : 0) + (farmer ? 1 : 0) + (pizzaChefNpc ? 1 : 0) + (smithNpc ? 1 : 0) + (S.lv.clerk > 0) + (S.lv.fishClerk > 0) + (S.lv.pizzaClerk > 0) + (S.lv.leatherClerk > 0);
 const staffMul = () => (S.strike ? .5 : 1) * (S.feastT > 0 ? T.feast.staffMul : 1) * (1 + (S.houseWarm === false ? 0 : T.staffHouse * S.lv.staffHouse));
 function payday() {
-  const n = staffCount(), wage = n * T.wage.per;
+  const n = staffCount(), wage = Math.round(n * T.wage.per * econ('sale'));
   if (!n) return;
   const interest = S.lv.bank ? Math.min(T.wage.maxInterest, Math.floor(S.bank * T.wage.interest), Math.floor(wage / 2)) : 0;   // never more than half the wage bill
   S.bank += interest;
@@ -1372,7 +1375,7 @@ function updateTrade(dt) {
     const share = Math.min(1, T.trade.max[S.stage] / Math.max(1, total));   // buy from every overstocked item in proportion
     for (const [it, k0] of surplus) {
       const k = Math.ceil(k0 * share); if (!k) continue;
-      S.wh[it] -= k; coins += k * T.trade.price[it]; sold.push(`${WH_ICON[it]}${k}`);
+      S.wh[it] -= k; coins += Math.round(k * T.trade.price[it] * econ('sale')); sold.push(`${WH_ICON[it]}${k}`);
     }
     const who = ship ? '🚢 교역선' : '🛻 상인 마차', at = ship ? V(47, 2, -5.5) : V(3, 2, 8.5);
     if (coins) { S.coinPile += coins; toast(`${who}이 남는 재료를 사갔어요 ${sold.join(' ')} → 🪙${coins}`); burst(at.x, at.y, at.z, 0xffd36b, 16, { spd: 3, up: 5, life: .7 }); }
@@ -1477,7 +1480,7 @@ function drawPad(p) {
     return;
   }
   const u = UP[p.key], lv = S.lv[p.key], maxed = lv >= u.costs.length;
-  const cost = maxed ? 0 : u.costs[lv];
+  const cost = maxed ? 0 : costOf(p.key, lv);
   p.ct.draw((c, w) => {
     c.fillStyle = maxed ? 'rgba(80,90,110,.55)' : 'rgba(19,37,61,.82)';
     c.beginPath(); c.roundRect ? c.roundRect(8, 8, w - 16, w - 16, 34) : c.rect(8, 8, w - 16, w - 16); c.fill();
@@ -1571,7 +1574,7 @@ function updatePads(dt) {
     if (p.m.scale.x < 1) p.m.scale.setScalar(Math.min(1, p.m.scale.x + dt * 2.5));
     const u = UP[p.key], lv = S.lv[p.key], maxed = lv >= u.costs.length;
     if (guardPad(p)) p.m.material.opacity = S.coins >= guardCost() ? 1 : .5;
-    else if (!maxed) p.m.material.opacity = S.coins >= u.costs[lv] - p.paid && matsOk(p.key) ? 1 : .5;
+    else if (!maxed) p.m.material.opacity = S.coins >= costOf(p.key, lv) - p.paid && matsOk(p.key) ? 1 : .5;
   }
 }
 
@@ -1620,6 +1623,7 @@ function applyStage(fanfare) {
     if (fanfare) { burst(from.x, 1, from.z, 0x9aa0aa, 24, { spd: 3, up: 4, life: .8, size: 1.3 }); burst(P.fire.x, 1.5, P.fire.z, 0xffb347, 40, { spd: 6, up: 10, life: 1.1, size: 1.4 }); }
   }
   if (three && !applyStage.moved3) { applyStage.moved3 = true; for (const p of pads) if (PAD_POS3[p.key]) { [p.x, p.z] = PAD_POS3[p.key]; p.m.position.set(p.x, .03, p.z); } }
+  pads.forEach(drawPad);   // prices change with the stage
   if (!fanfare) return;
   if (four) {
     const flash = document.createElement('div');
@@ -2036,7 +2040,7 @@ function updateHunters(dt) {
       h.noWh = false;
       const k = useWh ? 0 : Math.min(h.n, T.max.meat - S.meat);
       if (k > 0) { S.meat += k; h.n -= k; fly('meat', V(h.x, 1.3, h.z), V(P.meatTile.x, .5, P.meatTile.z)); }
-      if (h.n > 0) { S.coinPile += h.n * T.price.meat; h.n = 0; }   // nowhere left to put it: sell the surplus
+      if (h.n > 0) { S.coinPile += Math.round(h.n * T.price.meat * econ('sale')); h.n = 0; }   // nowhere left to put it: sell the surplus
       if (h.n === 0) { if (h.hides) { h.state = 'hides'; h.path = [V(TAN.in.x - 1.3, 0, TAN.in.z)]; } else huntOut(h); }
       continue;
     }
@@ -2165,7 +2169,7 @@ function updateCustomers(dt) {
       c.g.rotation.y = sh.face; c.wait += dt;
       if (c.wait > 30 && !sh.stock()) { c.state = 'leave'; drawBubble(c); toast('😠 기다리다 지친 손님이 떠났어요'); return; }
       if (sh.stock() > 0 && tick('serve' + key + i, ST.clerkIv[ck], dt)) {
-        sh.take(); c.need--; c.wait = 0; S[sh.coin] += Math.round(T.price[sh.item] * (1 + val('statue') / 100) * (S.feastT > 0 ? T.feast.saleMul : 1)); S.stat[sh.stat]++;
+        sh.take(); c.need--; c.wait = 0; S[sh.coin] += Math.round(T.price[sh.item] * econ('sale') * (1 + val('statue') / 100) * (S.feastT > 0 ? T.feast.saleMul : 1)); S.stat[sh.stat]++;
         fly(sh.item, V(sh.at.x, 1, sh.at.z), V(c.x, 1.2, c.z), .25);
         if (c.need <= 0) { c.state = 'leave'; S.served++; }
         drawBubble(c);
@@ -2822,7 +2826,7 @@ function updatePlayer(dt) {
     if (padHidden(p) || !near(p, 1.0) || S.coins <= 0 || pl.moving || !matsOk(p.key)) { p.dwell = 0; continue; }
     if ((p.dwell = (p.dwell || 0) + dt) < T.padDwell) continue;
     if (!tick('pad', .03, dt)) continue;
-    const cost = u.costs[lv], k = Math.min(S.coins, cost - p.paid, Math.max(1, Math.ceil(cost / 25)));
+    const cost = costOf(p.key, lv), k = Math.min(S.coins, cost - p.paid, Math.max(1, Math.ceil(cost / 25)));
     S.coins -= k; p.paid += k; play('coin', 45);
     fly('coin', V(pl.x, 1.4, pl.z), V(p.x, .1, p.z), .15);
     if (p.paid >= cost) { p.paid = 0; p.lock = true; levelUp(p.key); }
@@ -3427,5 +3431,5 @@ function footprints() {
   }
   return f;
 }
-window.__winter = { startSwing, spawnSea, boats, schools, syncBoats, HB, powerSlam, payday, get clerkNpc() { return clerkNpc; }, get farmer() { return farmer; }, couriers, whPut, PLOTS, bearHurt, spawnBeast, dropPickup, pickups, footprints, spawnPup, addPet, spawnPack, applyPetLook, pups, stackAdd, pets, fishers, SHOPS, P, S, pl, stack, bears, trees, customers, pads, helpers, servers, hunters, camera, T, save, levelUp };
+window.__winter = { costOf, econ, startSwing, spawnSea, boats, schools, syncBoats, HB, powerSlam, payday, get clerkNpc() { return clerkNpc; }, get farmer() { return farmer; }, couriers, whPut, PLOTS, bearHurt, spawnBeast, dropPickup, pickups, footprints, spawnPup, addPet, spawnPack, applyPetLook, pups, stackAdd, pets, fishers, SHOPS, P, S, pl, stack, bears, trees, customers, pads, helpers, servers, hunters, camera, T, save, levelUp };
 })();

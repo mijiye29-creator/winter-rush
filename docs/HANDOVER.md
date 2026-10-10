@@ -54,3 +54,4 @@
 - v2.1.6: `MENUS`(모닥불 레벨별 메뉴), `spotlight()`/`SPOT_PADS`(해금 확대 연출, `#spot` 카드), `crowd()`. `UP.gate`·`UP.courier`는 옛 저장용으로만 남고 칸 없음, `courierCount() = S.lv.warehouse`. 물류: `SOURCES`/`fetch` 상태, `sinkFor()`, `sellSurplus()`. `woodSpot()`은 자리가 없으면 null
 - v2.1.7: 배달 직원은 `c.cargo`(품목별 수량)와 `c.stops`(정류장 목록: load/take/give/reap/pick/stash/sell). `planTrip()`이 경로를 짜고(`routeOrder` 최근접 순서), `runStop()`이 실행. 다른 배달 직원이 맡은 칸·상자·줍기 대상은 `claimed()`로 건너뜀
 - v2.1.9: 알림은 `ALERTS`(id·조건·문구·위치) 목록, `updateAlerts()`가 1초마다 검사. 탭하면 `pl.target`에 `next` 경유지(정문)를 넣어 이동. 어선 연료 부족은 `HB.noFuelAt`
+- 경제 배율: `econ('cost'|'sale')`, 칸 가격은 반드시 `costOf(key, lv)`로 읽을 것(`UP.*.costs`는 1단계 기준가)
