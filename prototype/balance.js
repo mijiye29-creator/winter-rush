@@ -16,7 +16,7 @@ window.WinterRushData = {
       helperCarry: [0, 4, 8, 12], helperSpeed: [0, 3.4, 4, 4.8], helperChop: [0, .8, .6, .45],
       serverCarry: [0, 6, 10, 14], serverSpeed: [0, 3.6, 4.4, 5.2], serverIv: [0, .15, .1, .06],
       hunterDmg: [0, 2, 3, 4], hunterCd: [0, .7, .55, .4],
-      clerkSlots: [1, 2, 2, 3], clerkIv: [.35, .28, .2, .14],
+      clerkSlots: [1, 3, 3, 3], clerkIv: [.35, .14, .14, .14],   // clerks are hire-only: hired = full speed (Lv2-3 kept for old saves)
       hunterCarry: [0, 8, 12, 16], hunterHides: [0, 4, 6, 8],   // meat / hides a hunter carries home by level
     farmerCarry: [0, 4, 8], farmerSpeed: [0, 3.4, 4.2], pizzaChefCarry: [0, 4, 8], pizzaChefSpeed: [0, 3.6, 4.4],
     fisherCatch: [0, 2.6, 1.9], fisherCarry: [0, 6, 10],
@@ -85,7 +85,7 @@ window.WinterRushData = {
     server:  { name: '서빙 직원',  icon: '🧑‍🍳', costs: [150, 300, 600],    vals: [0, 1, 2, 3] },
     hunter:  { name: '사냥꾼',    icon: '🏹', costs: [200, 500, 1000],    vals: [0, 1, 2, 3], stage: [1, 1, 2] },
     fishing: { name: '2단계 낚시터', icon: '🎣', costs: [400],            vals: [0, 1] },
-    clerk:   { name: '판매 점원',  icon: '🧑‍💼', costs: [200, 500, 1000],    vals: [0, 1, 2, 3], stage: [3, 3, 3] },
+    clerk:   { name: '판매 점원',  icon: '🧑‍💼', costs: [500],    vals: [0, 1], stage: [3] },
     artisan: { name: '가죽 장인',  icon: '🧵', costs: [200, 500],         vals: [0, 1, 2] },
     fisher:  { name: '낚시꾼',    icon: '🪝', costs: [300, 700],         vals: [0, 1, 2] },
     helper2: { name: '나무꾼 2', icon: '👷', costs: [500], vals: [0, 1], stage: [2] },
@@ -101,9 +101,9 @@ window.WinterRushData = {
     pizzaOven: { name: '피자 화덕', icon: '🍕', costs: [800, 1800], vals: [0, 1, 2], stage: [3, 3] },
     courier:   { name: '배달 직원',   // legacy: no pad since v2.1.6 (couriers come with warehouse levels)
                 icon: '🛵', costs: [800, 1600, 3000], vals: [0, 1, 2, 3], stage: [3, 3, 3] },
-    leatherClerk: { name: '가죽 점원', icon: '🧑‍💼', costs: [300, 700, 1200], vals: [0, 1, 2, 3], stage: [3, 3, 3] },
+    leatherClerk: { name: '가죽 점원', icon: '🧑‍💼', costs: [700], vals: [0, 1], stage: [3] },
     fire:      { name: '모닥불 강화', icon: '🔥', costs: [300, 900, 2000, 4000], vals: [0, 1, 2, 3, 4], stage: [1, 2, 2, 3] },   // Lv1 fish, Lv2 leather, Lv3 pizza, Lv4 sushi
-    pizzaClerk: { name: '피자 점원', icon: '🧑‍💼', costs: [500, 1000, 1800], vals: [0, 1, 2, 3], stage: [3, 3, 3] },
+    pizzaClerk: { name: '피자 점원', icon: '🧑‍💼', costs: [1000], vals: [0, 1], stage: [3] },
     smith:     { name: '대장장이', icon: '⚒️', costs: [700, 1500], vals: [0, 1, 2], stage: [3, 3] },
     helper3:   { name: '나무꾼 3', icon: '👷', costs: [1200], vals: [0, 1], stage: [3] },
     hunter3:   { name: '사냥꾼 3', icon: '🏹', costs: [1500], vals: [0, 1], stage: [3] },
@@ -118,7 +118,7 @@ window.WinterRushData = {
     freezer:   { name: '냉동 창고', icon: '🧊', costs: [2000, 4000], vals: [0, 1, 2], stage: [4, 4] },
     lighthouse: { name: '등대', icon: '🗼', costs: [2000, 4500], vals: [0, 1, 2], stage: [4, 4] },
     sushiChef: { name: '초밥 쉐프', icon: '🍣', costs: [2500, 5000], vals: [0, 1, 2], stage: [4, 4] },
-    sushiClerk: { name: '초밥 점원', icon: '🧑‍💼', costs: [1500, 3000, 5000], vals: [0, 1, 2, 3], stage: [4, 4, 4] },
-    fishClerk: { name: '생선 점원', icon: '🧑‍💼', costs: [200, 500, 1000],  vals: [0, 1, 2, 3], stage: [3, 3, 3] },
+    sushiClerk: { name: '초밥 점원', icon: '🧑‍💼', costs: [2000], vals: [0, 1], stage: [4] },
+    fishClerk: { name: '생선 점원', icon: '🧑‍💼', costs: [500],  vals: [0, 1], stage: [3] },
   },
 };

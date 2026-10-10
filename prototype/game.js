@@ -52,9 +52,9 @@ const DESC = {
   pizzaChef: (a, b) => a ? `피자 쉐프 Lv${b}: 한 번에 2판씩 굽기` : `피자 쉐프 고용 (쉐프가 있어야 화덕이 피자를 구워요)`,
   pizzaOven: (a, b) => `피자 화덕 Lv${b + 1}: ${T.pizzaTime[a]}초 → ${T.pizzaTime[b]}초`,
   courier: (a, b) => a ? `배달 직원 ${b}명: ${T.courier.carry[b]}개씩, 더 빠르게` : `배달 직원 고용: 창고 → 모닥불·화덕·공방·피자 재료 칸 자동 배달`,
-  leatherClerk: (a, b) => a ? `가죽 점원 숙련 Lv${b}: 동시 손님 ${Math.max(T.leatherShop.slots, ST.clerkSlots[b])}명` : `가죽 가게 점원 고용 (판매, 은행 입금)`,
+  leatherClerk: () => `가죽 가게 점원 고용: 손님 ${Math.max(T.leatherShop.slots, ST.clerkSlots[1])}명 동시 응대, 수금해서 은행 입금`,
   fire: (a, b) => `모닥불 Lv${b + 1} (${['쇠 테두리', '황동 기둥', '푸른 수정', '첨단 고리'][b - 1]}): 장작 지속 +${Math.round(T.fireLv * 100 * b)}%` + ` · 새 메뉴 ${MENUS[b].icon} ${MENUS[b].name}`,
-  pizzaClerk: (a, b) => a ? `피자 점원 숙련 Lv${b}: 동시 손님 ${ST.clerkSlots[a]} → ${ST.clerkSlots[b]}명` : `피자 가게 점원 고용 (판매 속도 ↑)`,
+  pizzaClerk: () => `피자 가게 점원 고용: 손님 ${ST.clerkSlots[1]}명 동시 응대, 수금해서 은행 입금`,
   smith: (a, b) => a ? `가공 속도 ${T.smithTime[a]}초 → ${T.smithTime[b]}초` : `대장장이 고용 (가죽 공방 옆): 맹수 전리품 → 전설 장비 재료 (${T.smithTime[1]}초)`,
   helper3: () => `세 번째 나무꾼 고용`,
   harbor: () => `4단계! 빙하 항구: 부두·바다·어선·초밥 가게, 펭귄·바다표범·바다코끼리·범고래`,
@@ -64,7 +64,7 @@ const DESC = {
   freezer: (a, b) => `냉동 창고: 부두 상자 ${T.harbor.dockCap[a]} → ${T.harbor.dockCap[b]}칸`,
   lighthouse: (a, b) => `등대 Lv${b}: 안개 ${T.harbor.fogDur[a]}초 → ${T.harbor.fogDur[b]}초` + (b >= 2 ? ', 범고래가 어선을 못 찾음' : '') + ` (장작 ${T.harbor.lighthouseLogEvery}초마다 1개)`,
   sushiChef: (a, b) => a ? `초밥 쉐프 Lv${b}: ${T.harbor.sushiTime[a]}초 → ${T.harbor.sushiTime[b]}초` : `초밥 쉐프 고용 (참치 1 + 생선 1 + 채소 2 + 장작 1 → 초밥)`,
-  sushiClerk: (a, b) => a ? `초밥 점원 숙련 Lv${b}` : `초밥 가게 점원 고용 (판매, 은행 입금)`,
+  sushiClerk: () => `초밥 가게 점원 고용: 손님 ${ST.clerkSlots[1]}명 동시 응대, 수금해서 은행 입금`,
   warehouse: (a, b) => a ? `창고 Lv${b}: 보관 ${T.warehouse.cap[a]} → ${T.warehouse.cap[b]}칸, 배달 직원 ${a} → ${b}명` : `큰 창고 (${T.warehouse.cap[b]}칸) + 배달 직원 1명: 모든 재료가 여기 모이고 필요한 곳으로 배달돼요`,
   wall: (a, b) => `${b === 1 ? '돌담' : '가시 돌담'}: 눈보라 습격 곰 −${b}마리`,
   bank: () => `은행: 점원이 동전을 모아 입금, 월급 자동 지급, 이자 ${Math.round(T.wage.interest * 100)}%`,
@@ -74,12 +74,12 @@ const DESC = {
   server: (a, b) => a ? `서빙 숙련 Lv${b}: 한 번에 ${ST.serverCarry[a]} → ${ST.serverCarry[b]}개, 더 빠르게` : `서빙 직원 고용 (그릴 → 카운터)`,
   hunter: (a, b) => a ? `사냥꾼 숙련 Lv${b}: 공격력 ${ST.hunterDmg[a]} → ${ST.hunterDmg[b]}` + (b === 3 ? ', 가죽도 수집 → 가죽 공방 개방' : '') : `사냥꾼 고용 (곰 자동 사냥)`,
   fishing: () => `2단계! 마을 확장, 얼음 낚시터 + 훈제 생선 가게 개방`,
-  clerk: (a, b) => `점원 숙련 Lv${b}: 동시 손님 ${ST.clerkSlots[a]} → ${ST.clerkSlots[b]}명, 판매 속도 ↑`,
+  clerk: () => `스테이크 가게 점원 고용: 손님 ${ST.clerkSlots[1]}명 동시 응대, 수금해서 은행 입금`,
   artisan: (a, b) => b === 1 ? `가죽 장인 고용: 가죽 → 가죽 제품 (${T.tanTime[1]}초)` : `제작 속도 ${T.tanTime[a]}초 → ${T.tanTime[b]}초`,
   helper2: () => `두 번째 나무꾼 고용 (같은 숙련도로 장작 운반)`,
   hunter2: () => `두 번째 사냥꾼 고용 (같은 숙련도로 사냥)`,
   oven: (a, b) => `화덕 Lv${b + 1}: 생선 ${T.ovenTime[a]}초 → ${T.ovenTime[b]}초, 위에 ${T.ovenCap[a]} → ${T.ovenCap[b]}마리`,
-  fishClerk: (a, b) => a ? `생선 점원 숙련 Lv${b}: 동시 손님 ${ST.clerkSlots[a]} → ${ST.clerkSlots[b]}명` : `생선 가게 점원 고용 (판매 속도 ↑)`,
+  fishClerk: () => `생선 가게 점원 고용: 손님 ${ST.clerkSlots[1]}명 동시 응대, 수금해서 은행 입금`,
   fisher: (a, b) => a ? `낚시꾼 숙련 Lv${b}: 더 빨리, ${ST.fisherCarry[b]}마리씩` : `낚시꾼 고용 (생선 상자에 자동 공급)`,
 };
 const descOf = k => { if (k === 'hearth' && S.lv.hearth) return `🛡️ 경비 보급: 다음 눈보라 습격 곰 1마리 차단 (${S.guard}/${T.guard.max}) · 🪙${guardCost()}`; const u = UP[k], l = S.lv[k]; if (l >= u.costs.length) return `${u.icon} ${u.name} 최대 레벨`; const need = matsNeed(k).map(([m, n]) => `${MAT_ICON[m]} ${MAT_NAME[m]} ${n}개 필요(보유 ${S.mats[m]})`).join(' '); return `${u.icon} ${u.name}: ${DESC[k](u.vals[l], u.vals[l + 1])}` + (need ? ` · ${need}` : ''); };
@@ -3050,7 +3050,7 @@ function levelUp(key) {
   }
   const pad = pads.find(p => p.key === key);
   if (pad) burst(pad.x, .5, pad.z, 0xffc83d, 14, { spd: 4, up: 7, life: .8 }); play('up'); buzz([20, 40, 20]);
-  const msg = { bag: `가방 용량 ${bagCap()}`, axe: `⚔️ ${weaponLook().name}! 공격력 ${axeDmg()}`, cape: `최대 체력 ${S.maxHp}`, saberCoat: `검치호 갑옷 Lv${S.lv.saberCoat}: 막기 ${pct(blockChance())}, 체력 ${S.maxHp}`, tuskAxe: `🦣 ${weaponLook().name}! 공격력 ${axeDmg()}`, statue: `명성 +${val('statue')}%: 모든 판매가 상승`, hearth: `3단계 확장!`, fisher2: `두 번째 낚시꾼이 일을 시작합니다`, farmer: `농부 Lv${S.lv.farmer}: 채소를 거둡니다`, pizzaChef: `피자 쉐프 Lv${S.lv.pizzaChef}: 피자를 굽습니다`, pizzaOven: `피자 화덕 Lv${S.lv.pizzaOven + 1}: ${T.pizzaTime[S.lv.pizzaOven]}초`, courier: `배달 트럭 ${courierCount()}대`, leatherClerk: `가죽 점원 Lv${S.lv.leatherClerk}`, fire: `모닥불 Lv${S.lv.fire + 1}!`, pizzaClerk: `피자 점원 Lv${S.lv.pizzaClerk}`, smith: `대장장이 Lv${S.lv.smith}: 전리품을 가공합니다`, helper3: `세 번째 나무꾼이 일을 시작합니다`, harbor: `4단계 빙하 항구!`, boat: `${['', '쪽배', '그물배', '원양선'][S.lv.boat]} 출항!`, boat2: `두 번째 어선 출항!`, crane: `크레인 가동`, freezer: `냉동 창고 ${T.harbor.dockCap[S.lv.freezer]}칸`, lighthouse: `등대 Lv${S.lv.lighthouse}`, sushiChef: `초밥 쉐프 Lv${S.lv.sushiChef}`, sushiClerk: `초밥 점원 Lv${S.lv.sushiClerk}`, warehouse: `큰 창고 ${whCap()}칸: 재료가 모두 여기로 모여요`, wall: `돌담 Lv${S.lv.wall}`, bank: `은행 개점! 점원이 수금해요`, staffHouse: `직원 숙소 ${S.lv.staffHouse}채`, hunter3: `세 번째 사냥꾼이 사냥을 나갑니다`, boots: `이동 속도 ↑ · 막기 ${pct(blockChance())}`, coat: `외투 Lv${S.lv.coat}: 막기 ${pct(blockChance())}`, gate: S.lv.gate > 3 ? `감시탑 Lv${towerLv()} 가동!` : `습격 곰 −${val('gate')}마리`, helper: `나무꾼 Lv${S.lv.helper}: 장작 ${ST.helperCarry[S.lv.helper]}개씩`, server: `서빙 직원 Lv${S.lv.server}: 한 번에 ${ST.serverCarry[S.lv.server]}개`, hunter: `사냥꾼 Lv${S.lv.hunter}: 공격력 ${ST.hunterDmg[S.lv.hunter]}`, fishing: `2단계 확장!`, clerk: `판매 점원 Lv${S.lv.clerk}: 손님 ${ST.clerkSlots[S.lv.clerk]}명 동시 응대`, artisan: S.lv.artisan === 1 ? `가죽 공방 가동! 가죽 제품을 팔아요` : `가죽 제품을 더 빨리 만들어요`, fisher: `낚시꾼 Lv${S.lv.fisher}: 생선 상자를 채웁니다`, fishClerk: `생선 점원 Lv${S.lv.fishClerk}: 손님 ${ST.clerkSlots[S.lv.fishClerk]}명 동시 응대`, helper2: `두 번째 나무꾼이 일을 시작합니다`, oven: `생선을 ${T.ovenTime[S.lv.oven]}초마다 굽고, 위에 ${ovenCap()}마리까지 올려요`, hunter2: `두 번째 사냥꾼이 사냥을 나갑니다` }[key];
+  const msg = { bag: `가방 용량 ${bagCap()}`, axe: `⚔️ ${weaponLook().name}! 공격력 ${axeDmg()}`, cape: `최대 체력 ${S.maxHp}`, saberCoat: `검치호 갑옷 Lv${S.lv.saberCoat}: 막기 ${pct(blockChance())}, 체력 ${S.maxHp}`, tuskAxe: `🦣 ${weaponLook().name}! 공격력 ${axeDmg()}`, statue: `명성 +${val('statue')}%: 모든 판매가 상승`, hearth: `3단계 확장!`, fisher2: `두 번째 낚시꾼이 일을 시작합니다`, farmer: `농부 Lv${S.lv.farmer}: 채소를 거둡니다`, pizzaChef: `피자 쉐프 Lv${S.lv.pizzaChef}: 피자를 굽습니다`, pizzaOven: `피자 화덕 Lv${S.lv.pizzaOven + 1}: ${T.pizzaTime[S.lv.pizzaOven]}초`, courier: `배달 트럭 ${courierCount()}대`, leatherClerk: `가죽 점원이 일을 시작합니다`, fire: `모닥불 Lv${S.lv.fire + 1}!`, pizzaClerk: `피자 점원이 일을 시작합니다`, smith: `대장장이 Lv${S.lv.smith}: 전리품을 가공합니다`, helper3: `세 번째 나무꾼이 일을 시작합니다`, harbor: `4단계 빙하 항구!`, boat: `${['', '쪽배', '그물배', '원양선'][S.lv.boat]} 출항!`, boat2: `두 번째 어선 출항!`, crane: `크레인 가동`, freezer: `냉동 창고 ${T.harbor.dockCap[S.lv.freezer]}칸`, lighthouse: `등대 Lv${S.lv.lighthouse}`, sushiChef: `초밥 쉐프 Lv${S.lv.sushiChef}`, sushiClerk: `초밥 점원이 일을 시작합니다`, warehouse: `큰 창고 ${whCap()}칸: 재료가 모두 여기로 모여요`, wall: `돌담 Lv${S.lv.wall}`, bank: `은행 개점! 점원이 수금해요`, staffHouse: `직원 숙소 ${S.lv.staffHouse}채`, hunter3: `세 번째 사냥꾼이 사냥을 나갑니다`, boots: `이동 속도 ↑ · 막기 ${pct(blockChance())}`, coat: `외투 Lv${S.lv.coat}: 막기 ${pct(blockChance())}`, gate: S.lv.gate > 3 ? `감시탑 Lv${towerLv()} 가동!` : `습격 곰 −${val('gate')}마리`, helper: `나무꾼 Lv${S.lv.helper}: 장작 ${ST.helperCarry[S.lv.helper]}개씩`, server: `서빙 직원 Lv${S.lv.server}: 한 번에 ${ST.serverCarry[S.lv.server]}개`, hunter: `사냥꾼 Lv${S.lv.hunter}: 공격력 ${ST.hunterDmg[S.lv.hunter]}`, fishing: `2단계 확장!`, clerk: `판매 점원이 일을 시작합니다: 손님 ${ST.clerkSlots[1]}명 동시 응대`, artisan: S.lv.artisan === 1 ? `가죽 공방 가동! 가죽 제품을 팔아요` : `가죽 제품을 더 빨리 만들어요`, fisher: `낚시꾼 Lv${S.lv.fisher}: 생선 상자를 채웁니다`, fishClerk: `생선 점원이 일을 시작합니다: 손님 ${ST.clerkSlots[1]}명 동시 응대`, helper2: `두 번째 나무꾼이 일을 시작합니다`, oven: `생선을 ${T.ovenTime[S.lv.oven]}초마다 굽고, 위에 ${ovenCap()}마리까지 올려요`, hunter2: `두 번째 사냥꾼이 사냥을 나갑니다` }[key];
   if (key !== 'fishing') toast(`${u.icon} ${u.name} 업그레이드! ${msg}`);
 }
 
