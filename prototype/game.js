@@ -71,7 +71,6 @@ const DESC = {
   helper: (a, b) => a ? `나무꾼 숙련 Lv${b}: 장작 ${ST.helperCarry[a]} → ${ST.helperCarry[b]}개씩, 더 빠르게` : `나무꾼 고용 (장작 ${ST.helperCarry[1]}개씩 자동 운반)`,
   server: (a, b) => a ? `서빙 숙련 Lv${b}: 한 번에 ${ST.serverCarry[a]} → ${ST.serverCarry[b]}개, 더 빠르게` : `서빙 직원 고용 (그릴 → 카운터)`,
   hunter: (a, b) => a ? `사냥꾼 숙련 Lv${b}: 공격력 ${ST.hunterDmg[a]} → ${ST.hunterDmg[b]}` + (b === 3 ? ', 가죽도 수집 → 가죽 공방 개방' : '') : `사냥꾼 고용 (곰 자동 사냥)`,
-  cabin: (a, b) => `오두막 ${a} → ${b}채 (손님 수·주문량 ↑)`,
   fishing: () => `2단계! 마을 확장, 얼음 낚시터 + 훈제 생선 가게 개방`,
   clerk: (a, b) => `점원 숙련 Lv${b}: 동시 손님 ${ST.clerkSlots[a]} → ${ST.clerkSlots[b]}명, 판매 속도 ↑`,
   artisan: (a, b) => b === 1 ? `가죽 장인 고용: 가죽 → 가죽 제품 (${T.tanTime[1]}초)` : `제작 속도 ${T.tanTime[a]}초 → ${T.tanTime[b]}초`,
@@ -1359,23 +1358,8 @@ function syncClerks() {
   if (!fishClerkNpc && S.lv.fishClerk) { fishClerkNpc = makePerson(0x2f6e8a, 0x2b2f3a); fishClerkNpc.g.position.set(9.6, 0, -8.8); fishClerkNpc.g.rotation.y = Math.PI; }
 }
 
-// villager cabins (north, outside the fence)
-const CABIN_POS = [V(-6.2, 0, -13.7), V(-2.6, 0, -13.7), V(1, 0, -13.7)];
-const cabins = [];
-function buildCabin(i) {
-  const g = new THREE.Group(); g.position.copy(CABIN_POS[i]); scene.add(g);
-  g.add(mesh(new THREE.BoxGeometry(2.4, 1.5, 1.8), mat(0xb8743e), 0, .75, 0));
-  const roof = mesh(new THREE.ConeGeometry(1.95, 1.1, 4), new THREE.MeshLambertMaterial({ color: 0x7a4a2a }), 0, 2.05, 0);
-  roof.rotation.y = Math.PI / 4; roof.scale.set(1, 1, .8); g.add(roof);
-  g.add(mesh(new THREE.BoxGeometry(.6, .9, .05), mat(0x5a3420), 0, .45, .92));
-  g.add(mesh(new THREE.BoxGeometry(.45, .4, .05), mat(0xffd36b, { emissive: 0x664400 }), .75, .95, .92));
-  g.add(mesh(new THREE.BoxGeometry(.35, .7, .35), mat(0x8a8f99), -.7, 2.3, -.2));
-  g.scale.setScalar(.01); cabins.push({ g, roof });
-}
-function updateCabins(dt) {
-  const cold = S.warmth < 35;
-  cabins.forEach(c => { if (c.g.scale.x < 1) c.g.scale.setScalar(Math.min(1, c.g.scale.x + dt * 3)); c.roof.material.color.setHex(cold ? 0xd8f0ff : 0x7a4a2a); });
-}
+// more customers as the village grows (replaces the old cabin upgrade)
+const crowd = () => Math.min(3, S.stage - 1);
 // each shop drops its takings on its own coin pile
 const COIN_PILES = [
   { key: 'coinPile', at: P.coinPile, show: () => true },
@@ -1429,10 +1413,10 @@ function drawPad(p) {
 makePad('bag', -2.4, -.2); makePad('boots', -6.6, -.2);
 makePad('axe', -4.5, -.2); makePad('helper', -4.5, 2); makePad('helper2', -6.6, 2);
 makePad('gate', 2.4, 4.2); makePad('hunter', -2.4, 4.2); makePad('hunter2', -4.5, 4.2);
-makePad('server', 2.4, -.2); makePad('cabin', 6.6, -.2); makePad('fishing', 2.4, 2);
+makePad('server', 2.4, -.2); makePad('fishing', 2.4, 2);
 makePad('clerk', 4.5, -.2); makePad('artisan', 6.6, 4.2); makePad('fisher', 4.5, 4.2); makePad('fishClerk', 6.6, 2); makePad('oven', 4.5, 2);
 makePad('coat', -2.4, 2); makePad('cape', -6.6, 4.2);
-makePad('hearth', 8.7, -.2); makePad('fisher2', 8.7, 2);   // stage 2 column east of the right block
+makePad('hearth', 6.6, -.2); makePad('fisher2', 8.7, 2);   // stage 2 column east of the right block
 makePad('farmer', 18, -.2); makePad('pizzaChef', 24.4, -.2); makePad('pizzaClerk', 22.3, -.2); makePad('smith', 8.7, -5.6); makePad('helper3', 22.3, 2); makePad('hunter3', 24.4, 2);   // stage 3 annex grid
 makePad('warehouse', -4.3, 2.5); makePad('wall', 24.4, 4.2); makePad('bank', -6.4, 4.7); makePad('staffHouse', 24.4, -2.6);   // the bank pad becomes the bank tile
 makePad('harbor', 21.6, -6.4);   // stage 3 → 4
@@ -1444,28 +1428,27 @@ const PAD_POS3 = { helper2: [18, 2], cape: [18, 4.2], hunter2: [20.2, 4.2], hunt
 const REVEAL = {
   bag: () => true, axe: () => true,
   boots: () => S.bought >= 1,
-  coat: () => S.bought >= 2,
-  cape: () => S.bought >= 3,
+  coat: () => S.stage >= 2 && S.bought >= 2,
+  cape: () => S.stage >= 2 && S.bought >= 3,
   saberCoat: () => S.raw.pelt + S.forgeRaw.pelt + S.mats.pelt > 0 || S.lv.saberCoat > 0,
   tuskAxe: () => S.raw.tusk + S.forgeRaw.tusk + S.mats.tusk > 0 || S.lv.tuskAxe > 0,
   hearth: () => S.lv.hearth > 0 || S.stage >= 2 && S.stat.sold >= 60,
   fisher2: () => S.stage >= 2 && S.lv.fisher >= 1,
-  farmer: () => S.stage >= 3, pizzaChef: () => S.stage >= 3, pizzaClerk: () => S.stage >= 3, smith: () => S.stage >= 3,
-  harbor: () => S.stage >= 3 && S.stat.soldPizza >= 10, boat: () => S.stage >= 4, boat2: () => S.lv.boat >= 2, crane: () => S.lv.boat >= 1, freezer: () => S.stage >= 4, lighthouse: () => S.stage >= 4, sushiChef: () => S.stage >= 4, sushiClerk: () => S.lv.sushiChef > 0,
-  courier: () => S.stage >= 3 && S.lv.warehouse > 0, pizzaOven: () => S.lv.pizzaChef > 0, leatherClerk: () => S.lv.artisan > 0, fire: () => S.bought >= 2,
+  farmer: () => S.stage >= 3, pizzaChef: () => S.stage >= 3, pizzaClerk: () => S.lv.bank > 0, smith: () => S.stage >= 3,
+  harbor: () => S.stage >= 3 && S.stat.soldPizza >= 10, boat: () => S.stage >= 4, boat2: () => S.lv.boat >= 2, crane: () => S.lv.boat >= 1, freezer: () => S.stage >= 4, lighthouse: () => S.stage >= 4, sushiChef: () => S.stage >= 4, sushiClerk: () => S.lv.sushiChef > 0 && S.lv.bank > 0,
+  courier: () => S.stage >= 3 && S.lv.warehouse > 0, pizzaOven: () => S.lv.pizzaChef > 0, leatherClerk: () => S.lv.artisan > 0 && S.lv.bank > 0, fire: () => S.bought >= 2,
   warehouse: () => S.stage >= 3, wall: () => S.stage >= 3, bank: () => S.stage >= 3, staffHouse: () => S.stage >= 3,
   helper3: () => S.stage >= 3 && S.lv.helper2 >= 1, hunter3: () => S.stage >= 3 && S.lv.hunter2 >= 1,
-  statue: () => S.stage >= 2,
+  statue: () => S.stage >= 3,
   helper: () => S.stat.sold >= 5,
   gate: () => S.storms >= 1 || S.phase !== 'calm',
   server: () => S.stat.sold >= 10,
   hunter: () => S.stat.kills >= 5,
-  cabin: () => S.lv.server >= 1,
   fishing: () => S.stat.sold >= 25,
-  clerk: () => S.stat.sold >= 15 || S.lv.server >= 1,
+  clerk: () => S.lv.bank > 0,   // shop clerks come with the bank: they run the takings there
   artisan: () => hidesOn() && S.stage >= 2,
   fisher: () => S.stage >= 2,
-  fishClerk: () => S.stage >= 2,
+  fishClerk: () => S.lv.bank > 0,
   oven: () => S.stage >= 2,
   helper2: () => S.stage >= 2 && S.lv.helper >= 1,
   hunter2: () => S.stage >= 2 && S.lv.hunter >= 1,
@@ -1475,7 +1458,7 @@ const padHidden = p => { if (guardPad(p)) return S.guard >= T.guard.max; const u
 function updatePads(dt) {
   for (const p of pads) {
     p.m.visible = p.on && !padHidden(p);
-    if (!p.on && REVEAL[p.key]()) {
+    if (!p.on && !padHidden(p) && REVEAL[p.key]()) {
       p.on = true; p.m.visible = true; p.m.scale.setScalar(S.started ? .01 : 1);
       if (S.started) { toast(`✨ 새 업그레이드: ${UP[p.key].icon} ${UP[p.key].name}`); burst(p.x, .4, p.z, 0xffc83d, 12, { spd: 3, up: 6, life: .7 }); play('up'); }
     }
@@ -2033,7 +2016,7 @@ function spawnCustomer(key) {
   const sh = SHOPS[key], p = makePerson(sh.coat, 0x2b2f3a);
   const b = sprite(160, 120, 1.3, .98); b.sp.position.y = 2.6; p.g.add(b.sp);
   const need = key === 'main'
-    ? 1 + Math.floor(Math.random() * Math.min(4 + S.lv.cabin, 1 + S.served / 6)) + (Math.random() < S.lv.cabin * .2 ? 1 : 0)
+    ? 1 + Math.floor(Math.random() * Math.min(4 + crowd(), 1 + S.served / 6)) + (Math.random() < crowd() * .2 ? 1 : 0)
     : key === 'craft' ? 1 : 1 + Math.floor(Math.random() * (key === 'leather' ? 2 : 3));
   const c = { ...p, b, shop: key, need, wait: 0, x: sh.from.x, z: sh.from.z, state: 'queue', mood: '' };
   p.g.position.set(c.x, 0, c.z); customers.push(c); drawBubble(c);
@@ -2049,7 +2032,7 @@ function updateCustomers(dt) {
     if (!sh.open()) continue;
     const ck = S.lv[sh.clerk || 'clerk'], serveN = key === 'leather' ? Math.max(T.leatherShop.slots, ST.clerkSlots[ck]) : ST.clerkSlots[ck];
     const queue = customers.filter(c => c.shop === key && c.state === 'queue');
-    const big = key !== 'leather' && key !== 'craft', maxQ = key === 'fish' ? Math.min(10, 6 + 2 * S.lv.cabin) : key === 'sushi' ? Math.min(8, 6 + 2 * S.lv.cabin) : big ? 6 + 2 * S.lv.cabin : T.leatherShop.maxQ, iv = big ? 3.2 - .6 * S.lv.cabin : T.leatherShop.iv;
+    const big = key !== 'leather' && key !== 'craft', maxQ = key === 'fish' ? Math.min(10, 6 + 2 * crowd()) : key === 'sushi' ? Math.min(8, 6 + 2 * crowd()) : big ? 6 + 2 * crowd() : T.leatherShop.maxQ, iv = big ? 3.2 - .6 * crowd() : T.leatherShop.iv;
     const stockOk = key === 'craft' ? S.craft + S.ivory + S.whide > queue.reduce((n, c) => n + c.need, 0) : key !== 'leather' || S.leather + S.hide > queue.reduce((n, c) => n + c.need, 0);   // no leather queue piling up with nothing to sell
     if (queue.length < maxQ && stockOk && S.warmth >= 35 && S.started && tick('spawn' + key, iv, dt)) spawnCustomer(key);
     queue.forEach((c, i) => {
@@ -2909,7 +2892,6 @@ function levelUp(key) {
   if (key === 'gate') { drawGateSpikes(); }
   if (key === 'server') addServer();
   if (key === 'hunter' || key === 'hunter2' || key === 'hunter3') addHunter();
-  if (key === 'cabin') buildCabin(S.lv.cabin - 1);
   if (key === 'fishing') { S.stage = 2; applyStage(true); }
   if (key === 'hearth') { S.stage = 3; applyStage(true); }
   if (key === 'harbor') { S.stage = 4; applyStage(true); }
@@ -2939,7 +2921,7 @@ function levelUp(key) {
   }
   const pad = pads.find(p => p.key === key);
   burst(pad.x, .5, pad.z, 0xffc83d, 14, { spd: 4, up: 7, life: .8 }); play('up'); buzz([20, 40, 20]);
-  const msg = { bag: `가방 용량 ${bagCap()}`, axe: `⚔️ ${weaponLook().name}! 공격력 ${axeDmg()}`, cape: `최대 체력 ${S.maxHp}`, saberCoat: `검치호 갑옷 Lv${S.lv.saberCoat}: 막기 ${pct(blockChance())}, 체력 ${S.maxHp}`, tuskAxe: `🦣 ${weaponLook().name}! 공격력 ${axeDmg()}`, statue: `명성 +${val('statue')}%: 모든 판매가 상승`, hearth: `3단계 확장!`, fisher2: `두 번째 낚시꾼이 일을 시작합니다`, farmer: `농부 Lv${S.lv.farmer}: 채소를 거둡니다`, pizzaChef: `피자 쉐프 Lv${S.lv.pizzaChef}: 피자를 굽습니다`, pizzaOven: `피자 화덕 Lv${S.lv.pizzaOven + 1}: ${T.pizzaTime[S.lv.pizzaOven]}초`, courier: `배달 트럭 ${courierCount()}대`, leatherClerk: `가죽 점원 Lv${S.lv.leatherClerk}`, fire: `모닥불 Lv${S.lv.fire + 1}!`, pizzaClerk: `피자 점원 Lv${S.lv.pizzaClerk}`, smith: `대장장이 Lv${S.lv.smith}: 전리품을 가공합니다`, helper3: `세 번째 나무꾼이 일을 시작합니다`, harbor: `4단계 빙하 항구!`, boat: `${['', '쪽배', '그물배', '원양선'][S.lv.boat]} 출항!`, boat2: `두 번째 어선 출항!`, crane: `크레인 가동`, freezer: `냉동 창고 ${T.harbor.dockCap[S.lv.freezer]}칸`, lighthouse: `등대 Lv${S.lv.lighthouse}`, sushiChef: `초밥 쉐프 Lv${S.lv.sushiChef}`, sushiClerk: `초밥 점원 Lv${S.lv.sushiClerk}`, warehouse: `큰 창고 ${whCap()}칸: 재료가 모두 여기로 모여요`, wall: `돌담 Lv${S.lv.wall}`, bank: `은행 개점! 점원이 수금해요`, staffHouse: `직원 숙소 ${S.lv.staffHouse}채`, hunter3: `세 번째 사냥꾼이 사냥을 나갑니다`, boots: `이동 속도 ↑ · 막기 ${pct(blockChance())}`, coat: `외투 Lv${S.lv.coat}: 막기 ${pct(blockChance())}`, gate: S.lv.gate > 3 ? `감시탑 Lv${towerLv()} 가동!` : `습격 곰 −${val('gate')}마리`, helper: `나무꾼 Lv${S.lv.helper}: 장작 ${ST.helperCarry[S.lv.helper]}개씩`, server: `서빙 직원 Lv${S.lv.server}: 한 번에 ${ST.serverCarry[S.lv.server]}개`, hunter: `사냥꾼 Lv${S.lv.hunter}: 공격력 ${ST.hunterDmg[S.lv.hunter]}`, cabin: `손님이 더 많이, 더 자주 옵니다`, fishing: `2단계 확장!`, clerk: `판매 점원 Lv${S.lv.clerk}: 손님 ${ST.clerkSlots[S.lv.clerk]}명 동시 응대`, artisan: S.lv.artisan === 1 ? `가죽 공방 가동! 가죽 제품을 팔아요` : `가죽 제품을 더 빨리 만들어요`, fisher: `낚시꾼 Lv${S.lv.fisher}: 생선 상자를 채웁니다`, fishClerk: `생선 점원 Lv${S.lv.fishClerk}: 손님 ${ST.clerkSlots[S.lv.fishClerk]}명 동시 응대`, helper2: `두 번째 나무꾼이 일을 시작합니다`, oven: `생선을 ${T.ovenTime[S.lv.oven]}초마다 굽고, 위에 ${ovenCap()}마리까지 올려요`, hunter2: `두 번째 사냥꾼이 사냥을 나갑니다` }[key];
+  const msg = { bag: `가방 용량 ${bagCap()}`, axe: `⚔️ ${weaponLook().name}! 공격력 ${axeDmg()}`, cape: `최대 체력 ${S.maxHp}`, saberCoat: `검치호 갑옷 Lv${S.lv.saberCoat}: 막기 ${pct(blockChance())}, 체력 ${S.maxHp}`, tuskAxe: `🦣 ${weaponLook().name}! 공격력 ${axeDmg()}`, statue: `명성 +${val('statue')}%: 모든 판매가 상승`, hearth: `3단계 확장!`, fisher2: `두 번째 낚시꾼이 일을 시작합니다`, farmer: `농부 Lv${S.lv.farmer}: 채소를 거둡니다`, pizzaChef: `피자 쉐프 Lv${S.lv.pizzaChef}: 피자를 굽습니다`, pizzaOven: `피자 화덕 Lv${S.lv.pizzaOven + 1}: ${T.pizzaTime[S.lv.pizzaOven]}초`, courier: `배달 트럭 ${courierCount()}대`, leatherClerk: `가죽 점원 Lv${S.lv.leatherClerk}`, fire: `모닥불 Lv${S.lv.fire + 1}!`, pizzaClerk: `피자 점원 Lv${S.lv.pizzaClerk}`, smith: `대장장이 Lv${S.lv.smith}: 전리품을 가공합니다`, helper3: `세 번째 나무꾼이 일을 시작합니다`, harbor: `4단계 빙하 항구!`, boat: `${['', '쪽배', '그물배', '원양선'][S.lv.boat]} 출항!`, boat2: `두 번째 어선 출항!`, crane: `크레인 가동`, freezer: `냉동 창고 ${T.harbor.dockCap[S.lv.freezer]}칸`, lighthouse: `등대 Lv${S.lv.lighthouse}`, sushiChef: `초밥 쉐프 Lv${S.lv.sushiChef}`, sushiClerk: `초밥 점원 Lv${S.lv.sushiClerk}`, warehouse: `큰 창고 ${whCap()}칸: 재료가 모두 여기로 모여요`, wall: `돌담 Lv${S.lv.wall}`, bank: `은행 개점! 점원이 수금해요`, staffHouse: `직원 숙소 ${S.lv.staffHouse}채`, hunter3: `세 번째 사냥꾼이 사냥을 나갑니다`, boots: `이동 속도 ↑ · 막기 ${pct(blockChance())}`, coat: `외투 Lv${S.lv.coat}: 막기 ${pct(blockChance())}`, gate: S.lv.gate > 3 ? `감시탑 Lv${towerLv()} 가동!` : `습격 곰 −${val('gate')}마리`, helper: `나무꾼 Lv${S.lv.helper}: 장작 ${ST.helperCarry[S.lv.helper]}개씩`, server: `서빙 직원 Lv${S.lv.server}: 한 번에 ${ST.serverCarry[S.lv.server]}개`, hunter: `사냥꾼 Lv${S.lv.hunter}: 공격력 ${ST.hunterDmg[S.lv.hunter]}`, fishing: `2단계 확장!`, clerk: `판매 점원 Lv${S.lv.clerk}: 손님 ${ST.clerkSlots[S.lv.clerk]}명 동시 응대`, artisan: S.lv.artisan === 1 ? `가죽 공방 가동! 가죽 제품을 팔아요` : `가죽 제품을 더 빨리 만들어요`, fisher: `낚시꾼 Lv${S.lv.fisher}: 생선 상자를 채웁니다`, fishClerk: `생선 점원 Lv${S.lv.fishClerk}: 손님 ${ST.clerkSlots[S.lv.fishClerk]}명 동시 응대`, helper2: `두 번째 나무꾼이 일을 시작합니다`, oven: `생선을 ${T.ovenTime[S.lv.oven]}초마다 굽고, 위에 ${ovenCap()}마리까지 올려요`, hunter2: `두 번째 사냥꾼이 사냥을 나갑니다` }[key];
   if (key !== 'fishing') toast(`${u.icon} ${u.name} 업그레이드! ${msg}`);
 }
 
@@ -3075,18 +3057,18 @@ const GOALS = [
   { text: '나무꾼 고용', cur: () => S.lv.helper, n: 1, reward: 60 },
   { text: '서빙 직원 고용', cur: () => S.lv.server, n: 1, reward: 100 },
   { text: '사냥꾼 고용', cur: () => S.lv.hunter, n: 1, reward: 120 },
-  { text: '판매 점원 고용', cur: () => S.lv.clerk, n: 1, reward: 120 },
+  { text: '스테이크 30개 판매', cur: () => S.stat.sold, n: 30, reward: 120 },
   { text: '늑대 5마리 사냥', cur: () => S.stat.wolves, n: 5, reward: 80 },
   { text: '2단계: 낚시터 해금', cur: () => S.stage >= 2 ? 1 : 0, n: 1, reward: 200 },
   { text: '낚시꾼 고용', cur: () => S.lv.fisher, n: 1, reward: 150 },
-  { text: '생선 점원 고용', cur: () => S.lv.fishClerk, n: 1, reward: 150 },
+  { text: '화덕 강화', cur: () => S.lv.oven, n: 1, reward: 150 },
   { text: '훈제 생선 15마리 판매', cur: () => S.stat.soldFish, n: 15, reward: 200 },
   { text: '숙련 사냥꾼 (Lv3)', cur: () => S.lv.hunter, n: 3, reward: 200 },
   { text: '가죽 장인 고용', cur: () => S.lv.artisan, n: 1, reward: 150 },
   { text: '가죽 제품 10개 판매', cur: () => S.stat.soldLeather, n: 10, reward: 300 },
   { text: '보스 곰 처치', cur: () => S.stat.boss, n: 1, reward: 400 },
   { text: '늑대 펫 Lv3 키우기', cur: () => (pets[0] ? pets[0].lv + 1 : 0), n: 3, reward: 300 },
-  { text: '오두막 3채 짓기', cur: () => S.lv.cabin, n: 3, reward: 500 },
+  { text: '가죽 제품 25개 판매', cur: () => S.stat.soldLeather, n: 25, reward: 500 },
   { text: '3단계: 큰 화로', cur: () => S.stage >= 3 ? 1 : 0, n: 1, reward: 500 },
   { text: '채소 10개 수확', cur: () => S.stat.veg || 0, n: 10, reward: 200 },
   { text: '큰 창고 짓기', cur: () => S.lv.warehouse, n: 1, reward: 300 },
@@ -3141,7 +3123,6 @@ function load() {
   for (let i = 0; i < 4; i++) addHelper();
   for (let i = 0; i < val('server'); i++) addServer();
   for (let i = 0; i < 4; i++) addHunter();
-  for (let i = 0; i < S.lv.cabin; i++) buildCabin(i);
   for (let i = 0; i < Math.min(1, S.petCount); i++) addPet();
   for (let i = 0; i < 3; i++) addFisher();
   if (S.lv.farmer) addFarmer(); if (S.lv.pizzaChef) addPizzaChef(); if (S.lv.smith) addSmith(); addCourier();
@@ -3179,7 +3160,7 @@ function frame(now) {
     updateCustomers(g); updateHelpers(g); updateServers(g); updateHunters(g); updateShots(g); updatePets(g); updateTannery(g); updateFishers(g); updateOven(g); updateTowers(g); updateAnnex(g); updateHearth3(g); updateBank(g); updateHarbor(g); updateTrade(g); updateFeast(g);
   }
   const glow = .5 + .5 * Math.sin(performance.now() / 160); IMAT.pelt.emissive.setRGB(.45 * glow, .3 * glow, 0); IMAT.tusk.emissive.setRGB(.45 * glow, .42 * glow, .25 * glow); IMAT.ivory.emissive.setRGB(.45 * glow, .43 * glow, .3 * glow); IMAT.whide.emissive.setRGB(.3 * glow, .2 * glow, .1 * glow);   // trophies pulse
-  updateTrees(g); updateFlyers(g); updateParts(g); updatePops(dt); updateShock(dt); updateFx(dt); updateCabins(dt); updateSnow(dt); updateHud(dt);
+  updateTrees(g); updateFlyers(g); updateParts(g); updatePops(dt); updateShock(dt); updateFx(dt); updateSnow(dt); updateHud(dt);
   woodPile.set(S.wood); meatPile.set(S.meat); renderGrill();
   counterPile.set(S.counter.steak);
   COIN_PILES.forEach(c => { c.v.g.visible = c.show(); c.v.set(Math.min(72, Math.ceil(S[c.key] / 5))); });

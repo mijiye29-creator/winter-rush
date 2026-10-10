@@ -75,17 +75,16 @@ window.WinterRushData = {
   },
   UP: {
     bag:     { name: '가방',      icon: '🎒', costs: [30, 60, 120, 240, 500], vals: [10, 16, 22, 30, 40, 50] },
-    axe:     { name: '무기',      icon: '⚔️', costs: [40, 90, 200, 450, 900, 1600, 3500, 7000], vals: [1, 2, 3, 4, 6, 8, 11, 15, 20], stage: [1, 1, 1, 2, 2, 2, 4, 4] },   // Lv8-9: glacier trident, aurora greatsword
-    boots:   { name: '장화',      icon: '🥾', costs: [30, 80, 200, 2000, 4000], vals: [5, 5.8, 6.6, 7.4, 8.2, 9], stage: [1, 1, 1, 4, 4] },
-    cape:    { name: '망토',      icon: '🦸', costs: [100, 300, 700, 1200, 3000, 6000], vals: [5, 6, 7, 8, 9, 11, 13], stage: [1, 1, 2, 2, 4, 4] },   // max HP
-    coat:    { name: '외투',      icon: '🧥', costs: [60, 180, 400, 2500, 5000], vals: [0, 1, 2, 3, 4, 5], stage: [1, 1, 1, 4, 4] },
+    axe:     { name: '무기',      icon: '⚔️', costs: [40, 90, 200, 450, 900, 1600, 3500, 7000], vals: [1, 2, 3, 4, 6, 8, 11, 15, 20], stage: [1, 2, 2, 3, 3, 3, 4, 4] },   // Lv8-9: glacier trident, aurora greatsword
+    boots:   { name: '장화',      icon: '🥾', costs: [30, 80, 200, 2000, 4000], vals: [5, 5.8, 6.6, 7.4, 8.2, 9], stage: [1, 2, 3, 4, 4] },
+    cape:    { name: '망토',      icon: '🦸', costs: [100, 300, 700, 1200, 3000, 6000], vals: [5, 6, 7, 8, 9, 11, 13], stage: [2, 2, 3, 3, 4, 4] },   // max HP
+    coat:    { name: '외투',      icon: '🧥', costs: [60, 180, 400, 2500, 5000], vals: [0, 1, 2, 3, 4, 5], stage: [2, 2, 3, 4, 4] },
     gate:    { name: '정문 강화',  icon: '🛡️', costs: [80, 200, 450, 900, 1800, 3200], vals: [0, 1, 2, 3, 3, 3, 3], stage: [1, 1, 1, 2, 2, 2] },   // Lv4+ watchtowers
     helper:  { name: '나무꾼',    icon: '👷', costs: [100, 220, 450],    vals: [0, 1, 2, 3] },
     server:  { name: '서빙 직원',  icon: '🧑‍🍳', costs: [150, 300, 600],    vals: [0, 1, 2, 3] },
     hunter:  { name: '사냥꾼',    icon: '🏹', costs: [200, 500, 1000],    vals: [0, 1, 2, 3], stage: [1, 1, 2] },
-    cabin:   { name: '오두막',    icon: '🏠', costs: [180, 450, 900],    vals: [0, 1, 2, 3] },
     fishing: { name: '2단계 낚시터', icon: '🎣', costs: [400],            vals: [0, 1] },
-    clerk:   { name: '판매 점원',  icon: '🧑‍💼', costs: [200, 500, 1000],    vals: [0, 1, 2, 3] },
+    clerk:   { name: '판매 점원',  icon: '🧑‍💼', costs: [200, 500, 1000],    vals: [0, 1, 2, 3], stage: [3, 3, 3] },
     artisan: { name: '가죽 장인',  icon: '🧵', costs: [200, 500],         vals: [0, 1, 2] },
     fisher:  { name: '낚시꾼',    icon: '🪝', costs: [300, 700],         vals: [0, 1, 2] },
     helper2: { name: '나무꾼 2', icon: '👷', costs: [500], vals: [0, 1], stage: [2] },
@@ -93,14 +92,14 @@ window.WinterRushData = {
     oven:    { name: '화덕',      icon: '🔥', costs: [300, 700],         vals: [0, 1, 2], stage: [2, 2] },
     saberCoat: { name: '검치호 갑옷', icon: '🐯', costs: [600, 1500], mats: { pelt: [2, 4] }, vals: [0, 1, 2], stage: [2, 2] },
     tuskAxe:   { name: '매머드 뿔 창', icon: '🦣', costs: [900, 2200], mats: { tusk: [1, 3] }, vals: [0, 1, 2], stage: [2, 2] },
-    statue:    { name: '명성 동상', icon: '🗿', costs: [500, 900, 1600, 2800, 5000, 9000, 16000, 30000], vals: [0, 6, 12, 18, 24, 30, 36, 42, 48], stage: [2, 2, 2, 2, 2, 2, 2, 2] },   // +% to every sale
+    statue:    { name: '명성 동상', icon: '🗿', costs: [500, 900, 1600, 2800, 5000, 9000, 16000, 30000], vals: [0, 6, 12, 18, 24, 30, 36, 42, 48], stage: [3, 3, 3, 3, 3, 3, 3, 3] },   // +% to every sale
     fisher2:   { name: '낚시꾼 2', icon: '🪝', costs: [800], vals: [0, 1], stage: [2] },
     hearth:    { name: '큰 화로', icon: '🔥', costs: [3000], vals: [0, 1], stage: [2] },   // → stage 3
     farmer:    { name: '농부', icon: '🧑‍🌾', costs: [600, 1300], vals: [0, 1, 2], stage: [3, 3] },
     pizzaChef: { name: '피자 쉐프', icon: '👨‍🍳', costs: [600, 1400], vals: [0, 1, 2], stage: [3, 3] },
     pizzaOven: { name: '피자 화덕', icon: '🍕', costs: [800, 1800], vals: [0, 1, 2], stage: [3, 3] },
     courier:   { name: '배달 직원', icon: '🛵', costs: [800, 1600, 3000], vals: [0, 1, 2, 3], stage: [3, 3, 3] },
-    leatherClerk: { name: '가죽 점원', icon: '🧑‍💼', costs: [300, 700, 1200], vals: [0, 1, 2, 3], stage: [2, 2, 2] },
+    leatherClerk: { name: '가죽 점원', icon: '🧑‍💼', costs: [300, 700, 1200], vals: [0, 1, 2, 3], stage: [3, 3, 3] },
     fire:      { name: '모닥불 강화', icon: '🔥', costs: [150, 400, 900, 2000], vals: [0, 1, 2, 3, 4] },
     pizzaClerk: { name: '피자 점원', icon: '🧑‍💼', costs: [500, 1000, 1800], vals: [0, 1, 2, 3], stage: [3, 3, 3] },
     smith:     { name: '대장장이', icon: '⚒️', costs: [700, 1500], vals: [0, 1, 2], stage: [3, 3] },
@@ -118,6 +117,6 @@ window.WinterRushData = {
     lighthouse: { name: '등대', icon: '🗼', costs: [2000, 4500], vals: [0, 1, 2], stage: [4, 4] },
     sushiChef: { name: '초밥 쉐프', icon: '🍣', costs: [2500, 5000], vals: [0, 1, 2], stage: [4, 4] },
     sushiClerk: { name: '초밥 점원', icon: '🧑‍💼', costs: [1500, 3000, 5000], vals: [0, 1, 2, 3], stage: [4, 4, 4] },
-    fishClerk: { name: '생선 점원', icon: '🧑‍💼', costs: [200, 500, 1000],  vals: [0, 1, 2, 3], stage: [2, 2, 2] },
+    fishClerk: { name: '생선 점원', icon: '🧑‍💼', costs: [200, 500, 1000],  vals: [0, 1, 2, 3], stage: [3, 3, 3] },
   },
 };
