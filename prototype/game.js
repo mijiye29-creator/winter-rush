@@ -1192,6 +1192,7 @@ for (const [x, z, h] of [[60, -14, 4], [64, 2, 6], [58, 14, 3.5]]) seaG.add(mesh
 seaG.add(mesh(new THREE.BoxGeometry(44 - 34, .2, 2), mat(0x9a6a40), 39, .12, -2, false));
 for (let x = 35; x <= 44; x += 1.5) for (const z of [-3.05, -.95]) seaG.add(mesh(new THREE.CylinderGeometry(.12, .12, .9, 6), mat(0x6b4426), x, .3, z));
 const boardTile = tile(HB.boardSpot, '🚣'); seaG.add(boardTile.g);
+const boardSign = sprite(300, 90, 2.6, .78); boardSign.sp.position.set(HB.boardSpot.x, 2.2, HB.boardSpot.z); seaG.add(boardSign.sp); boardSign.draw((c, w, h) => bubble(c, w, h, '🚣 바다로 나가 싸우기', '#9fd8ff'));
 // 🏗️ crane loading tile: boats unload here, couriers haul it to the warehouse
 const dockTile = tile(P.dockCrate, '🏗️'); seaG.add(dockTile.g);
 const dockFishPile = pile('fish', 30, V(P.dockCrate.x - .4, .09, P.dockCrate.z), 2, 3, .5, .45); seaG.add(dockFishPile.g);
@@ -1473,7 +1474,7 @@ function updateRowboat(dt) {
   if (!rowboat.parent) player.g.add(rowboat);
   if (S.stage < 4) { pl.boat = false; rowboat.visible = false; return; }
   if (pl.boardLock && !near(HB.boardSpot, 1.4)) pl.boardLock = false;   // must step off the boarding tile before boarding again
-  if (!pl.boat && !pl.boardLock && near(HB.boardSpot, .9) && pl.stunFree) { pl.boat = true; pl.x = 45.6; pl.z = -2; toast('🚣 배를 탔어요! 참치 떼(짙은 그림자)에 다가가면 작살로 잡아요. 부두 끝으로 돌아오면 내려요'); }
+  if (!pl.boat && !pl.boardLock && near(HB.boardSpot, .9) && pl.stunFree) { pl.boat = true; pl.x = 45.6; pl.z = -2; toast('🚣 배를 탔어요! 참치 떼(짙은 그림자)에 다가가면 작살로 잡고, 범고래가 오면 배 위에서 싸워요. 부두 끝으로 돌아오면 내려요'); }
   if (pl.boat && pl.x < 45 && Math.abs(pl.z + 2) < 2.2) { pl.boat = false; pl.boardLock = true; pl.x = 41.6; pl.z = -2; pl.target = null; toast('⚓ 부두에 내렸어요'); }
   rowboat.visible = !!pl.boat;
   if (!pl.boat) return;
@@ -2405,7 +2406,7 @@ function spawnBeast() {
   if (!kinds.length) return;
   const k = kinds[Math.floor(Math.random() * kinds.length)], b = makeBeast(k);
   b.x = rand(-9, 9); b.z = rand(16, 22); b.tx = b.x; b.tz = b.z; bears.push(b);
-  toast(`⚠ ${T.beasts[k].name} 출현! (영웅 Lv${p})`); play('growl'); buzz([40, 30, 60]);
+  play('growl');   // no toast: 형 found spawn announcements noisy
 }
 function spawnPack() {
   const x = rand(-10, 10), z = rand(15, 22);
@@ -2414,7 +2415,7 @@ function spawnPack() {
   for (let i = 0; i < T.wolfPackSize + T.stagePack[stg()] + (alpha ? 1 : 0); i++) {
     const w = makeWolf(alpha && i === 0); w.x = x + rand(-1.2, 1.2); w.z = z + rand(-1.2, 1.2); w.tx = w.x; w.tz = w.z; bears.push(w);
   }
-  if (alpha) { toast('🐺 대장 늑대가 나타났다!'); play('growl'); buzz([40, 30, 60]); }
+  if (alpha) play('growl');
 }
 
 // wolf pups → tamed pets (fight beside the player, +4 bag each)
@@ -2452,22 +2453,37 @@ function spawnPup(x, z) {
   u.bub = b; pups.push(u);
   toast(`🐺 새끼 늑대! 고기 ${T.pet.tameMeat}개를 먹이면 길들일 수 있어요`);
 }
+function sealModel(scale) { const a = makeSeal(); a.bar.visible = false; a.g.scale.setScalar(scale); return a; }
+function applySealLook(w) {   // grows a scarf, then a fish-scale collar, then a little gold crown
+  if (w.look) { w.body.remove(w.look); disposeActor(w.look); }
+  const g = w.look = new THREE.Group(); w.body.add(g);
+  if (w.lv >= 0) g.add(mesh(new THREE.TorusGeometry(.3, .07, 6, 12).rotateX(Math.PI / 2), mat(w.lv >= 2 ? 0x3a9ad9 : 0xe5484d), 0, .5, .62));
+  if (w.lv >= 3) g.add(mesh(new THREE.TorusGeometry(.34, .05, 6, 14).rotateX(Math.PI / 2), mat(0x9fd8ff, { emissive: 0x24506a }), 0, .42, .5));
+  if (w.lv >= 4) g.add(mesh(new THREE.ConeGeometry(.12, .2, 5), mat(0xffc83d, { emissive: 0x664400 }), 0, .95, .8));
+}
+function spawnSealPup(x, z) {
+  const u = sealModel(.6); u.seal = true; u.x = x; u.z = z; u.t = 60; u.fed = 0; u.g.position.set(x, 0, z);
+  const b = sprite(180, 120, 1.8, 1.2); b.sp.position.y = 2.2; u.g.add(b.sp); b.draw((c, w, h) => bubble(c, w, h, `🐟 0/${T.pet.tameFish}`));
+  u.bub = b; pups.push(u);
+  toast(`🦭 아기 바다표범! 생선 ${T.pet.tameFish}마리를 먹이면 친구가 돼요 (바다에서도 같이 싸워요)`);
+}
 const petLv = () => T.pet.hits.filter(h => S.petHits >= h).length - 1;
-function addPet() {
-  const w = petModel(0xd9c3a0, T.pet.scale[petLv()]); w.lv = petLv(); applyPetLook(w);
-  w.x = pl.x - 1; w.z = pl.z; w.cd = 0; pets.push(w); S.petCount = pets.length;
+function addPet(seal = false) {
+  const w = seal ? sealModel(T.pet.scale[petLv()]) : petModel(0xd9c3a0, T.pet.scale[petLv()]); w.seal = seal; w.lv = petLv(); (seal ? applySealLook : applyPetLook)(w);
+  w.x = pl.x - 1; w.z = pl.z; w.cd = 0; pets.push(w); S.petCount = pets.filter(p => !p.seal).length; S.sealPet = pets.some(p => p.seal) ? 1 : 0;
 }
 function removeWolfModel(u) { scene.remove(u.g); disposeActor(u.g, hpBarGeo); u.fur.dispose(); if (u.bub) { u.bub.tex.dispose(); u.bub.sp.material.dispose(); } }
 function updatePets(dt) {
   for (let i = pups.length - 1; i >= 0; i--) {
     const u = pups[i]; u.t -= dt; u.g.position.y = Math.abs(Math.sin(performance.now() / 200 + i)) * .06;
-    if (Math.hypot(u.x - pl.x, u.z - pl.z) < 1.6 && stackHas('meat') && pets.length < 1 && tick('feedPup', .35, dt)) {
-      stackTake('meat'); u.fed++; u.t = 60; play('pop', 60);
-      fly('meat', backPos(), V(u.x, .6, u.z), .2);
-      u.bub.draw((c, w, h) => bubble(c, w, h, `🥩 ${u.fed}/${T.pet.tameMeat}`));
-      if (u.fed < T.pet.tameMeat) continue;
-      removeWolfModel(u); pups.splice(i, 1); addPet();
-      toast('🐺 늑대를 길들였어요! 함께 싸우며 점점 자랍니다 (가방 +4)'); play('up'); buzz([20, 30, 20]);
+    const food = u.seal ? 'fish' : 'meat', need = u.seal ? T.pet.tameFish : T.pet.tameMeat;
+    if (Math.hypot(u.x - pl.x, u.z - pl.z) < 1.6 && stackHas(food) && !pets.some(w => !!w.seal === !!u.seal) && tick('feedPup', .35, dt)) {
+      stackTake(food); u.fed++; u.t = 60; play('pop', 60);
+      fly(food, backPos(), V(u.x, .6, u.z), .2);
+      u.bub.draw((c, w, h) => bubble(c, w, h, `${u.seal ? '🐟' : '🥩'} ${u.fed}/${need}`));
+      if (u.fed < need) continue;
+      removeWolfModel(u); pups.splice(i, 1); addPet(!!u.seal);
+      toast(u.seal ? '🦭 바다표범이 친구가 됐어요! 배를 타면 바다까지 따라와 싸워요 (가방 +4)' : '🐺 늑대를 길들였어요! 함께 싸우며 점점 자랍니다 (가방 +4)'); play('up'); buzz([20, 30, 20]);
       burst(pl.x, 1, pl.z, 0xffc83d, 12, { spd: 3, up: 5, life: .6 });
     } else if (u.t <= 0) { removeWolfModel(u); pups.splice(i, 1); }
   }
@@ -2475,11 +2491,11 @@ function updatePets(dt) {
     w.cd -= dt;
     let tgt = null, bd = 6;
     const home = inCamp();
-    for (const b of bears) { const d = Math.hypot(b.x - pl.x, b.z - pl.z); if (d < bd && (!home || b.raider) && !(b.sea && b.x > HB.shoreX - .2 && !onPier(b.x, b.z))) { bd = d; tgt = b; } }   // never into the water
+    for (const b of bears) { const d = Math.hypot(b.x - pl.x, b.z - pl.z); if (d < bd && (!home || b.raider) && (w.seal || !(b.sea && b.x > HB.shoreX - .2 && !onPier(b.x, b.z)))) { bd = d; tgt = b; } }   // wolves never go into the water; the seal swims
     let tx, tz;
     if (tgt) { tx = tgt.x; tz = tgt.z; }
     else { const a = pl.rot + Math.PI + (i ? .8 : -.8); tx = pl.x + Math.sin(a) * 1.5; tz = pl.z + Math.cos(a) * 1.5; }
-    if (pl.boat && !tgt) { tx = HB.boardSpot.x - 1.2 - i; tz = -2; }   // waits on the pier while the hero is at sea
+    if (pl.boat && !tgt && !w.seal) { tx = HB.boardSpot.x - 1.2 - i; tz = -2; }   // the wolf waits on the pier while the hero is at sea; the seal swims beside the boat
     const dx = tx - w.x, dz = tz - w.z, d = Math.hypot(dx, dz), stop = tgt ? 1.2 : .3;
     if (d > stop) {
       const st = Math.min(d - stop, (d > 6 ? 10 : 6) * dt);
@@ -2490,14 +2506,14 @@ function updatePets(dt) {
       const dmg = T.pet.dmg[w.lv];
       S.petHits++;
       if (petLv() > w.lv) {
-        w.lv = petLv(); applyPetLook(w); popText(w.x, 2.4, w.z, `🐺 Lv${w.lv + 1}!`, '#ffd36b', true);
-        burst(w.x, 1, w.z, 0xffc83d, 14, { spd: 3, up: 6, life: .7 }); play('up'); toast(`🐺 늑대가 자랐어요! Lv${w.lv + 1} (공격력 ${T.pet.dmg[w.lv]})`);
+        w.lv = petLv(); (w.seal ? applySealLook : applyPetLook)(w); popText(w.x, 2.4, w.z, `${w.seal ? '🦭' : '🐺'} Lv${w.lv + 1}!`, '#ffd36b', true);
+        burst(w.x, 1, w.z, 0xffc83d, 14, { spd: 3, up: 6, life: .7 }); play('up'); toast(`${w.seal ? '🦭 바다표범' : '🐺 늑대'}가 자랐어요! Lv${w.lv + 1} (공격력 ${T.pet.dmg[w.lv]})`);
       }
       popText(tgt.x, 2.3, tgt.z, `${dmg}`, '#ffd9a0'); burst(tgt.x, 1, tgt.z, 0xffffff, 4, { spd: 3, up: 3, life: .3, size: .6 });
       bearHurt(tgt, dmg, w);
     }
-    if (Math.hypot(pl.x - w.x, pl.z - w.z) > 14 && !pl.boat) { w.x = pl.x; w.z = pl.z; }
-    if (S.stage >= 4 && w.x > HB.shoreX - .4 && !onPier(w.x, w.z)) { w.x = clamp(w.x, 34.4, 43.4); w.z = clamp(w.z, -2.7, -1.3); }
+    if (Math.hypot(pl.x - w.x, pl.z - w.z) > 14 && (!pl.boat || w.seal)) { w.x = pl.x; w.z = pl.z; }
+    if (S.stage >= 4 && !w.seal && w.x > HB.shoreX - .4 && !onPier(w.x, w.z)) { w.x = clamp(w.x, 34.4, 43.4); w.z = clamp(w.z, -2.7, -1.3); }
     const sc = w.g.scale.x + (T.pet.scale[w.lv] - w.g.scale.x) * Math.min(1, dt * 3); w.g.scale.setScalar(sc);
     w.g.position.x = w.x; w.g.position.z = w.z;
   });
@@ -2512,7 +2528,7 @@ function spawnRaid() {
   }
   if (S.storms % T.bossEvery === 0) {
     const b = makeBear(true, true); b.x = 0; b.z = 21; bears.push(b);
-    setTimeout(() => { toast('👑 보스 곰이 나타났다!'); play('growl'); buzz([60, 40, 60]); }, 2400);
+    setTimeout(() => play('growl'), 2400);
   }
 }
 function bearHurt(b, dmg, src = pl) {
@@ -2528,7 +2544,7 @@ function bearHurt(b, dmg, src = pl) {
   const meat = B ? B.meat : b.alpha ? T.alpha.meat : b.wolf ? 1 : b.boss ? 8 : 3;
   const hides = !(hidesOn() && S.stage >= 2) ? 0 : B ? B.hides : b.boss ? 2 : b.alpha ? 1 : Math.random() < T.hideChance[b.wolf ? 'wolf' : 'bear'] ? 1 : 0;
   b.lootText = b.boss ? '👑 처치!' : `🥩+${meat}`;
-  if (b.wolf) { S.stat.wolves++; if (Math.random() < (b.alpha ? T.alpha.pupChance : .15) && pets.length + pups.length < 1) spawnPup(b.x, b.z); }
+  if (b.wolf) { S.stat.wolves++; if (Math.random() < (b.alpha ? T.alpha.pupChance : .15) && !pets.some(w => !w.seal) && !pups.some(u => !u.seal)) spawnPup(b.x, b.z); }
   if (b.alpha) { S.coins += T.alpha.coins; toast(`🐺 대장 늑대 처치! 보너스 🪙${T.alpha.coins}`); }
   const heldMeat = src !== pl && src.carry ? Math.min(meat, Math.max(0, huntCap() - src.n)) : 0;
   const heldHides = src !== pl && src.carry ? Math.min(hides, Math.max(0, hideCap() - src.hides)) : 0;
@@ -2538,6 +2554,7 @@ function bearHurt(b, dmg, src = pl) {
   if (B && B.blubber) for (let i = 0; i < B.blubber; i++) dropPickup('blubber', b.x + rand(-1, 1), b.z + rand(-1, 1));
   if (B && B.loot) for (const [it, n] of Object.entries(B.loot)) for (let i = 0; i < n; i++) dropPickup(it, b.x + rand(-1, 1), b.z + rand(-1, 1));
   if (b.kind === 'penguin') { S.stat.penguins = (S.stat.penguins || 0) + 1; if (b.loot >= 1) { S.dockFish += Math.floor(b.loot); popText(b.x, 2, b.z, `🐟 되찾음 +${Math.floor(b.loot)}`, '#9fd8ff'); } }
+  if (b.kind === 'seal' && Math.random() < T.pet.sealPup && !pets.some(w => w.seal) && !pups.some(u => u.seal)) spawnSealPup(b.x, b.z);
   if (b.kind === 'walrus') { S.stat.walrus = (S.stat.walrus || 0) + 1; toast('👑 바다코끼리 대장 처치!'); }
   if (B && B.trophy) { if (src !== pl && src.carry) { if (whOn()) S.wh[B.trophy]++; else S[S.lv.smith ? 'forgeRaw' : 'raw'][B.trophy]++; toast(`${MAT_ICON[B.trophy]} 사냥꾼이 ${josa(RAW_NAME[B.trophy], '을', '를')} 챙겼어요`); } else dropPickup(B.trophy, b.x, b.z); }
   if (B) { const c = B.coins + T.beasts.coinsPer * heroLv(); S.coins += c; S.stat.beasts = (S.stat.beasts || 0) + 1; toast(`⚔ ${B.name} 처치! 보너스 🪙${c}`); return true; }
@@ -3173,7 +3190,7 @@ function levelUp(key) {
     applyFireLook(); burst(P.fire.x, 1.5, P.fire.z, 0xffb347, 30, { spd: 5, up: 8, life: 1 });
     const h = T.hearth[Math.min(S.lv.fire, T.hearth.length - 1)], ns = stageOfFire(S.lv.fire);
     S.lv.wall = Math.min(UP.wall.costs.length, defOf('wall'));
-    if (ns > S.stage) { S.stage = ns; applyStage(true); } else if (h.wall) applyStage(false);
+    if (ns > S.stage) { S.stage = ns; applyStage(true); if (ns === 4) setTimeout(() => spotlight(HB.boardSpot.x, HB.boardSpot.z, '🚣', '바다로 나갈 수 있어요!', '부두 끝 🚣 칸에 서면 배를 타요<br>🍣 참치 떼에 다가가 작살로 잡고<br>🐋 범고래가 오면 배 위에서 싸워요<br>🦭 바다표범을 잡으면 아기가 나올 때도 있어요: 생선을 먹여 친구로'), 100); } else if (h.wall) applyStage(false);
     quietPadsUntil = performance.now() + 4000;
     const at = h.stage === 3 ? V(20, 0, -5) : h.stage === 4 ? V(31, 0, -3) : P.fire;
     spotlight(at.x, at.z, '🔥', `모닥불 Lv${S.lv.fire + 1}${h.stage ? ` · ${h.stage}단계 확장!` : ''}`, `<i>이제 할 수 있는 것</i>${h.say.join('<br>')}`);
@@ -3482,7 +3499,7 @@ const SAVE_KEY = 'winter-rush-v1';
 function save() {
   try {
     const counter = { ...S.counter };
-    const keys = ['coins', 'ivory', 'whide', 'craft', 'craftT', 'craftT2', 'feastT', 'dockFish', 'dockTuna', 'suTuna', 'suFish', 'suVeg', 'suWood', 'sushi', 'blubber', 'guard', 'defV', 'vegBox', 'strike', 'paydayT', 'wh', 'mats', 'raw', 'forgeRaw', 'plots', 'pzFish', 'pzVeg', 'pzMeat', 'pzWood', 'pzFuel', 'pzT', 'pizza', 'smithT', 'wood', 'meat', 'fuel', 'warmth', 'grillItems', 'lv', 'storms', 'stat', 'goal', 'tut', 'woodIn', 'meatIn', 'steakIn', 'served', 'bought', 'hide', 'fishCrate', 'fishRaw', 'ovenWood', 'fishSmoked', 'fishStock', 'smokeFuel', 'leather', 'stage', 'petCount', 'petHits', 'packs', 'tanT', 'hp', 'phase', 'phaseT', 'stormFireOut'];
+    const keys = ['coins', 'ivory', 'whide', 'craft', 'craftT', 'craftT2', 'feastT', 'dockFish', 'dockTuna', 'suTuna', 'suFish', 'suVeg', 'suWood', 'sushi', 'blubber', 'guard', 'defV', 'vegBox', 'sealPet', 'strike', 'paydayT', 'wh', 'mats', 'raw', 'forgeRaw', 'plots', 'pzFish', 'pzVeg', 'pzMeat', 'pzWood', 'pzFuel', 'pzT', 'pizza', 'smithT', 'wood', 'meat', 'fuel', 'warmth', 'grillItems', 'lv', 'storms', 'stat', 'goal', 'tut', 'woodIn', 'meatIn', 'steakIn', 'served', 'bought', 'hide', 'fishCrate', 'fishRaw', 'ovenWood', 'fishSmoked', 'fishStock', 'smokeFuel', 'leather', 'stage', 'petCount', 'petHits', 'packs', 'tanT', 'hp', 'phase', 'phaseT', 'stormFireOut'];
     const data = Object.fromEntries(keys.map(k => [k, S[k]]));
     data.wh = { ...S.wh }; couriers.forEach(c => { for (const [it, n] of Object.entries(c.cargo)) if (it in data.wh) data.wh[it] += n; });   // cargo on a moving truck goes back to the warehouse on save
     data.v = 2; data.counter = counter; data.paid = Object.fromEntries(pads.map(p => [p.key, p.paid]));
@@ -3526,6 +3543,7 @@ function load() {
   for (let i = 0; i < val('server'); i++) addServer();
   for (let i = 0; i < 4; i++) addHunter();
   for (let i = 0; i < Math.min(1, S.petCount); i++) addPet();
+  if (S.sealPet) addPet(true);
   for (let i = 0; i < 3; i++) addFisher();
   if (S.lv.farmer) addFarmer(); if (S.lv.pizzaChef) addPizzaChef(); if (S.lv.smith) addSmith(); addCourier();
   S.wh = Object.assign({ log: 0, meat: 0, fish: 0, veg: 0, hide: 0, pelt: 0, tusk: 0, tuna: 0, blubber: 0, ivory: 0, whide: 0 }, S.wh); S.wh.log += S.whWood || 0; S.wh.meat += S.whMeat || 0; S.wh.veg += S.vegCrate || 0; S.whWood = S.whMeat = S.vegCrate = 0;
@@ -3631,5 +3649,5 @@ function footprints() {
   }
   return f;
 }
-window.__winter = { get pizzaChef() { return pizzaChefNpc; }, buildWarehouse, guardLv, defOf, raidSize, get paused() { return paused; }, checkUpdate, fieldTarget, fieldCount, spotQ, beastOk, trophyOpen, hpBadge, danger, rushing, fly, earn, OPEN, STAGE_AT, migrateLv, applyStage, applyFireLook, buildCrane, hl, dockCap, costOf, econ, startSwing, spawnSea, boats, schools, syncBoats, HB, powerSlam, payday, get farmer() { return farmer; }, couriers, whPut, PLOTS, bearHurt, spawnBeast, dropPickup, pickups, footprints, spawnPup, addPet, spawnPack, applyPetLook, pups, stackAdd, pets, fishers, SHOPS, P, S, pl, stack, bears, trees, customers, pads, helpers, servers, hunters, camera, T, save, levelUp };
+window.__winter = { spawnSealPup, get pizzaChef() { return pizzaChefNpc; }, buildWarehouse, guardLv, defOf, raidSize, get paused() { return paused; }, checkUpdate, fieldTarget, fieldCount, spotQ, beastOk, trophyOpen, hpBadge, danger, rushing, fly, earn, OPEN, STAGE_AT, migrateLv, applyStage, applyFireLook, buildCrane, hl, dockCap, costOf, econ, startSwing, spawnSea, boats, schools, syncBoats, HB, powerSlam, payday, get farmer() { return farmer; }, couriers, whPut, PLOTS, bearHurt, spawnBeast, dropPickup, pickups, footprints, spawnPup, addPet, spawnPack, applyPetLook, pups, stackAdd, pets, fishers, SHOPS, P, S, pl, stack, bears, trees, customers, pads, helpers, servers, hunters, camera, T, save, levelUp };
 })();
