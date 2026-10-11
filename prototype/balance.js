@@ -58,9 +58,10 @@ window.WinterRushData = {
     pet: { tameMeat: 8, hits: [0, 15, 40, 80, 140], dmg: [1, 2, 3, 4, 6], cd: [1, .9, .8, .7, .6], scale: [.55, .65, .78, .9, 1.05] },
     calmTime: 70, firstCalm: 80, warnTime: 8, stormTime: 25,
     stormBurn: 3.5, stormSlow: .35,
-    fieldBears: 5, maxFieldBears: 9, bearRespawn: 5, stageBears: [0, 1, 3, 5], stageRespawn: [5, 4, 3, 2.5],   // pizza/sushi eat meat: more bears and faster respawn by village stage 1-4
+    fieldBears: 5, maxFieldBears: 9, bearRespawn: 5, stageBears: [0, 2, 5, 8], stageRespawn: [5, 3.5, 2.5, 1.8],   // pizza/sushi eat meat: more bears and faster respawn by village stage 1-4
     bearHp: 4, bossEvery: 4,
-    wolfPackSize: 3, maxWolves: 10, wolfSpawn: 14, wolfStartSold: 8, hurtGrace: .8,
+    wolfPackSize: 3, maxWolves: 10, wolfSpawn: 14, stageWolves: [0, 3, 6, 9], stagePack: [0, 0, 1, 1], stageWolfSpawn: [14, 12, 10, 8],   // later stages: more and bigger packs, more meat
+    wolfStartSold: 8, hurtGrace: .8,
     hideChance: { bear: .6, wolf: .35 },   // hides drop only sometimes; bosses/alpha/beasts always drop theirs
     leatherShop: { iv: 3.5, maxQ: 5, slots: 2 },   // customers only come while there is stock (leather + hides) to serve them
     axeChop: [.42, .34, .27, .21, .19, .17, .15, .13, .12],   // seconds per chop by axe level

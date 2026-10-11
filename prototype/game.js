@@ -2411,7 +2411,7 @@ function spawnPack() {
   const x = rand(-10, 10), z = rand(15, 22);
   S.packs = (S.packs || 0) + 1;
   const alpha = S.storms >= 2 && S.packs % T.alpha.every === 0 && !bears.some(b => b.alpha);
-  for (let i = 0; i < T.wolfPackSize + (alpha ? 1 : 0); i++) {
+  for (let i = 0; i < T.wolfPackSize + T.stagePack[stg()] + (alpha ? 1 : 0); i++) {
     const w = makeWolf(alpha && i === 0); w.x = x + rand(-1.2, 1.2); w.z = z + rand(-1.2, 1.2); w.tx = w.x; w.tz = w.z; bears.push(w);
   }
   if (alpha) { toast('🐺 대장 늑대가 나타났다!'); play('growl'); buzz([40, 30, 60]); }
@@ -2552,7 +2552,7 @@ const fieldCount = () => bears.filter(x => !x.raider && !x.boss && !x.wolf && !x
 function updateBears(dt) {
   if (tick('herd', .5, dt) && fieldCount() < fieldTarget()) pendingBears.push(T.stageRespawn[stg()]);
   for (let i = pendingBears.length - 1; i >= 0; i--) if ((pendingBears[i] -= dt) <= 0) { pendingBears.splice(i, 1); spawnFieldBear(); }
-  if ((S.storms >= 1 || S.stat.sold >= T.wolfStartSold) && tick('wolfPack', T.wolfSpawn, dt) && bears.filter(b => b.wolf).length + T.wolfPackSize <= Math.min(T.maxWolves, 3 + 3 * Math.floor(S.storms / 2))) spawnPack();
+  if ((S.storms >= 1 || S.stat.sold >= T.wolfStartSold) && tick('wolfPack', T.stageWolfSpawn[stg()], dt) && bears.filter(b => b.wolf).length + T.wolfPackSize + T.stagePack[stg()] <= Math.min(T.maxWolves + T.stageWolves[stg()], 3 + T.stageWolves[stg()] + 3 * Math.floor(S.storms / 2))) spawnPack();
   if (S.started && heroLv() >= T.beasts.chief.power && tick('beast', T.beasts.every, dt)) spawnBeast();
   const pd = b => Math.hypot(pl.x - b.x, pl.z - b.z);
   for (const b of bears) {
