@@ -1,0 +1,47 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<title>윈터 러시</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Jua&display=swap">
+<link rel="stylesheet" href="style.css">
+
+<div id="game"></div>
+<div id="hud">
+  <div class="row">
+    <div class="pill" id="coins">🪙 0</div>
+    <div class="pill" id="storm">❄ 다음 눈보라 1:15</div>
+    <div class="pill" id="hp">♥♥♥♥♥</div>
+  </div>
+  <div class="warm" id="warm"><span>마을 온기</span><div class="bar"><i id="warmFill"></i></div></div>
+  <div class="row"><div class="pill goal" id="goal">Day 1</div><div class="btns"><button id="snd" aria-label="소리 켜기/끄기">🔊</button><button id="vib" aria-label="진동 켜기/끄기">📳</button></div></div>
+</div>
+<div id="bottom">
+  <div id="obj"></div>
+  <div class="pill" id="bag">🎒 0 / 8</div>
+</div>
+<div id="frost"></div>
+<div id="hurt"></div>
+<div id="toast"></div>
+<div id="joy"><div id="knob"></div></div>
+<div id="start">
+  <div class="card">
+    <h1>윈터 러시</h1>
+    <div class="sub">눈보라가 오기 전에, 불을 지켜라</div>
+    <ul>
+      <li>🌲 숲을 지나가면 자동으로 나무를 벱니다</li>
+      <li>🐻 정문 밖 북극곰을 사냥하면 고기가 떨어집니다</li>
+      <li>⚔️ 곰을 직접 탭해 연타하면 콤보·치명타·4타 광역 강타가 발동합니다</li>
+      <li>🔥 장작과 고기를 모닥불에 넣어 스테이크를 굽고 주민에게 파세요. 손님이 낸 🪙 동전은 바로 주머니로 들어옵니다</li>
+      <li>🌨 눈보라 중엔 불이 3.5배 빨리 꺼지고, 곰이 마을을 습격합니다</li>
+      <li>⭐ 동전으로 <b>🔥 모닥불 칸</b>을 키우면 새 일·직원·마을 확장이 하나씩 열립니다</li>
+      <li>🟩 고용 칸은 직원을 늘리고, 🟪 강화 칸은 그 직원 모두를 숙련시킵니다</li>
+    </ul>
+    <button id="go">불 피우러 가기</button>
+    <button id="reset" class="ghost" hidden>처음부터 새로 시작</button>
+    <div class="keys">곰 탭: 직접 공격 · 빈 곳 탭: 이동 · 드래그: 조이스틱 · PC: WASD</div>
+  </div>
+</div>
+
+<script src="vendor/three.min.js"></script>
+<script src="balance.js"></script>
+<script src="game.js"></script>

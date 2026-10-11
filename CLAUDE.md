@@ -1,4 +1,8 @@
-# Claude 협업 안내
+Read `AGENTS.md` before editing. Use `docs/WORKFLOW.md` for task ownership and handoff.
+
+지금 플레이하는 게임은 웹 프로토타입(`prototype/`)이고 작업은 GitHub 이슈로 주고받습니다(`docs/WORKFLOW.md`). 아래는 저장소 루트의 Godot 시제품(보류 중, Unity/Godot 이식 때 참고) 규칙입니다.
+
+## Godot 시제품 안내
 
 이 저장소는 Godot 4.x GDScript 프로젝트입니다. 사용자는 개발 초보자이므로 설명은 한국어로, 실행 방법과 확인 결과를 짧고 구체적으로 적어 주세요.
 

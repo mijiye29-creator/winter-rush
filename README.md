@@ -1,44 +1,26 @@
-# Winter Rush
+# winter-rush
+한겨울 숲속 마을 모바일 게임 개발 프로젝트
 
-한겨울 숲속 마을을 키우고 침입자를 막는 모바일 게임의 첫 플레이 버전입니다.
+## 윈터 러시
+나무를 베고, 북극곰을 사냥해 고기를 굽고, 마을 주민에게 팔아 업그레이드하세요.
+주기적으로 몰려오는 **눈보라** 동안 모닥불이 꺼지지 않게 지키고, 마을을 습격하는 **곰**을 막아야 합니다.
 
-출시 목표는 **Android와 iPhone 모두**입니다. 현재는 두 기기에서 공통으로 사용할 Godot 프로젝트를 개발 중이며, 앱 설치 파일은 아직 만들지 않았습니다. 준비 과정은 [모바일 출시 안내](docs/MOBILE_RELEASE.md)에 정리했습니다.
+- 기획서: [`docs/GDD.md`](docs/GDD.md)
+- 플레이 가능한 프로토타입: [`prototype/index.html`](prototype/index.html)
+- 플레이테스트 기록: [`docs/PLAYTEST.md`](docs/PLAYTEST.md)
+- Claude·Codex 협업 방식: [`docs/WORKFLOW.md`](docs/WORKFLOW.md)
 
-## 지금 해볼 수 있는 것
-
-1. 노란색 `나`를 방향키/WASD로 움직이거나, 가고 싶은 쪽 칸을 눌러 한 칸씩 움직입니다.
-2. `나무`와 `광석` 칸을 밟아 자원을 모읍니다. 다시 방문해도 채집할 수 있습니다.
-3. `시장`에서 자원을 팔아 돈을 법니다. 나무는 3원, 광석은 5원입니다.
-4. `확장` 칸에서 돈을 써 집, 작업장, 망루를 차례로 세웁니다. 건물마다 마을 체력이 3씩 늘어납니다.
-5. `성장` 칸에서 경험치를 써 레벨을 올립니다.
-6. 6턴마다 나타나는 `적`이 마을에 닿기 전에 그 칸으로 이동해 막습니다.
-
-마을을 3번 확장하고 레벨 3에 도달하면 승리합니다. 마을 체력이 0이면 패배합니다. `R` 키나 종료 후 화면 터치로 다시 시작합니다.
-
-## 실행하기
-
-[Godot 4.3 이상](https://godotengine.org/download)으로 이 폴더의 `project.godot`를 연 뒤 **F5**를 누르세요. 첫 실행에는 Godot이 `.godot/` 임시 파일을 만듭니다.
-
-명령줄에서는 저장소 루트에서 아래 명령을 사용합니다.
+## 프로토타입 실행
+빌드가 필요 없습니다. `prototype/index.html`을 브라우저로 열면 됩니다. Three.js는 프로젝트에 포함되어 있어 인터넷 연결 없이도 게임을 시작할 수 있습니다. 웹 글꼴은 연결되지 않으면 기기의 기본 글꼴로 표시됩니다.
 
 ```bash
-godot --path .
-./tools/check.sh
+cd prototype && python3 -m http.server 8000
+# 휴대폰과 PC가 같은 와이파이라면 휴대폰에서 http://<PC-IP>:8000 접속
 ```
 
-첫 버전은 도형과 글자로 만든 시제품입니다. Android/iPhone 설치 파일, 저장 기능, 실제 그림과 소리, 스토어 등록은 다음 단계입니다.
+조작: 화면을 탭/클릭하면 그 위치로 이동, 드래그하면 가상 조이스틱, PC는 WASD 또는 방향키.
 
-## 파일 안내
+수치·업그레이드 비용은 `prototype/balance.js`, 게임 규칙은 `prototype/game.js`, 화면은 `prototype/index.html`과 `prototype/style.css`에서 관리합니다.
 
-- `project.godot`: Godot 프로젝트 설정
-- `scenes/Main.tscn`, `scripts/main.gd`: 화면과 입력
-- `scripts/game_state.gd`: 게임 규칙과 데이터
-- `tests/run_tests.gd`: 핵심 규칙 검사
-- `tests/run_ui_tests.gd`: 터치 입력과 재시작 검사
-- `docs/ROADMAP.md`: 출시까지의 순서
-- `docs/MOBILE_RELEASE.md`: Android/iPhone 빌드 준비
-- `docs/AI_COLLABORATION.md`: Codex와 Claude 작업을 넘기는 방법
-- `tools/check.sh`: 게임 규칙·터치·시작을 한 번에 검사
-- `CLAUDE.md`: Claude와 작업할 때의 규칙
-
-코드를 바꾸면 게임 규칙 검사를 실행하고, 화면도 직접 한 번 플레이해 보세요. 변경 사항은 작은 단위로 Git 커밋에 저장합니다.
+## Godot 시제품 (보류)
+저장소 루트의 `project.godot`, `scenes/`, `scripts/`, `tests/`는 Codex가 만든 Godot 4 격자형 시제품입니다. 지금 개발·배포하는 게임은 위의 웹 프로토타입이며, 앱 이식을 시작할 때 참고합니다. 실행: Godot 4.3 이상으로 `project.godot`를 열고 F5, 검사는 `./tools/check.sh`. 모바일 출시 준비는 [`docs/MOBILE_RELEASE.md`](docs/MOBILE_RELEASE.md)에 있습니다.
