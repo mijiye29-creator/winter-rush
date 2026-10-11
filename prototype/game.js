@@ -167,7 +167,7 @@ function useModel(name, parent, base) {
   if (e.src) return put(e.src);
   e.wait.push(put);
   if (e.wait.length > 1) return;
-  new THREE.GLTFLoader().load(`models/${name}.glb` + (window.WINTER_BUILD ? '?v=' + window.WINTER_BUILD : ''), gltf => {
+  const done = gltf => {
     const lam = {};
     gltf.scene.traverse(o => {
       if (!o.isMesh) return;
@@ -175,7 +175,11 @@ function useModel(name, parent, base) {
       o.castShadow = o.receiveShadow = true;
     });
     e.src = gltf.scene; e.wait.forEach(f => f(e.src)); e.wait = [];
-  }, undefined, () => (e.wait = []));
+  }, fail = () => (e.wait = []);
+  // hosts that can't serve .glb files (the claude.ai artifact) put the models in window.WINTER_MODELS as base64
+  const inl = window.WINTER_MODELS && window.WINTER_MODELS[name];
+  if (inl) new THREE.GLTFLoader().parse(Uint8Array.from(atob(inl), c => c.charCodeAt(0)).buffer, '', done, fail);
+  else new THREE.GLTFLoader().load(`models/${name}.glb` + (window.WINTER_BUILD ? '?v=' + window.WINTER_BUILD : ''), done, undefined, fail);
 }
 function disposeActor(group, sharedGeometry = null) {
   const geometries = new Set();
