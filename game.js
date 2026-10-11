@@ -68,7 +68,7 @@ const DESC = {
   server: () => `서빙 직원 고용: 그릴의 스테이크를 진열대로`,
   serverUp: (a, b) => `서빙 숙련 Lv${b}: 한 번에 ${ST.serverCarry[a]} → ${ST.serverCarry[b]}개, 더 빠르게`,
   hunter: (a, b) => `사냥꾼 ${a} → ${b}명: 곰을 잡아 고기·가죽을 가져와요`,
-  hunterUp: (a, b) => `사냥꾼 전원 숙련 Lv${b}: 공격력 ${ST.hunterDmg[a]} → ${ST.hunterDmg[b]}, 고기 ${ST.hunterCarry[a]} → ${ST.hunterCarry[b]}개씩`,
+  hunterUp: (a, b) => `사냥꾼 전원 숙련 Lv${b}: 공격력 ${ST.hunterDmg[a]} → ${ST.hunterDmg[b]}, 고기 ${ST.hunterCarry[a]} → ${ST.hunterCarry[b]}개씩 · ${['', '', '🏹 화살통', '🧥 털 망토', '⛑️ 투구 + 어깨갑옷', '👑 황금 망토 + 오라'][b]}`,
   fisher: (a, b) => `낚시꾼 ${a} → ${b}명: 생선 상자를 자동으로 채워요`,
   fisherUp: (a, b) => `낚시꾼 전원 숙련 Lv${b}: 더 빨리, ${ST.fisherCarry[a]} → ${ST.fisherCarry[b]}마리씩`,
   oven: (a, b) => `생선 화덕 Lv${b + 1}: 생선 ${T.ovenTime[a]}초 → ${T.ovenTime[b]}초, 위에 ${T.ovenCap[a]} → ${T.ovenCap[b]}마리`,
@@ -2151,15 +2151,40 @@ function dressStaff(w, isHunter) {
   }
   if (isHunter) {
     w.body.children[0].material = mat(HUNTER_KIT[tier].coat);
+    w.rankLv = -1;
     if (w.weapon) w.body.remove(w.weapon);
     w.weapon = staffWeapon(tier); w.body.add(w.weapon);
     w.hp = Math.max(w.hp, HS().hp[tier]);
   }
 }
 const allStaff = () => [...helpers, ...servers, ...fishers, ...couriers, artisan, farmer, pizzaChefNpc, smithNpc, sushiChefNpc];
+// hunter mastery (강화 Lv1-5) adds gear on top of the stage outfit: quiver → fur cloak → helmet + shoulder guards → golden cape + aura
+function rankHunter(h) {
+  const r = M('hunter');
+  if (h.rankLv === r) return;
+  h.rankLv = r;
+  if (h.rank) h.body.remove(h.rank);
+  const k = h.rank = new THREE.Group(); h.body.add(k);
+  if (r >= 2) {   // quiver of arrows on the right hip
+    k.add(mesh(new THREE.CylinderGeometry(.1, .08, .55, 8), mat(0x6b3d1f), .42, .8, -.15));
+    for (const dx of [-.04, .04]) k.add(mesh(new THREE.ConeGeometry(.05, .14, 4), mat(r >= 5 ? 0xffd36b : 0xe8e8e8), .42 + dx, 1.13, -.15));
+  }
+  if (r >= 3) {   // fur cloak down the back
+    const c = mesh(new THREE.BoxGeometry(.7, .9, .06), mat(r >= 5 ? 0xffc83d : 0x8a6a48, r >= 5 ? { emissive: 0x553300 } : undefined), 0, .75, -.38); c.rotation.x = .12; k.add(c);
+  }
+  if (r >= 4) {   // steel helmet with a red plume + shoulder guards
+    k.add(mesh(new THREE.SphereGeometry(.36, 10, 6, 0, Math.PI * 2, 0, 1.3), mat(r >= 5 ? 0xffd36b : 0x9aa4b2), 0, 1.5, -.04));
+    k.add(mesh(new THREE.BoxGeometry(.06, .3, .4), mat(0xc0392b), 0, 1.92, -.1));
+    for (const sd of [-1, 1]) k.add(mesh(new THREE.SphereGeometry(.17, 8, 6, 0, Math.PI * 2, 0, 1.4), mat(r >= 5 ? 0xffd36b : 0x9aa4b2), sd * .4, 1.08, 0));
+  }
+  if (r >= 5) {   // champion: glowing aura ring at the feet
+    k.add(mesh(new THREE.TorusGeometry(.6, .05, 6, 20).rotateX(Math.PI / 2), mat(0xffd36b, { emissive: 0xb07a00 }), 0, .06, 0));
+  }
+  h.g.scale.setScalar(1 + (r - 1) * .04);
+}
 function syncStaffLook() {
   for (const w of allStaff()) dressStaff(w, false);
-  for (const h of hunters) dressStaff(h, true);
+  for (const h of hunters) { dressStaff(h, true); rankHunter(h); }
 }
 
 // fishers: catch fish at the ice holes and stock the fish shop
@@ -2397,9 +2422,11 @@ function makeBeast(kind) {
   return Object.assign(a, { kind, sc: B.scale, dmg: B.dmg, reach: kind === 'mammoth' ? 2.8 : kind === 'chief' ? 2.1 : 1.8, big: kind !== 'saber',
     wolf: false, alpha: false, raider: false, boss: false, hp, maxHp: hp, x: 0, z: 0, tx: 0, tz: 0, cd: 0, flash: 0, squash: 0, recoil: 0, stagger: 0, wander: 0 });
 }
-// 🐯🦣 trophy beasts only roam once the forge's legendary-gear pads exist (hearth Lv12), so their pelts/tusks always have a use
+// 🐯🦣 trophy beasts only roam once their pelts/tusks can actually be used: gear pads open (hearth Lv12), a smith hired to process them,
+// and the legendary gear still needs more of that trophy
 const trophyOpen = () => S.lv.fire >= OPEN.saberCoat;
-const beastOk = (k, p = heroLv()) => { const B = T.beasts[k]; return B.power && p >= B.power && (!B.trophy || trophyOpen()); };
+const trophyUsable = m => trophyOpen() && S.lv.smith > 0 && trophyNeed(m) > S.raw[m] + S.wh[m] + S.forgeRaw[m] + S.mats[m];
+const beastOk = (k, p = heroLv()) => { const B = T.beasts[k]; return B.power && p >= B.power && (!B.trophy || trophyUsable(B.trophy)); };
 function spawnBeast() {
   const p = heroLv();
   const kinds = Object.keys(T.beasts).filter(k => beastOk(k, p) && bears.filter(b => b.kind === k).length < T.beasts[k].max);
@@ -2541,7 +2568,7 @@ function bearHurt(b, dmg, src = pl) {
   b.fur.dispose(); b.bar.children.forEach(o => o.material.dispose());
   if (!b.wolf) S.stat.kills++;
   const B = b.kind && T.beasts[b.kind];
-  const meat = B ? B.meat : b.alpha ? T.alpha.meat : b.wolf ? 1 : b.boss ? 8 : 3;
+  const meat = B ? B.meat : b.alpha ? T.alpha.meat : b.wolf ? 1 + (S.stage >= 3 ? 1 : 0) : b.boss ? 8 : T.bearMeat[stg()];
   const hides = !(hidesOn() && S.stage >= 2) ? 0 : B ? B.hides : b.boss ? 2 : b.alpha ? 1 : Math.random() < T.hideChance[b.wolf ? 'wolf' : 'bear'] ? 1 : 0;
   b.lootText = b.boss ? '👑 처치!' : `🥩+${meat}`;
   if (b.wolf) { S.stat.wolves++; if (Math.random() < (b.alpha ? T.alpha.pupChance : .15) && !pets.some(w => !w.seal) && !pups.some(u => !u.seal)) spawnPup(b.x, b.z); }
@@ -2949,7 +2976,7 @@ function updatePlayer(dt) {
     if (p.paid >= cost) { p.paid = 0; p.lock = true; levelUp(p.key); }
     drawPad(p);
   }
-  if (inCamp() && S.hp < S.maxHp && tick('regen', 2.5, dt)) S.hp++;
+  if (inCamp() && S.hp < S.maxHp && tick('regen', T.campRegen, dt)) S.hp++;
 }
 function startSwing(dur, onHit, power = false) { const style = power ? slamStyle() : null; pl.sw = { t: 0, dur: power ? SLAM_DUR[style] : dur, onHit, hit: false, power, style }; play('swing', 80); }
 // the ultimate (4th-hit slam) moves differently for each weapon family
@@ -3198,9 +3225,13 @@ function levelUp(key) {
     const padAt = k => pads.find(q => q.key === k) || P.fire;
     if (S.lv.fire === OPEN.warehouse) { const w = padAt('warehouse'); spotlight(w.x, w.z, '🏚️', '큰 창고 칸 등장!', '여기에 동전을 내면 창고가 지어져요<br>🪵🥩🐟 재료가 한곳에 모이고 🚚 배달원이 대신 날라요'); }
     if (S.lv.fire === OPEN.saberCoat) {
-      const f = padAt('saberCoat'), list = ['saber', 'mammoth'].map(k => `${k === 'saber' ? '🐯' : '🦣'} ${T.beasts[k].name}: ${heroLv() >= T.beasts[k].power ? '지금부터 출현!' : `영웅 Lv${T.beasts[k].power}부터 출현`}`);
+      const f = padAt('saberCoat'), list = ['saber', 'mammoth'].map(k => `${k === 'saber' ? '🐯' : '🦣'} ${T.beasts[k].name}: ${heroLv() >= T.beasts[k].power ? '⚒️ 대장장이를 고용하면 출현' : `영웅 Lv${T.beasts[k].power} + 대장장이 고용 후 출현`}`);
       spotlight(f.x, f.z, '⚒️', '전설 장비 칸 등장!', `검치호 가죽 · 매머드 뿔로 전설 장비를 만들어요<br>${list.join('<br>')}`);
     }
+  }
+  if (key === 'smith' && S.lv.smith === 1) {
+    const on = ['saber', 'mammoth'].filter(k => beastOk(k)).map(k => T.beasts[k].name);
+    if (on.length) setTimeout(() => toast(`⚒️ 대장장이 고용! 이제 숲 밖에 ${on.join(' · ')} 출현`), 2400);
   }
   if (key === 'hero' || key === 'saberCoat' || key === 'tuskAxe') {
     S.maxHp = maxHpOf(); S.hp = S.maxHp;
@@ -3319,7 +3350,12 @@ let toastT = 0;
 // unlock close-up: the camera flies to the new thing for a moment with a big card (tap anywhere to skip)
 const spotEl = document.createElement('div'); spotEl.id = 'spot'; document.body.appendChild(spotEl);
 const spotQ = []; let spot = null;
-function spotlight(x, z, icon, title, sub) { if (!S.started || spotQ.length >= 4) return; spotQ.push({ x, z, icon, title, sub }); }
+function spotlight(x, z, icon, title, sub) {
+  if (!S.started) return;
+  if (spotQ.length >= 2) spotQ.shift();   // keep only the newest cards
+  spotQ.push({ x, z, icon, title, sub });
+  if (spot && spot.t > 1) spot.t = 99;   // a fresh level-up card shows right away instead of waiting behind the old one
+}
 function showSpot(s) { spotEl.innerHTML = `<div class="ic">${s.icon}</div><b>${s.title}</b><span>${s.sub}</span>`; spotEl.classList.add('show'); play('up'); buzz([30, 60, 30]); burst(s.x, .8, s.z, 0xffd36b, 26, { spd: 4, up: 8, life: 1 }); }
 addEventListener('pointerdown', () => { if (spot && spot.t > .6) spot.t = 99; });
 function toast(msg) { toastEl.textContent = msg; toastEl.classList.add('show'); toastT = 2.6; }
@@ -3484,12 +3520,12 @@ function claimQuest(g) {
   for (const [k, n] of Object.entries(g.gift || {})) GIFT[k](n)[1]();
   for (let i = 0; i < Math.min(12, 4 + Math.floor(g.reward / 100)); i++) setTimeout(() => fly('coin', V(pl.x + rand(-2.5, 2.5), 4.5, pl.z + rand(-2.5, 2.5)), V(pl.x, 1.6, pl.z), .4), i * 70);   // coin shower onto the hero
   popText(pl.x, 3.2, pl.z, `+🪙${g.reward}`, '#ffd36b', true);
-  spotlight(pl.x, pl.z, '📜', '퀘스트 완료!', `<i>${g.text}</i>🎁 🪙${g.reward}` + giftText(g).map(t => '<br>' + t).join(''));
   toast(`📜 퀘스트 완료: ${g.text} → ${rewardShort(g)}`); play('up'); buzz([30, 40, 30]);
 }
+let questGap = 0;
 function updateGoals() {
   const g = GOALS[S.goal];
-  if (g && S.started && g.cur() >= g.n) { claimQuest(g); S.goal++; }
+  if (g && S.started && g.cur() >= g.n && performance.now() > questGap) { claimQuest(g); S.goal++; questGap = performance.now() + 1500; }   // rewards show the moment a quest is done; several finished together come 1.5 s apart
   const ng = GOALS[S.goal];
   setText(goalEl, `Day ${S.storms + 1} · ` + (ng ? `📜 ${ng.text} ${Math.min(ng.cur(), ng.n)}/${ng.n} · 🎁 ${rewardShort(ng)}` : '🎉 모든 퀘스트 완료!'));
 }
