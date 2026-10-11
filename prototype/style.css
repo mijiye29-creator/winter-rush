@@ -47,7 +47,8 @@ body { background: var(--night); color: var(--snow); font-family: var(--display)
 #spot.show { opacity: 1; transform: translate(-50%, -50%) scale(1); }
 #spot .ic { font-size: 46px; line-height: 1.1; }
 #spot b { display: block; font-size: 24px; margin: 4px 0; }
-#spot span { display: block; font-size: 15px; line-height: 1.35; }
+#spot span { display: block; font-size: 15px; line-height: 1.45; }
+#spot span i { display: block; font-style: normal; font-size: 13px; color: #a0581a; letter-spacing: .5px; margin-bottom: 2px; }
 #frost { position: fixed; inset: 0; pointer-events: none; opacity: 0; background: radial-gradient(ellipse at center, transparent 45%, rgba(225,240,255,.85) 100%); }
 #hurt { position: fixed; inset: 0; pointer-events: none; opacity: 0; background: radial-gradient(ellipse at center, transparent 40%, rgba(229,72,77,.6) 100%); transition: opacity .3s; }
 

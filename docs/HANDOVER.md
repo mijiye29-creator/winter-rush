@@ -55,3 +55,9 @@
 - v2.1.7: 배달 직원은 `c.cargo`(품목별 수량)와 `c.stops`(정류장 목록: load/take/give/reap/pick/stash/sell). `planTrip()`이 경로를 짜고(`routeOrder` 최근접 순서), `runStop()`이 실행. 다른 배달 직원이 맡은 칸·상자·줍기 대상은 `claimed()`로 건너뜀
 - v2.1.9: 알림은 `ALERTS`(id·조건·문구·위치) 목록, `updateAlerts()`가 1초마다 검사. 탭하면 `pl.target`에 `next` 경유지(정문)를 넣어 이동. 어선 연료 부족은 `HB.noFuelAt`
 - 경제 배율: `econ('cost'|'sale')`, 칸 가격은 반드시 `costOf(key, lv)`로 읽을 것(`UP.*.costs`는 1단계 기준가)
+- v3.0 모닥불 통일: 해금은 `T.hearth[레벨].open`뿐(`OPEN[key]`, `REVEAL(key)`), 단계는 `stageOfFire(S.lv.fire)`(`STAGE_AT`). 단계 미달 레벨은 `padLockLv(p)`로 🔒 표시, 구매 불가. `fishing`·`hearth`·`harbor`·장비·추가 직원·`staffHouse`·`freezer`·`lighthouse`·`boat2`·`gate`·`courier` 키 삭제
+- 직원 숙련은 `M(job)`(고용 안 했으면 0, 아니면 1 + `S.lv[job+'Up']`). `T.staff` 배열은 이 값으로 읽음. 인원은 `S.lv[job]`
+- 주인공은 `S.lv.hero`(`hl()`), 수치·외형은 `T.hero`와 `look(key)`. 처치 이펙트 `killFx(b)`, 강타 이펙트 `slamFx` 단계 = 주인공 레벨
+- 칸 그리기 `drawPad`: `padKind()`(fire/hero/hire/up/facility), 효과 한 줄 `EFFECT`/`effectOf()`, 설명 `DESC`/`descOf()`. 모닥불 레벨업 카드는 `levelUp('fire')`, 그 사이 칸 토스트는 `quietPadsUntil`로 생략
+- 모닥불 외형 `applyFireLook()`(돌·장작은 `fireBase`, Lv6부터 숨김), 회전·떠오름은 `spinFireLook()`. 크레인 `buildCrane()`/`CRANE_NAMES`, 적재 칸 `dockCap()`·`T.harbor.crane`, 배달원 수거는 `planTrip()`의 `dockFull`
+- 저장 `data.v = 2`. 옛 저장은 `load()`에서 `migrateLv(lv, stage)`로 변환
