@@ -3,18 +3,25 @@ name: Codex PR review
 on:
   pull_request:
     types: [opened, synchronize, reopened, ready_for_review, labeled]
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: PR number to review
+        required: true
+        type: number
 
 concurrency:
-  group: codex-review-${{ github.event.pull_request.number }}
+  group: codex-review-${{ github.event.pull_request.number || inputs.pr_number }}
   cancel-in-progress: true
 
 jobs:
   review:
     if: >-
       vars.AI_COLLAB_ENABLED == 'true' &&
-      github.event.pull_request.head.repo.full_name == github.repository &&
-      !github.event.pull_request.draft &&
-      contains(github.event.pull_request.labels.*.name, 'needs-review')
+      (github.event_name == 'workflow_dispatch' ||
+       (github.event.pull_request.head.repo.full_name == github.repository &&
+        !github.event.pull_request.draft &&
+        contains(github.event.pull_request.labels.*.name, 'needs-review')))
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -23,22 +30,19 @@ jobs:
     steps:
       - uses: actions/checkout@v5
         with:
-          ref: refs/pull/${{ github.event.pull_request.number }}/merge
+          ref: refs/pull/${{ github.event.pull_request.number || inputs.pr_number }}/merge
+          fetch-depth: 2
           persist-credentials: false
-      - name: Fetch PR commits
-        env:
-          PR_BASE_REF: ${{ github.event.pull_request.base.ref }}
-          PR_NUMBER: ${{ github.event.pull_request.number }}
-        run: |
-          git fetch --no-tags origin "$PR_BASE_REF" "+refs/pull/$PR_NUMBER/head"
       - id: codex
         uses: openai/codex-action@v1
         with:
           openai-api-key: ${{ secrets.OPENAI_API_KEY }}
           sandbox: workspace-write
+          allow-bots: true
+          allow-bot-users: claude[bot]
           prompt: |
-            Review the changes in Winter Rush PR #${{ github.event.pull_request.number }}.
-            Compare ${{ github.event.pull_request.base.sha }} with ${{ github.event.pull_request.head.sha }}.
+            Review the changes in Winter Rush PR #${{ github.event.pull_request.number || inputs.pr_number }}.
+            Compare the merge commit's parents with git diff HEAD^1 HEAD^2.
             Find concrete bugs, regressions, and missing checks in the changed code.
             Focus on mobile input, game economy, save/load, and player progression when relevant.
             Reply in concise Korean with file and line references. If no issue is found, say so briefly.
@@ -58,6 +62,6 @@ jobs:
             await github.rest.issues.createComment({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              issue_number: context.payload.pull_request.number,
+              issue_number: context.payload.pull_request?.number ?? Number(context.payload.inputs.pr_number),
               body: process.env.CODEX_FEEDBACK,
             });
