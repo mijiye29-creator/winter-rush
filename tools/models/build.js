@@ -1,6 +1,6 @@
-// Writes prototype/models/hero_lv1.glb from tools/models/hero_lv1.js.
-// Run from the repo root: node tools/models/build.js [preview.png]
-// Needs Playwright with Chromium. Without it, open tools/models/export.html in a browser and press the button.
+// Writes prototype/models/<name>.glb for every model in tools/models/export.html.
+// Run from the repo root: node tools/models/build.js [previewDir]   (previewDir gets one <name>.png per model)
+// Needs Playwright with Chromium. Without it, open tools/models/export.html in a browser and press the buttons.
 const { chromium } = require('playwright');
 const { writeFileSync } = require('fs');
 const { resolve } = require('path');
@@ -9,9 +9,12 @@ const browser = await chromium.launch({ args: ['--allow-file-access-from-files',
 const page = await browser.newPage({ viewport: { width: 1000, height: 420 } });
 page.on('pageerror', e => { console.error(e); process.exitCode = 1; });
 await page.goto('file://' + resolve('tools/models/export.html'));
-const glb = Buffer.from(await page.evaluate(() => window.exportGLB()), 'base64');
-writeFileSync('prototype/models/hero_lv1.glb', glb);
-console.log(`prototype/models/hero_lv1.glb ${glb.length} bytes`);
-if (process.argv[2]) await page.screenshot({ path: process.argv[2] });
+for (const name of await page.evaluate(() => Object.keys(MODELS))) {
+  const glb = Buffer.from(await page.evaluate(n => window.exportGLB(n), name), 'base64');
+  writeFileSync(`prototype/models/${name}.glb`, glb);
+  const tris = await page.evaluate(n => window.preview(n), name);
+  console.log(`prototype/models/${name}.glb ${glb.length} bytes, ${tris} triangles`);
+  if (process.argv[2]) await page.screenshot({ path: `${process.argv[2]}/${name}.png` });
+}
 await browser.close();
 })();
