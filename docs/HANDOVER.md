@@ -62,3 +62,4 @@
 - 모닥불 외형 `applyFireLook()`(돌·장작은 `fireBase`, Lv6부터 숨김), 회전·떠오름은 `spinFireLook()`. 크레인 `buildCrane()`/`CRANE_NAMES`, 적재 칸 `dockCap()`·`T.harbor.crane`, 배달원 수거는 `planTrip()`의 `dockFull`
 - 저장 `data.v = 2`. 옛 저장은 `load()`에서 `migrateLv(lv, stage)`로 변환
 - v3.1: 수입은 `earn(v, x, z)`(손님 결제) 또는 `S.coins +=`로 바로 주머니. `COIN_PILES`·`RUNNERS`·은행(`S.bank`, `UP.bank`, `updateBank`) 삭제, 월급은 `updatePayday`/`payday()`. 옛 저장의 은행·동전 더미는 `load()`에서 주머니로 합침. 가방 `bagCap()` = `T.hero.bag[S.lv.hero]` + 펫. 퀘스트 `GOALS`(reward + gift)·`GIFT`·`claimQuest()`
+- v3.2: 점원 삭제(`SHOPS`는 `ST.shopSlots`/`ST.shopIv`로 판매), 옛 저장 환불은 `load()`의 `CLERK_COST`. 퀘스트 선물 `GIFT`/`stockGift()`, 조사 `josa(word, 받침O, 받침X)`
