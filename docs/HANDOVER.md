@@ -61,3 +61,4 @@
 - 칸 그리기 `drawPad`: `padKind()`(fire/hero/hire/up/facility), 효과 한 줄 `EFFECT`/`effectOf()`, 설명 `DESC`/`descOf()`. 모닥불 레벨업 카드는 `levelUp('fire')`, 그 사이 칸 토스트는 `quietPadsUntil`로 생략
 - 모닥불 외형 `applyFireLook()`(돌·장작은 `fireBase`, Lv6부터 숨김), 회전·떠오름은 `spinFireLook()`. 크레인 `buildCrane()`/`CRANE_NAMES`, 적재 칸 `dockCap()`·`T.harbor.crane`, 배달원 수거는 `planTrip()`의 `dockFull`
 - 저장 `data.v = 2`. 옛 저장은 `load()`에서 `migrateLv(lv, stage)`로 변환
+- v3.1: 수입은 `earn(v, x, z)`(손님 결제) 또는 `S.coins +=`로 바로 주머니. `COIN_PILES`·`RUNNERS`·은행(`S.bank`, `UP.bank`, `updateBank`) 삭제, 월급은 `updatePayday`/`payday()`. 옛 저장의 은행·동전 더미는 `load()`에서 주머니로 합침. 가방 `bagCap()` = `T.hero.bag[S.lv.hero]` + 펫. 퀘스트 `GOALS`(reward + gift)·`GIFT`·`claimQuest()`

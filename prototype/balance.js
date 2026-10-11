@@ -26,11 +26,12 @@ window.WinterRushData = {
       speed: [5, 5.5, 6, 6.5, 7, 7.5, 8, 8.5, 9], dmg: [1, 2, 3, 4, 6, 8, 11, 15, 20], hp: [5, 6, 7, 8, 9, 10, 11, 12, 13],
       block: [0, .05, .09, .13, .17, .21, .26, .31, .36], atk: [.75, .71, .67, .63, .59, .56, .53, .5, .46],
       coat: [0, 1, 1, 2, 2, 3, 4, 4, 5], boots: [0, 1, 1, 1, 2, 3, 3, 4, 5], cape: [0, 0, 1, 2, 3, 4, 5, 5, 6],   // look index per hero level
+      bag: [10, 16, 22, 28, 34, 40, 46, 52, 60],   // 🎒 bag size per hero level (no separate bag pad)
       kill: ['먼지', '나무 조각', '불티', '금빛 별', '얼음 파편', '화염', '번개', '빙하 분수', '오로라'],
     },
     // 🔥 what each hearth level opens (index = levels bought). stage: village expansion, say: the "이제 할 수 있는 것" card
     hearth: [
-      { open: ['fire', 'bag', 'hero'], say: ['🪓 나무를 베어 모닥불에 넣기', '🐻 곰 사냥 → 고기 굽기 → 스테이크 팔기'] },
+      { open: ['fire', 'hero'], say: ['🪓 나무를 베어 모닥불에 넣기', '🐻 곰 사냥 → 고기 굽기 → 스테이크 팔기'] },
       { open: ['helper', 'helperUp'], say: ['👷 나무꾼 고용: 장작을 대신 날라요'] },
       { open: ['server', 'serverUp'], say: ['🧑‍🍳 서빙 직원 고용: 스테이크를 진열대로 옮겨요'] },
       { open: ['hunter', 'hunterUp'], say: ['🏹 사냥꾼 고용: 곰을 잡아 고기를 가져와요'] },
@@ -43,7 +44,7 @@ window.WinterRushData = {
       { open: ['warehouse'], say: ['🏚️ 큰 창고: 재료가 한곳에 모이고 배달원이 날라요'] },
       { open: ['pizzaClerk', 'smith', 'smithUp', 'saberCoat', 'tuskAxe'], say: ['🧑‍💼 피자 점원 고용', '⚒️ 대장간: 검치호 가죽 · 매머드 뿔로 전설 장비 만들기'] },
       { open: ['wall', 'guard'], say: ['🧱 돌담 · 🛡️ 경비 보급으로 눈보라 습격 막기'] },
-      { open: ['bank', 'statue'], say: ['🏦 은행: 동전 자동 수금', '🗿 명성 동상: 모든 판매가 상승'] },
+      { open: ['statue'], say: ['🗿 명성 동상: 모든 판매가 상승'] },
       { open: ['boat', 'sushiChef', 'sushiChefUp'], stage: 4, say: ['🚤 어선으로 참치 잡기', '🍣 참치 + 생선 + 채소 + 장작 → 초밥', '🍣 초밥 쉐프 고용'] },
       { open: ['crane', 'sushiClerk'], say: ['🏗️ 부두 크레인: 어획량 ↑, 적재 칸에 쌓이면 배달원이 창고로 옮겨요', '🧑‍💼 초밥 점원 고용'] },
       { open: [], sale: 5, say: ['💰 모든 판매가 +5%'] },
@@ -83,7 +84,7 @@ window.WinterRushData = {
     courier: { carry: [0, 20, 24, 28, 32, 36], speed: [0, 5.5, 5.8, 6.1, 6.4, 6.7] },   // delivery workers, by warehouse level: mixed loads up to this many items
     fireLv: .08,                  // each hearth level: a log burns 8% longer
     econ: { cost: [1, 1.5, 2.2, 3], sale: [1, 1.5, 2.2, 3] },   // by village stage 1-4: upgrade/hire prices and every sale (shops, wages, traders, surplus) scale together
-    wage: { every: 60, per: 8, interest: .005, maxInterest: 50 },   // per staff each payday (stage 3)
+    wage: { every: 60, per: 8 },   // per staff each payday (stage 3), paid from the wallet
     // stage 4 (빙하 항구): boats, tuna, sushi, sea animals, sea fog
     harbor: {
       boatTime: [0, 9, 8, 7], boatFish: [0, 5, 7, 5], boatTuna: [0, 0, 1, 4],   // by boat tier: 쪽배 / 그물배 / 원양선
@@ -104,7 +105,6 @@ window.WinterRushData = {
   UP: {
     // 🔥 the hearth is the only gate: each level opens the pads listed in T.hearth[level] (Lv6 / Lv10 / Lv15 expand the village)
     fire:    { name: '모닥불', icon: '🔥', costs: [40, 80, 150, 250, 400, 600, 900, 1200, 2000, 1400, 1700, 2000, 2400, 3000, 2400, 3200, 4500], vals: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18] },
-    bag:     { name: '가방',      icon: '🎒', costs: [30, 60, 120, 240, 500], vals: [10, 16, 22, 30, 40, 50] },
     hero:    { name: '주인공 성장', icon: '🦸', costs: [60, 150, 300, 600, 1000, 1600, 2500, 4000], vals: [0, 1, 2, 3, 4, 5, 6, 7, 8], stage: [1, 1, 2, 2, 3, 3, 4, 4] },   // 2 levels per village stage
     // hire pads (vals = workers) and their 강화 pads (vals = mastery level shared by every worker of that job)
     helper:  { name: '나무꾼',    icon: '👷', hire: 1, costs: [100, 500, 1200], vals: [0, 1, 2, 3], stage: [1, 2, 3] },
@@ -134,7 +134,6 @@ window.WinterRushData = {
     tuskAxe:   { name: '매머드 뿔 창', icon: '🦣', costs: [900, 2200], mats: { tusk: [1, 3] }, vals: [0, 1, 2] },
     wall:    { name: '돌담', icon: '🧱', costs: [1500, 3000], vals: [0, 1, 2] },   // −1 raider per level
     guard:   { name: '경비 보급', icon: '🛡️', costs: [0], vals: [0, 0] },   // not a level: buys one guard per blizzard (T.guard)
-    bank:    { name: '은행', icon: '🏦', costs: [1200], vals: [0, 1] },
     statue:  { name: '명성 동상', icon: '🗿', costs: [500, 900, 1600, 2800, 5000, 9000, 16000, 30000], vals: [0, 6, 12, 18, 24, 30, 36, 42, 48] },   // +% to every sale
     boat:    { name: '어선', icon: '🚤', costs: [1500, 3000, 6000, 4000], vals: [0, 1, 2, 3, 4] },   // Lv1-3 boat tier, Lv4 a second boat
     crane:   { name: '부두 크레인', icon: '🏗️', costs: [1200, 2500, 4500, 7000], vals: [0, 1, 2, 3, 4] },
