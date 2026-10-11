@@ -2542,8 +2542,12 @@ function hurtPlayer(b) {
   }
 }
 const input = { x: 0, z: 0 }, keys = {};
-addEventListener('keydown', e => { keys[e.key.toLowerCase()] = true; });
-addEventListener('keyup', e => { keys[e.key.toLowerCase()] = false; });
+// read physical keys (e.code), not e.key: with the Korean IME on, W/A/S/D arrive as ㅈ/ㅁ/ㄴ/ㅇ or 'Process'
+const KEYMAP = { KeyW: 'w', KeyA: 'a', KeyS: 's', KeyD: 'd', ArrowUp: 'arrowup', ArrowDown: 'arrowdown', ArrowLeft: 'arrowleft', ArrowRight: 'arrowright' };
+const setKey = (e, on) => { const k = KEYMAP[e.code]; if (!k) return; keys[k] = on; if (on) e.preventDefault(); };
+addEventListener('keydown', e => setKey(e, true));
+addEventListener('keyup', e => setKey(e, false));
+addEventListener('blur', () => { for (const k in keys) keys[k] = false; });   // no stuck movement after alt-tab
 const joyEl = document.getElementById('joy'), knob = document.getElementById('knob');
 let joyId = null, jx0 = 0, jy0 = 0, jdx = 0, jdy = 0;
 const cv = renderer.domElement;
