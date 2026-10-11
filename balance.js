@@ -15,7 +15,7 @@ window.WinterRushData = {
       helperCarry: [0, 4, 8, 12], helperSpeed: [0, 3.4, 4, 4.8], helperChop: [0, .8, .6, .45],
       serverCarry: [0, 6, 10, 14], serverSpeed: [0, 3.6, 4.4, 5.2], serverIv: [0, .15, .1, .06],
       hunterDmg: [0, 2, 3, 4], hunterCd: [0, .7, .55, .4],
-      clerkSlots: [1, 3, 3, 3], clerkIv: [.35, .14, .14, .14],   // clerks are hire-only: hired = full speed (Lv2-3 kept for old saves)
+      shopSlots: 3, shopIv: .14,   // every shop serves 3 customers at once, one item every .14 s (no clerks)
       hunterCarry: [0, 8, 12, 16], hunterHides: [0, 4, 6, 8],   // meat / hides a hunter carries home by level
     farmerCarry: [0, 4, 8], farmerSpeed: [0, 3.4, 4.2], pizzaChefCarry: [0, 4, 8], pizzaChefSpeed: [0, 3.6, 4.4],
     fisherCatch: [0, 2.6, 1.9], fisherCarry: [0, 6, 10],
@@ -26,7 +26,8 @@ window.WinterRushData = {
       speed: [5, 5.5, 6, 6.5, 7, 7.5, 8, 8.5, 9], dmg: [1, 2, 3, 4, 6, 8, 11, 15, 20], hp: [5, 6, 7, 8, 9, 10, 11, 12, 13],
       block: [0, .05, .09, .13, .17, .21, .26, .31, .36], atk: [.75, .71, .67, .63, .59, .56, .53, .5, .46],
       coat: [0, 1, 1, 2, 2, 3, 4, 4, 5], boots: [0, 1, 1, 1, 2, 3, 3, 4, 5], cape: [0, 0, 1, 2, 3, 4, 5, 5, 6],   // look index per hero level
-      bag: [10, 16, 22, 28, 34, 40, 46, 52, 60],   // 🎒 bag size per hero level (no separate bag pad)
+      bag: [10, 16, 22, 28, 34, 40, 46, 52, 60],
+      dangerPct: .4, rushLv: 3, rushMul: 1.4,   // ♥ badge over the head at ≤40% health; from hero Lv3, danger also gives ×1.4 move speed   // 🎒 bag size per hero level (no separate bag pad)
       kill: ['먼지', '나무 조각', '불티', '금빛 별', '얼음 파편', '화염', '번개', '빙하 분수', '오로라'],
     },
     // 🔥 what each hearth level opens (index = levels bought). stage: village expansion, say: the "이제 할 수 있는 것" card
@@ -35,18 +36,18 @@ window.WinterRushData = {
       { open: ['helper', 'helperUp'], say: ['👷 나무꾼 고용: 장작을 대신 날라요'] },
       { open: ['server', 'serverUp'], say: ['🧑‍🍳 서빙 직원 고용: 스테이크를 진열대로 옮겨요'] },
       { open: ['hunter', 'hunterUp'], say: ['🏹 사냥꾼 고용: 곰을 잡아 고기를 가져와요'] },
-      { open: ['clerk'], say: ['🧑‍💼 스테이크 점원 고용: 손님을 대신 받아요'] },
+      { open: [], sale: 3, say: ['🏪 단골손님이 늘어요: 모든 판매가 +3%'] },
       { open: ['fisher', 'fisherUp', 'oven'], stage: 2, say: ['🎣 얼음 구멍에서 낚시하기', '🔥 생선 화덕에 생선 + 장작 → 생선구이 팔기', '🪝 낚시꾼 고용'] },
-      { open: ['fishClerk'], say: ['🧑‍💼 생선 점원 고용', '👷 두 번째 나무꾼 · 🏹 사냥꾼 고용 가능'] },
+      { open: [], sale: 3, say: ['🐟 생선구이 단골: 모든 판매가 +3%', '👷 두 번째 나무꾼 · 🏹 사냥꾼 고용 가능'] },
       { open: ['artisan', 'artisanUp'], say: ['🟫 가죽이 떨어져요: 가죽 공방에 가져가기', '🧵 가죽 장인 고용 → 가죽 제품 팔기'] },
-      { open: ['leatherClerk'], say: ['🧑‍💼 가죽 점원 고용'] },
+      { open: [], sale: 3, say: ['👜 가죽 제품 입소문: 모든 판매가 +3%'] },
       { open: ['farmer', 'farmerUp', 'pizzaChef', 'pizzaChefUp', 'pizzaOven'], stage: 3, say: ['🥬 텃밭 채소 + 고기 + 생선 + 장작 → 피자', '🧑‍🌾 농부 · 👨‍🍳 피자 쉐프 고용'] },
       { open: ['warehouse'], say: ['🏚️ 큰 창고: 재료가 한곳에 모이고 배달원이 날라요'] },
-      { open: ['pizzaClerk', 'smith', 'smithUp', 'saberCoat', 'tuskAxe'], say: ['🧑‍💼 피자 점원 고용', '⚒️ 대장간: 검치호 가죽 · 매머드 뿔로 전설 장비 만들기'] },
+      { open: ['smith', 'smithUp', 'saberCoat', 'tuskAxe'], say: ['⚒️ 대장간: 검치호 가죽 · 매머드 뿔로 전설 장비 만들기'] },
       { open: ['wall', 'guard'], say: ['🧱 돌담 · 🛡️ 경비 보급으로 눈보라 습격 막기'] },
       { open: ['statue'], say: ['🗿 명성 동상: 모든 판매가 상승'] },
       { open: ['boat', 'sushiChef', 'sushiChefUp'], stage: 4, say: ['🚤 어선으로 참치 잡기', '🍣 참치 + 생선 + 채소 + 장작 → 초밥', '🍣 초밥 쉐프 고용'] },
-      { open: ['crane', 'sushiClerk'], say: ['🏗️ 부두 크레인: 어획량 ↑, 적재 칸에 쌓이면 배달원이 창고로 옮겨요', '🧑‍💼 초밥 점원 고용'] },
+      { open: ['crane'], say: ['🏗️ 부두 크레인: 어획량 ↑, 적재 칸에 쌓이면 배달원이 창고로 옮겨요'] },
       { open: [], sale: 5, say: ['💰 모든 판매가 +5%'] },
       { open: [], sale: 10, say: ['🌌 오로라 모닥불 완성! 모든 판매가 +10%'] },
     ],
@@ -113,20 +114,16 @@ window.WinterRushData = {
     serverUp: { name: '서빙 직원', icon: '🧑‍🍳', up: 'server', costs: [300, 600], vals: [1, 2, 3] },
     hunter:  { name: '사냥꾼',    icon: '🏹', hire: 1, costs: [200, 700, 1500], vals: [0, 1, 2, 3], stage: [1, 2, 3] },
     hunterUp: { name: '사냥꾼',   icon: '🏹', up: 'hunter', costs: [500, 1000], vals: [1, 2, 3], stage: [1, 2] },
-    clerk:   { name: '스테이크 점원', icon: '🧑‍💼', hire: 1, costs: [300], vals: [0, 1] },
     fisher:  { name: '낚시꾼',    icon: '🪝', hire: 1, costs: [300, 800], vals: [0, 1, 2] },
     fisherUp: { name: '낚시꾼',   icon: '🪝', up: 'fisher', costs: [700], vals: [1, 2] },
     oven:    { name: '생선 화덕',  icon: '🔥', costs: [300, 700], vals: [0, 1, 2] },
-    fishClerk: { name: '생선 점원', icon: '🧑‍💼', hire: 1, costs: [500], vals: [0, 1] },
     artisan: { name: '가죽 장인',  icon: '🧵', hire: 1, costs: [200], vals: [0, 1] },
     artisanUp: { name: '가죽 장인', icon: '🧵', up: 'artisan', costs: [500], vals: [1, 2] },
-    leatherClerk: { name: '가죽 점원', icon: '🧑‍💼', hire: 1, costs: [600], vals: [0, 1] },
     farmer:  { name: '농부', icon: '🧑‍🌾', hire: 1, costs: [600], vals: [0, 1] },
     farmerUp: { name: '농부', icon: '🧑‍🌾', up: 'farmer', costs: [1300], vals: [1, 2] },
     pizzaChef: { name: '피자 쉐프', icon: '👨‍🍳', hire: 1, costs: [600], vals: [0, 1] },
     pizzaChefUp: { name: '피자 쉐프', icon: '👨‍🍳', up: 'pizzaChef', costs: [1400], vals: [1, 2] },
     pizzaOven: { name: '피자 화덕', icon: '🍕', costs: [800, 1800], vals: [0, 1, 2] },
-    pizzaClerk: { name: '피자 점원', icon: '🧑‍💼', hire: 1, costs: [800], vals: [0, 1] },
     warehouse: { name: '큰 창고', icon: '🏚️', costs: [2000, 3500, 6000, 9000, 13000], vals: [0, 1, 2, 3, 4, 5], stage: [3, 3, 3, 4, 4] },   // each level: +1 courier (up to 5), more room
     smith:   { name: '대장장이', icon: '⚒️', hire: 1, costs: [700], vals: [0, 1] },
     smithUp: { name: '대장장이', icon: '⚒️', up: 'smith', costs: [1500], vals: [1, 2] },
@@ -139,6 +136,5 @@ window.WinterRushData = {
     crane:   { name: '부두 크레인', icon: '🏗️', costs: [1200, 2500, 4500, 7000], vals: [0, 1, 2, 3, 4] },
     sushiChef: { name: '초밥 쉐프', icon: '🍣', hire: 1, costs: [2500], vals: [0, 1] },
     sushiChefUp: { name: '초밥 쉐프', icon: '🍣', up: 'sushiChef', costs: [5000], vals: [1, 2] },
-    sushiClerk: { name: '초밥 점원', icon: '🧑‍💼', hire: 1, costs: [1500], vals: [0, 1] },
   },
 };
