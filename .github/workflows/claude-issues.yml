@@ -1,0 +1,54 @@
+name: Claude issue work
+
+on:
+  issues:
+    types: [labeled]
+  issue_comment:
+    types: [created]
+
+concurrency:
+  group: claude-${{ github.event.issue.number }}
+  cancel-in-progress: false
+
+jobs:
+  implement:
+    if: >-
+      vars.AI_COLLAB_ENABLED == 'true' &&
+      ((github.event_name == 'issues' && github.event.label.name == 'claude') ||
+      (github.event_name == 'issue_comment' &&
+       contains(fromJSON('["OWNER", "MEMBER", "COLLABORATOR"]'), github.event.comment.author_association) &&
+       contains(github.event.comment.body, '@claude')))
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      issues: write
+      pull-requests: write
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+      - id: claude
+        uses: anthropics/claude-code-action@v1
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          label_trigger: claude
+          base_branch: main
+          claude_args: --max-turns 15
+      - name: Open PR for issue work
+        if: >-
+          github.event_name == 'issues' &&
+          steps.claude.outputs.branch_name != ''
+        env:
+          GH_TOKEN: ${{ steps.claude.outputs.github_token }}
+          CLAUDE_BRANCH: ${{ steps.claude.outputs.branch_name }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          ISSUE_TITLE: ${{ github.event.issue.title }}
+        run: |
+          git fetch --no-tags origin "$CLAUDE_BRANCH"
+          if [ "$(git rev-list --count HEAD..FETCH_HEAD)" -eq 0 ]; then
+            exit 0
+          fi
+          if [ -n "$(gh pr list --head "$CLAUDE_BRANCH" --json number --jq '.[0].number')" ]; then
+            exit 0
+          fi
+          pr_url=$(gh pr create --base main --head "$CLAUDE_BRANCH" --title "$ISSUE_TITLE" --body "Closes #$ISSUE_NUMBER")
+          gh pr edit "$pr_url" --add-label needs-review
