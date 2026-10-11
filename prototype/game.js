@@ -40,7 +40,8 @@ const MAT_ICON = { pelt: '🐯', tusk: '🦣' }, MAT_NAME = { pelt: '손질한 �
 const matsNeed = (k, lv = S.lv[k]) => Object.entries(UP[k].mats || {}).map(([m, a]) => [m, a[lv]]).filter(([, n]) => n);
 const matsOk = k => matsNeed(k).every(([m, n]) => S.mats[m] >= n);   // drives how tough the wild animals get
 const ovenCap = () => T.ovenCap[S.lv.oven];
-const huntCap = () => ST.hunterCarry[M('hunter')], hideCap = () => ST.hunterHides[M('hunter')];
+const HS = () => ST.hunterStage, stg = () => Math.max(0, Math.min(3, S.stage - 1));   // hunters also grow with the village stage
+const huntCap = () => ST.hunterCarry[M('hunter')] + HS().carry[stg()], hideCap = () => ST.hunterHides[M('hunter')];
 const ST = T.staff;
 const raidSize = () => Math.max(0, 1 + Math.floor((S.storms + 1) / 2) - S.lv.wall);
 const guardCost = () => Math.round((T.guard.baseCost + T.guard.costPerStorm * S.storms) * (1 + .25 * S.guard));
@@ -1895,12 +1896,11 @@ const arrowGeo = new THREE.CylinderGeometry(.03, .03, .8, 4).rotateX(Math.PI / 2
 function addHunter() {
   if (hunters.length >= S.lv.hunter) return;
   const p = makePerson(0x6b8e3a, 0x4a3020);
-  const bow = mesh(new THREE.TorusGeometry(.35, .04, 5, 12, Math.PI), mat(0x6b3d1f), -.45, .9, .1); bow.rotation.y = Math.PI / 2; p.body.add(bow);
   const carry = new THREE.Group(); carry.position.z = -.5; p.g.add(carry);
-  for (let i = 0; i < 16; i++) { const m = itemMesh('meat'); m.visible = false; carry.add(m); }
+  for (let i = 0; i < 28; i++) { const m = itemMesh('meat'); m.visible = false; carry.add(m); }
   for (let i = 0; i < 8; i++) { const m = itemMesh('hide'); m.visible = false; m.userData.hide = true; carry.add(m); }
-  const h = { ...p, carry, n: 0, hides: 0, hp: 8, down: 0, cd: 0, x: P.meatTile.x - hunters.length, z: P.meatTile.z + 1.4, path: [], state: 'out', prey: null };
-  p.g.position.set(h.x, 0, h.z); hunters.push(h); huntOut(h);
+  const h = { ...p, carry, n: 0, hides: 0, hp: HS().hp[stg()], down: 0, cd: 0, x: P.meatTile.x - hunters.length, z: P.meatTile.z + 1.4, path: [], state: 'out', prey: null };
+  p.g.position.set(h.x, 0, h.z); hunters.push(h); dressStaff(h, true); huntOut(h);
 }
 function huntOut(h) { h.state = 'out'; h.prey = null; h.path = h.z < 6 ? [GATE_IN.clone(), GATE_OUT.clone()] : []; }
 function huntHome(h) {
@@ -1914,7 +1914,7 @@ function hurtHunter(h, b) {
   if (h.hp <= 0) { h.down = 3; h.n = 0; h.hides = 0; h.state = 'down'; toast('🏹 사냥꾼이 곰에게 쓰러졌어요'); }
 }
 function shoot(h, b) {
-  const m = new THREE.Mesh(arrowGeo, mat(0x5a3a28)); scene.add(m);
+  const m = new THREE.Mesh(arrowGeo, mat(HUNTER_KIT[stg()].arrow, stg() >= 3 ? { emissive: 0x2a6f9e } : undefined)); scene.add(m);
   shots.push({ m, h, b, from: V(h.x, 1.1, h.z), t: 0 });
 }
 // watchtowers beside the gate (gate Lv4-6) shoot animals outside the fence
@@ -1957,7 +1957,7 @@ function updateShots(dt) {
     scene.remove(s.m); shots.splice(i, 1);
     if (!bears.includes(s.b)) continue;
     burst(s.b.x, 1.3, s.b.z, 0xffffff, 4, { spd: 3, up: 3, life: .35, size: .7 });
-    const dmg = s.dmg || ST.hunterDmg[M('hunter')];
+    const dmg = s.dmg || ST.hunterDmg[M('hunter')] + HS().dmg[stg()];
     popText(s.b.x, 2.5, s.b.z, `${dmg}`, s.dmg ? '#ffd36b' : '#c9f29b');
     if (bearHurt(s.b, dmg, s.h)) burst(s.b.x, 1, s.b.z, 0xffffff, 10, { spd: 5, up: 6, life: .6 });
   }
@@ -1971,13 +1971,13 @@ function updateHunters(dt) {
     });
     if (h.down > 0) {
       h.down -= dt; h.body.rotation.z = Math.PI / 2.3;
-      if (h.down <= 0) { h.body.rotation.z = 0; h.hp = 8; huntHome(h); }
+      if (h.down <= 0) { h.body.rotation.z = 0; h.hp = HS().hp[stg()]; huntHome(h); }
       continue;
     }
     h.cd -= dt;
-    if (h.state === 'out') { if (walkPath(h, dt, 3.4)) h.state = 'hunt'; continue; }
+    if (h.state === 'out') { if (walkPath(h, dt, hunterSpd())) h.state = 'hunt'; continue; }
     if (h.state === 'home') {
-      if (!walkPath(h, dt, 3.4)) continue;
+      if (!walkPath(h, dt, hunterSpd())) continue;
       const useWh = whOn() && !h.noWh;
       if (useWh) {
         h.n -= whPut('meat', h.n, V(h.x, 1.3, h.z)); h.hides -= whPut('hide', h.hides);
@@ -1991,14 +1991,14 @@ function updateHunters(dt) {
       continue;
     }
     if (h.state === 'hides') {
-      if (!walkPath(h, dt, 3.4)) continue;
+      if (!walkPath(h, dt, hunterSpd())) continue;
       S.stat.hides += h.hides;
       for (; h.hides > 0; h.hides--) { if (S.hide < T.max.hide) S.hide++; else S.coins += T.price.hide; }
       fly('hide', V(h.x, 1.3, h.z), V(TAN.in.x, .5, TAN.in.z)); huntOut(h);
       continue;
     }
     if (h.state === 'collect') {             // picking up meat/hides lying inside the village
-      if (!walkPath(h, dt, 3.4)) continue;
+      if (!walkPath(h, dt, hunterSpd())) continue;
       for (let i = pickups.length - 1; i >= 0; i--) {
         const pk = pickups[i];
         if (Math.hypot(pk.x - h.x, pk.z - h.z) > 1.4) continue;
@@ -2013,17 +2013,85 @@ function updateHunters(dt) {
     const loot = loosePickup(h);
     if (loot) { h.state = 'collect'; h.path = lootPath(h, loot); continue; }
     if (h.n >= huntCap() || h.hides >= hideCap()) { huntHome(h); continue; }
-    if (h.hp < 8 && tick('hReg' + hunters.indexOf(h), 2, dt)) h.hp++;
+    if (h.hp < HS().hp[stg()] && tick('hReg' + hunters.indexOf(h), 2, dt)) h.hp++;
     if (!h.prey || !bears.includes(h.prey) || h.prey.raider) {
       h.prey = null; let bd = 1e9;
       for (const b of bears) if (!b.raider && !b.boss && !b.sea) { const d = Math.hypot(b.x - h.x, b.z - h.z); if (d < bd) { bd = d; h.prey = b; } }
       if (!h.prey) { h.body.position.y = 0; continue; }
     }
     const b = h.prey, d = Math.hypot(b.x - h.x, b.z - h.z);
-    if (d > 4.5) move(h, b.x, b.z, 3.4 * (1 - .3 * S.stormK), dt);
+    if (d > 4.5) move(h, b.x, b.z, hunterSpd() * (1 - .3 * S.stormK), dt);
     else { h.g.rotation.y = Math.atan2(b.x - h.x, b.z - h.z); h.body.position.y = 0; if (h.cd <= 0) { h.cd = ST.hunterCd[M('hunter')]; shoot(h, b); } }
     h.z = Math.max(h.z, 7.5); h.g.position.set(h.x, 0, h.z);
   }
+}
+
+// rare trophies: keep only what the remaining legendary gear still needs (🐯 armour, 🦣 spear); the rest sells at a rare-item price
+const trophyNeed = m => { let n = 0; for (const k of ['saberCoat', 'tuskAxe']) { const ms = UP[k].mats && UP[k].mats[m]; if (ms) for (let l = S.lv[k]; l < ms.length; l++) n += ms[l]; } return n; };
+function sellSurplusTrophies() {
+  for (const m of ['pelt', 'tusk']) {
+    let extra = S.raw[m] + S.wh[m] + S.forgeRaw[m] + S.mats[m] - trophyNeed(m);
+    if (extra <= 0) continue;
+    const n = extra;
+    for (const box of [S.raw, S.wh, S.forgeRaw, S.mats]) { const k = Math.min(box[m], extra); box[m] -= k; extra -= k; }
+    const v = Math.round(n * T.price[m] * saleMul());
+    S.coins += v; coinBump = .5; play('coin', 45);
+    popText(pl.x, 3.4, pl.z, `💎 ${MAT_ICON[m]}${RAW_NAME[m]} ${n} 판매 +🪙${v}`, '#ffd36b', true);
+  }
+}
+// ───── staff outfits follow the village stage (hearth Lv6/10/15): scarf → fur hat + boots → ice parka hood + badge.
+// Hunters also change coat and weapon (bow → recurve → crossbow → glowing ice bow) and get faster, tougher and carry more.
+const hunterSpd = () => 3.4 * HS().speed[stg()];
+const HUNTER_KIT = [
+  { coat: 0x6b8e3a, arrow: 0x5a3a28, name: '나무 활' },
+  { coat: 0x4f7a36, arrow: 0x3a2a22, name: '합성 활' },
+  { coat: 0x8a5a3a, arrow: 0x2b2f3a, name: '석궁' },
+  { coat: 0x2c3e7a, arrow: 0x9fe8ff, name: '얼음 활' },
+];
+function staffWeapon(tier) {
+  const g = new THREE.Group(); g.position.set(-.45, .9, .1);
+  if (tier < 2) {   // wooden bow, then a bigger recurve with a string
+    const r = tier ? .42 : .35, bow = mesh(new THREE.TorusGeometry(r, tier ? .05 : .04, 5, 12, Math.PI), mat(tier ? 0x3a2a22 : 0x6b3d1f)); bow.rotation.y = Math.PI / 2; g.add(bow);
+    if (tier) g.add(mesh(new THREE.CylinderGeometry(.01, .01, r * 2, 3), mat(0xffffff)));
+  } else if (tier === 2) {   // crossbow: stock + short limbs
+    g.add(mesh(new THREE.BoxGeometry(.12, .12, .7), mat(0x5a3a28)));
+    const limb = mesh(new THREE.TorusGeometry(.3, .04, 5, 10, Math.PI), mat(0x3a3f4a), 0, 0, .3); limb.rotation.x = -Math.PI / 2; g.add(limb);
+  } else {   // glowing ice bow
+    const bow = mesh(new THREE.TorusGeometry(.48, .06, 6, 14, Math.PI), mat(0x9fe8ff, { emissive: 0x2a6f9e })); bow.rotation.y = Math.PI / 2; g.add(bow);
+    g.add(mesh(new THREE.CylinderGeometry(.012, .012, .96, 3), mat(0xffffff, { emissive: 0x8fe3ff })));
+  }
+  return g;
+}
+function dressStaff(w, isHunter) {
+  const tier = stg();
+  if (!w || !w.body || w.kitTier === tier) return;
+  w.kitTier = tier;
+  if (w.kit) w.body.remove(w.kit);
+  const k = w.kit = new THREE.Group(); w.body.add(k);
+  if (tier >= 1) {   // knitted scarf with a tail
+    k.add(mesh(new THREE.TorusGeometry(.3, .09, 6, 12).rotateX(Math.PI / 2), mat(tier >= 3 ? 0x2c3e7a : 0xc0392b), 0, 1.16, 0));
+    k.add(mesh(new THREE.BoxGeometry(.12, .34, .06), mat(tier >= 3 ? 0x2c3e7a : 0xc0392b), .14, .98, .3));
+  }
+  if (tier >= 2) {   // fur hat with ear flaps + sturdy boots
+    k.add(mesh(new THREE.CylinderGeometry(.3, .34, .26, 10), mat(tier >= 3 ? 0xdff2ff : 0x7a5a3a), 0, 1.74, -.02));
+    k.add(mesh(new THREE.SphereGeometry(.1, 8, 6), mat(0xffffff), 0, 1.92, -.02));
+    for (const sd of [-1, 1]) { k.add(mesh(new THREE.BoxGeometry(.08, .22, .18), mat(tier >= 3 ? 0xdff2ff : 0x7a5a3a), sd * .32, 1.5, 0)); k.add(mesh(new THREE.BoxGeometry(.2, .2, .26), mat(0x2b1d14), sd * .16, .1, .03)); }
+  }
+  if (tier >= 3) {   // ice-harbor parka: hood ring + glowing badge
+    k.add(mesh(new THREE.TorusGeometry(.36, .07, 6, 14), mat(0xffffff), 0, 1.45, .02));
+    k.add(mesh(new THREE.OctahedronGeometry(.08), mat(0x9fe8ff, { emissive: 0x2a8fbf }), .14, .85, .4));
+  }
+  if (isHunter) {
+    w.body.children[0].material = mat(HUNTER_KIT[tier].coat);
+    if (w.weapon) w.body.remove(w.weapon);
+    w.weapon = staffWeapon(tier); w.body.add(w.weapon);
+    w.hp = Math.max(w.hp, HS().hp[tier]);
+  }
+}
+const allStaff = () => [...helpers, ...servers, ...fishers, ...couriers, artisan, farmer, pizzaChefNpc, smithNpc, sushiChefNpc];
+function syncStaffLook() {
+  for (const w of allStaff()) dressStaff(w, false);
+  for (const h of hunters) dressStaff(h, true);
 }
 
 // fishers: catch fish at the ice holes and stock the fish shop
@@ -3389,7 +3457,7 @@ function frame(now) {
     updateCustomers(g); updateHelpers(g); updateServers(g); updateHunters(g); updateShots(g); updatePets(g); updateTannery(g); updateFishers(g); updateOven(g); updateTowers(g); updateAnnex(g); updateHearth3(g); updatePayday(g); updateHarbor(g); updateTrade(g); updateFeast(g);
   }
   const glow = .5 + .5 * Math.sin(performance.now() / 160); IMAT.pelt.emissive.setRGB(.45 * glow, .3 * glow, 0); IMAT.tusk.emissive.setRGB(.45 * glow, .42 * glow, .25 * glow); IMAT.ivory.emissive.setRGB(.45 * glow, .43 * glow, .3 * glow); IMAT.whide.emissive.setRGB(.3 * glow, .2 * glow, .1 * glow);   // trophies pulse
-  updateTrees(g); updateFlyers(g); updateParts(g); updatePops(dt); updateShock(dt); updateFx(dt); updateSnow(dt); updateHud(dt); updateHpBadge(dt); syncGapFill();
+  updateTrees(g); updateFlyers(g); updateParts(g); updatePops(dt); updateShock(dt); updateFx(dt); updateSnow(dt); updateHud(dt); updateHpBadge(dt); syncGapFill(); syncStaffLook(); if (S.started && tick('trophySale', 1, dt)) sellSurplusTrophies();
   woodPile.set(S.wood); meatPile.set(S.meat); renderGrill();
   counterPile.set(S.counter.steak);
   updatePads(dt);
