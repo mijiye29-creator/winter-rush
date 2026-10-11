@@ -6,6 +6,7 @@
 <script src="../../prototype/vendor/three.min.js"></script>
 <script src="vendor/GLTFExporter.js"></script>
 <script src="hero_lv1.js"></script>
+<script src="bake.js"></script>
 <script>
 // Builds the hero, shows it from the front, side, back and the game camera angle, and exports it as GLB.
 const W = 1000, H = 420, r = new THREE.WebGLRenderer({ antialias: true });
@@ -13,14 +14,15 @@ r.setSize(W, H); r.setScissorTest(true); document.body.appendChild(r.domElement)
 const scene = new THREE.Scene(); scene.background = new THREE.Color(0xdfeaf5);
 scene.add(new THREE.HemisphereLight(0xffffff, 0xb0c4de, .8));
 const sun = new THREE.DirectionalLight(0xffffff, .75); sun.position.set(8, 16, 10); scene.add(sun);
-const hero = buildHeroLv1(THREE); scene.add(hero);
+const hero = bakeModel(THREE, buildHeroLv1(THREE)); scene.add(hero);
+document.title = `${hero.geometry.index.count / 3} triangles`;
 const views = [[0, 1.2, 4], [4, 1.2, 0], [0, 1.2, -4], [0, 20 / 7, 14 / 7]];   // front, side, back, game camera direction
 views.forEach(([x, y, z], i) => {
   const c = new THREE.PerspectiveCamera(30, (W / 4) / H, .1, 50); c.position.set(x, y, z); c.lookAt(0, .95, 0);
   r.setViewport(i * W / 4, 0, W / 4, H); r.setScissor(i * W / 4, 0, W / 4, H); r.render(scene, c);
 });
-// no textures, so UVs are dropped to keep the file small for phones
-const lean = () => { const g = buildHeroLv1(THREE); g.traverse(o => o.geometry && o.geometry.deleteAttribute('uv')); return g; };
+// one mesh, one material, vertex colors: light for phones
+const lean = () => bakeModel(THREE, buildHeroLv1(THREE));
 window.exportGLB = () => new Promise(ok => new THREE.GLTFExporter().parse(lean(), buf => {
   let s = ''; new Uint8Array(buf).forEach(b => (s += String.fromCharCode(b))); ok(btoa(s));
 }, { binary: true }));
