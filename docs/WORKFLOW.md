@@ -16,7 +16,7 @@
 ## 코드와 배포
 
 - 수치와 업그레이드는 `prototype/balance.js`; 게임 규칙은 `prototype/game.js`; 화면은 `prototype/index.html`과 `prototype/style.css`에서 수정한다.
-- 공개용 `gh-pages`는 `prototype/` 내용을 루트에 복사한 배포 브랜치다. 개발 브랜치와 함께 갱신하고, Pages 설정이 어느 브랜치를 보는지 확인한다.
+- 공개용 `gh-pages`는 `prototype/` 내용을 루트에 복사한 배포 브랜치다. 개발 브랜치와 함께 갱신하고, Pages 설정이 어느 브랜치를 보는지 확인한다. 배포 때 `version.json`에 배포 커밋 sha를 써야 열려 있는 게임에 업데이트 알림이 뜬다.
 - `main`은 아직 초기 README다. PR #2가 머지되기 전에는 `main`을 최신 게임으로 가정하지 않는다.
 - 수정 전후 `git status`, `git log -1`, `git diff --check`, `node --check prototype/game.js`, `node --check prototype/balance.js`를 확인한다.
 - GitHub Actions가 JavaScript 문법을 검사한다. 통과해도 모바일 조작과 실제 재미가 검증된 것은 아니다.
