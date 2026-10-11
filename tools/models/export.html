@@ -11,9 +11,14 @@
 <script src="woodcutter_lv1.js"></script>
 <script src="hunter_lv1.js"></script>
 <script src="hearth_lv1.js"></script>
+<script src="animals.js"></script>
 <script>
 // Each model: shown from the front, side, back and the game camera angle (open with ?m=name), and exported as one baked GLB mesh.
-const MODELS = { hero_lv1: buildHeroLv1, woodcutter_lv1: buildWoodcutterLv1, hunter_lv1: buildHunterLv1, hearth_lv1: buildHearthLv1 };
+const MODELS = { hero_lv1: buildHeroLv1, woodcutter_lv1: buildWoodcutterLv1, hunter_lv1: buildHunterLv1, hearth_lv1: buildHearthLv1,
+  bear: buildBear, wolf: T => buildWolf(T, false), wolf_pup: T => buildWolf(T, true), saber: buildSaber, mammoth: buildMammoth,
+  penguin: buildPenguin, seal: buildSeal, walrus: buildWalrus, orca: buildOrca };
+// preview tint per animal: the color the game gives the "tint" parts
+const TINT = { bear: 0xfffaf0, wolf: 0x8e98a8, wolf_pup: 0xd9c3a0, saber: 0xe0a050, mammoth: 0x7a5236, penguin: 0x22262e, seal: 0x8a8f99, walrus: 0x8a5a3a, orca: 0x15171c };
 const lean = name => bakeModel(THREE, MODELS[name](THREE));   // one mesh, one material, vertex colors: light for phones
 const W = 1000, H = 420, r = new THREE.WebGLRenderer({ antialias: true });
 r.setSize(W, H); r.setScissorTest(true); document.body.appendChild(r.domElement);
@@ -22,12 +27,14 @@ window.preview = name => {
   scene.add(new THREE.HemisphereLight(0xffffff, 0xb0c4de, .8));
   const sun = new THREE.DirectionalLight(0xffffff, .75); sun.position.set(8, 16, 10); scene.add(sun);
   const m = lean(name); scene.add(m);
-  m.geometry.computeBoundingSphere(); const { center: ctr, radius: rad } = m.geometry.boundingSphere, k = rad / 1.05;
+  const tint = m.getObjectByName('tint'); if (tint && TINT[name]) tint.material.color.setHex(TINT[name]);
+  const sph = new THREE.Box3().setFromObject(m).getBoundingSphere(new THREE.Sphere()), ctr = sph.center, k = sph.radius / 1.05;
+  let tris = 0; m.traverse(o => o.isMesh && (tris += o.geometry.index.count / 3));
   [[0, .25, 4], [4, .25, 0], [0, .25, -4], [0, 20 / 7, 14 / 7]].forEach(([x, y, z], i) => {   // front, side, back, game camera direction
     const c = new THREE.PerspectiveCamera(30, (W / 4) / H, .1, 50); c.position.set(ctr.x + x * k, ctr.y + y * k, ctr.z + z * k); c.lookAt(ctr);
     r.setViewport(i * W / 4, 0, W / 4, H); r.setScissor(i * W / 4, 0, W / 4, H); r.render(scene, c);
   });
-  return m.geometry.index.count / 3;
+  return tris;
 };
 window.exportGLB = name => new Promise(ok => new THREE.GLTFExporter().parse(lean(name), buf => {
   let s = ''; new Uint8Array(buf).forEach(b => (s += String.fromCharCode(b))); ok(btoa(s));

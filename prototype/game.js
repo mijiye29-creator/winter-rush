@@ -160,9 +160,23 @@ function mesh(geo, material, x = 0, y = 0, z = 0, shadow = true) {
 // GLB models built by tools/models (one baked mesh, ~500-1,500 triangles each). Each loads once and is shared by every copy;
 // it replaces the shape version (base) when it arrives, and the shapes stay if it can't load (e.g. opened as a file).
 const models = {};
-function useModel(name, parent, base) {
+// Animals pass their own fur material: the model's "tint" mesh takes it (fur color per kind, red hit flash) and gets a dark outline.
+function useModel(name, parent, base, fur) {
   if (!THREE.GLTFLoader) return;
-  const put = src => { base.forEach(o => (o.visible = false)); const m = src.clone(); m.name = name; parent.add(m); };
+  const put = src => {
+    base.forEach(o => (o.visible = false)); const m = src.clone(); m.name = name; parent.add(m);
+    const t = m.getObjectByName('tint');
+    if (t && fur) {
+      if (!fur.vertexColors) { fur.vertexColors = true; fur.needsUpdate = true; }
+      t.material = fur;
+      if (!e.outline) {   // tint parts pushed out along their normals, drawn back-face only
+        const g = t.geometry.clone(), p = g.attributes.position, n = g.attributes.normal;
+        for (let i = 0; i < p.count; i++) p.setXYZ(i, p.getX(i) + n.getX(i) * .04, p.getY(i) + n.getY(i) * .04, p.getZ(i) + n.getZ(i) * .04);
+        g.deleteAttribute('color'); g.userData.shared = true; e.outline = g;
+      }
+      const ol = new THREE.Mesh(e.outline, outlineMat); ol.position.copy(t.position); t.parent.add(ol);
+    }
+  };
   const e = models[name] || (models[name] = { src: null, wait: [] });
   if (e.src) return put(e.src);
   e.wait.push(put);
@@ -172,7 +186,7 @@ function useModel(name, parent, base) {
     gltf.scene.traverse(o => {
       if (!o.isMesh) return;
       const k = o.material.name; o.material = lam[k] || (lam[k] = new THREE.MeshLambertMaterial({ color: o.material.color, vertexColors: o.material.vertexColors, name: k }));
-      o.castShadow = o.receiveShadow = true;
+      o.castShadow = o.receiveShadow = true; o.geometry.userData.shared = true;   // shared by every copy: never disposed with one actor
     });
     e.src = gltf.scene; e.wait.forEach(f => f(e.src)); e.wait = [];
   }, fail = () => (e.wait = []);
@@ -183,7 +197,7 @@ function useModel(name, parent, base) {
 }
 function disposeActor(group, sharedGeometry = null) {
   const geometries = new Set();
-  group.traverse(o => { if (o.isMesh && o.geometry !== sharedGeometry) geometries.add(o.geometry); });
+  group.traverse(o => { if (o.isMesh && o.geometry !== sharedGeometry && !o.geometry.userData.shared) geometries.add(o.geometry); });
   geometries.forEach(g => g.dispose());
 }
 
@@ -1301,12 +1315,14 @@ function makePenguin() {
   m(new THREE.CylinderGeometry(.28, .36, .8, 10), 0, .45, 0); m(new THREE.SphereGeometry(.26, 10, 8), 0, .98, 0);
   a.body.add(mesh(new THREE.CylinderGeometry(.22, .3, .6, 10), mat(0xffffff), 0, .42, .12), mesh(new THREE.ConeGeometry(.08, .2, 6).rotateX(Math.PI / 2), mat(0xffa030), 0, .95, .3));
   for (const sx of [-1, 1]) a.body.add(mesh(new THREE.BoxGeometry(.06, .06, .03), mat(0xff3030, { emissive: 0xaa0000 }), sx * .1, 1.04, .23), mesh(new THREE.BoxGeometry(.06, .4, .2), mat(0x22262e), sx * .33, .55, 0));
+  useModel('penguin', a.body, [...a.body.children], a.fur);
   return a;
 }
 function makeSeal() {
   const a = seaShell(0x8a8f99, 1.2), { m } = a;
   m(new THREE.SphereGeometry(.5, 10, 8).scale(1, .7, 1.8), 0, .35, 0); m(new THREE.SphereGeometry(.32, 10, 8), 0, .55, .8);
   for (const sx of [-1, 1]) a.body.add(mesh(new THREE.BoxGeometry(.4, .06, .2), mat(0x6e6a72), sx * .45, .12, .2), mesh(new THREE.BoxGeometry(.06, .06, .03), mat(0x1b1b22), sx * .12, .62, 1.08));
+  useModel('seal', a.body, [...a.body.children], a.fur);
   return a;
 }
 function makeWalrus() {
@@ -1314,6 +1330,7 @@ function makeWalrus() {
   m(new THREE.SphereGeometry(1, 12, 10).scale(1.2, .9, 1.6), 0, .9, 0); m(new THREE.SphereGeometry(.6, 10, 8), 0, 1.2, 1.4);
   for (const sx of [-1, 1]) a.body.add(mesh(new THREE.ConeGeometry(.09, .9, 6).rotateX(Math.PI), mat(0xf4efe2), sx * .22, .65, 1.75), mesh(new THREE.BoxGeometry(.1, .1, .04), mat(0x1b1b22), sx * .25, 1.45, 1.92));
   a.body.add(mesh(new THREE.ConeGeometry(.3, .35, 5), mat(0xffc83d, { emissive: 0x664400 }), 0, 1.95, 1.3));   // crown
+  useModel('walrus', a.body, [...a.body.children], a.fur);
   return a;
 }
 function makeOrca() {
@@ -1321,6 +1338,7 @@ function makeOrca() {
   m(new THREE.SphereGeometry(.9, 12, 8).scale(1, .6, 2.6), 0, .25, 0);
   a.body.add(mesh(new THREE.SphereGeometry(.6, 10, 8).scale(1, .4, 2), mat(0xffffff), 0, .05, .4), mesh(new THREE.ConeGeometry(.3, 1.4, 4), mat(0x15171c), 0, 1.0, -.3), mesh(new THREE.BoxGeometry(1.6, .08, .5), mat(0x15171c), 0, .2, -2.2));
   for (const sx of [-1, 1]) a.body.add(mesh(new THREE.SphereGeometry(.14, 8, 6), mat(0xffffff), sx * .4, .35, 1.3));
+  useModel('orca', a.body, [...a.body.children], a.fur);
   return a;
 }
 const SEA_MAKERS = { penguin: makePenguin, seal: makeSeal, walrus: makeWalrus, orca: makeOrca };
@@ -2356,6 +2374,7 @@ function makeBear(raider, boss = false) {
     m(new THREE.BoxGeometry(.09, .09, .04), s * .18, 1.48, 1.46, raider ? mat(0xff3030, { emissive: 0xaa0000 }) : mat(0x1b1b22));
     for (const f of [-1, 1]) m(new THREE.CylinderGeometry(.18, .2, .65, 7), s * .38, .33, f * .6);
   }
+  useModel('bear', body, [...body.children], fur);
   const bar = new THREE.Group(); bar.position.y = 2.4; g.add(bar);
   bar.add(new THREE.Mesh(hpBarGeo, new THREE.MeshBasicMaterial({ color: 0x13253d, depthTest: false })));
   const fill = new THREE.Mesh(hpBarGeo, new THREE.MeshBasicMaterial({ color: 0xe5484d, depthTest: false })); fill.position.z = .01; bar.add(fill);
@@ -2371,7 +2390,7 @@ function spawnFieldBear() {
   bears.push(b);
 }
 for (let i = 0; i < T.fieldBears; i++) spawnFieldBear();
-function makeWolf(alpha = false) {
+function makeWolf(alpha = false, pup = false) {
   const g = new THREE.Group(); scene.add(g);
   const body = new THREE.Group(); g.add(body);
   const fur = new THREE.MeshLambertMaterial({ color: alpha ? 0x2b2f3a : 0x8e98a8 });
@@ -2389,6 +2408,7 @@ function makeWolf(alpha = false) {
     m(new THREE.BoxGeometry(.07, .06, .04), s * .11, 1.04, .94, mat(0xffd34a, { emissive: 0x806000 }));
     for (const f of [-1, 1]) m(new THREE.CylinderGeometry(.08, .08, .5, 6), s * .2, .25, f * .38);
   }
+  useModel(pup ? 'wolf_pup' : 'wolf', body, [...body.children], fur);
   const bar = new THREE.Group(); bar.position.y = 1.8; g.add(bar);
   bar.add(new THREE.Mesh(hpBarGeo, new THREE.MeshBasicMaterial({ color: 0x13253d, depthTest: false })));
   const fill = new THREE.Mesh(hpBarGeo, new THREE.MeshBasicMaterial({ color: 0xe5484d, depthTest: false })); fill.position.z = .01; bar.add(fill);
@@ -2435,6 +2455,7 @@ function makeBeast(kind) {
       m(new THREE.BoxGeometry(.06, .34, .06), sx * .1, .8, 1.38, mat(0xffffff));
       for (const f of [-1, 1]) m(new THREE.CylinderGeometry(.12, .12, .7, 6), sx * .28, .35, f * .5);
     }
+    useModel('saber', a.body, [...a.body.children], a.fur);
   } else {
     a = beastShell(0x7a5236, 4); const { m } = a;
     m(new THREE.BoxGeometry(1.9, 1.6, 2.6), 0, 1.75, 0); m(new THREE.BoxGeometry(1.2, .5, 1.2), 0, 2.75, .4); m(new THREE.BoxGeometry(1.2, 1.1, 1), 0, 2.1, 1.6);
@@ -2445,6 +2466,7 @@ function makeBeast(kind) {
       m(new THREE.BoxGeometry(.1, .1, .05), sx * .3, 2.3, 2.11, mat(0x1b1b22));
       for (const f of [-1, 1]) m(new THREE.CylinderGeometry(.32, .34, 1.1, 8), sx * .6, .55, f * .85);
     }
+    useModel('mammoth', a.body, [...a.body.children], a.fur);
   }
   const hp = B.hp + B.hpPer * heroLv();
   return Object.assign(a, { kind, sc: B.scale, dmg: B.dmg, reach: kind === 'mammoth' ? 2.8 : kind === 'chief' ? 2.1 : 1.8, big: kind !== 'saber',
@@ -2476,7 +2498,7 @@ function spawnPack() {
 // wolf pups → tamed pets (fight beside the player, +4 bag each)
 const pets = [], pups = [];
 function petModel(color, scale) {
-  const w = makeWolf(); w.bar.visible = false; w.fur.color.setHex(color); w.g.scale.setScalar(scale); return w;
+  const w = makeWolf(false, true); w.bar.visible = false; w.fur.color.setHex(color); w.g.scale.setScalar(scale); return w;
 }
 // each pet level gets its own coat and gear so growth is visible at a glance
 const PET_LOOKS = [
