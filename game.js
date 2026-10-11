@@ -7,7 +7,7 @@ const rand = (a, b) => a + Math.random() * (b - a);
 const { T, UP } = window.WinterRushData;
 
 const S = {
-  coins: 0, ivory: 0, whide: 0, craft: 0, craftT: 0, craftT2: 0, feastT: 0, dockFish: 0, dockTuna: 0, suTuna: 0, suFish: 0, suVeg: 0, suWood: 0, sushi: 0, blubber: 0, guard: 0, strike: false, wh: { log: 0, meat: 0, fish: 0, veg: 0, hide: 0, pelt: 0, tusk: 0, tuna: 0, blubber: 0, ivory: 0, whide: 0 }, mats: { pelt: 0, tusk: 0 }, raw: { pelt: 0, tusk: 0 }, forgeRaw: { pelt: 0, tusk: 0 }, plots: [0, 0, 0, 0, 0, 0], vegCrate: 0, pzVeg: 0, pzMeat: 0, pzFish: 0, pzWood: 0, pzFuel: 0, pzT: 0, pizza: 0, smithT: 0, tanWood: 0, wood: 0, meat: 0, hide: 0, fishCrate: 0, fishRaw: 0, ovenWood: 0, fishSmoked: 0, fishStock: 0, smokeFuel: 0, smokeT: 0, tanFuel: 0, leather: 0, stage: 1, tanT: 0, petCount: 0, petHits: 0, grillItems: [], counter: { steak: 0 },
+  coins: 0, ivory: 0, whide: 0, craft: 0, craftT: 0, craftT2: 0, feastT: 0, dockFish: 0, dockTuna: 0, suTuna: 0, suFish: 0, suVeg: 0, suWood: 0, sushi: 0, blubber: 0, guard: 0, defV: 1, strike: false, wh: { log: 0, meat: 0, fish: 0, veg: 0, hide: 0, pelt: 0, tusk: 0, tuna: 0, blubber: 0, ivory: 0, whide: 0 }, mats: { pelt: 0, tusk: 0 }, raw: { pelt: 0, tusk: 0 }, forgeRaw: { pelt: 0, tusk: 0 }, plots: [0, 0, 0, 0, 0, 0], vegCrate: 0, pzVeg: 0, pzMeat: 0, pzFish: 0, pzWood: 0, pzFuel: 0, pzT: 0, pizza: 0, smithT: 0, tanWood: 0, wood: 0, meat: 0, hide: 0, fishCrate: 0, fishRaw: 0, ovenWood: 0, fishSmoked: 0, fishStock: 0, smokeFuel: 0, smokeT: 0, tanFuel: 0, leather: 0, stage: 1, tanT: 0, petCount: 0, petHits: 0, grillItems: [], counter: { steak: 0 },
   fuel: 0, cookT: 0, warmth: 55, hp: 5, maxHp: 5, stun: 0, hurtCd: 0, hitstop: 0,
   lv: Object.fromEntries(Object.keys(UP).map(k => [k, 0])),
   phase: 'calm', phaseT: T.firstCalm, stormK: 0, storms: 0, stormFireOut: false,
@@ -40,8 +40,12 @@ const MAT_ICON = { pelt: '🐯', tusk: '🦣' }, MAT_NAME = { pelt: '손질한 �
 const matsNeed = (k, lv = S.lv[k]) => Object.entries(UP[k].mats || {}).map(([m, a]) => [m, a[lv]]).filter(([, n]) => n);
 const matsOk = k => matsNeed(k).every(([m, n]) => S.mats[m] >= n);   // drives how tough the wild animals get
 const ovenCap = () => T.ovenCap[S.lv.oven];
-const huntCap = () => ST.hunterCarry[M('hunter')], hideCap = () => ST.hunterHides[M('hunter')];
+const HS = () => ST.hunterStage, stg = () => Math.max(0, Math.min(3, S.stage - 1));   // hunters also grow with the village stage
+const huntCap = () => ST.hunterCarry[M('hunter')] + HS().carry[stg()], hideCap = () => ST.hunterHides[M('hunter')];
 const ST = T.staff;
+// 🧱🛡️ gate defence comes from hearth levels: wall = fewer raiders at the gate, guard = raiders stopped every blizzard
+const defOf = k => T.hearth.slice(0, S.lv.fire + 1).reduce((n, h) => n + (h[k] || 0), 0);
+const guardLv = () => defOf('guard');
 const raidSize = () => Math.max(0, 1 + Math.floor((S.storms + 1) / 2) - S.lv.wall);
 const guardCost = () => Math.round((T.guard.baseCost + T.guard.costPerStorm * S.storms) * (1 + .25 * S.guard));
 const guardPad = p => p.key === 'guard';
@@ -1352,7 +1356,8 @@ function updateTrade(dt) {
   const arriving = t > 0 && t < 8, docked = t >= 8 && t < 16, leaving = t >= 16 && t < 20;
   tradeShip.visible = ship && (arriving || docked || leaving); wagon.visible = !ship && (arriving || docked || leaving);
   if (ship) tradeShip.position.set(arriving ? 70 - 23 * t / 8 : docked ? 47 : 47 + (t - 16) * 6, Math.sin(performance.now() / 500) * .08, -5.5);
-  else wagon.position.set(arriving ? 3 + (8 - t) * 2 : docked ? 3 : 3 - (t - 16) * 4, 0, 8.5);
+  else { wagon.position.set(arriving ? 3 + (8 - t) * 4.5 : docked ? 3 : 3 - (t - 16) * 9, 0, 8.5); wagon.rotation.y = docked ? 0 : -Math.PI / 2; }
+  if (arriving && !S.tradeHi) { S.tradeHi = true; toast(ship ? '🚢 교역선이 들어와요: 창고에 남는 재료를 사갈 거예요' : '🛻 떠돌이 상인이 마차를 끌고 왔어요: 창고에 남는 재료를 사가요'); }
   if (docked && !S.traded) {
     S.traded = true; let coins = 0; const sold = [];
     const surplus = Object.keys(T.trade.price).map(it => [it, Math.max(0, S.wh[it] - T.trade.keep)]), total = surplus.reduce((n, [, k]) => n + k, 0);
@@ -1365,7 +1370,7 @@ function updateTrade(dt) {
     if (coins) { S.coins += coins; toast(`${who}이 남는 재료를 사갔어요 ${sold.join(' ')} → 🪙${coins}`); burst(at.x, at.y, at.z, 0xffd36b, 16, { spd: 3, up: 5, life: .7 }); }
     else toast(`${who}이 들렀지만 창고에 남는 재료가 없어요`);
   }
-  if (S.tradeT >= T.trade.every) { S.tradeT = 0; S.traded = false; }
+  if (S.tradeT >= T.trade.every) { S.tradeT = 0; S.traded = false; S.tradeHi = false; }
 }
 // stage 3+: the village throws a feast when the warehouse is well stocked — sales ×1.3 and staff ×1.2 for a minute
 function updateFeast(dt) {
@@ -1491,7 +1496,7 @@ makePad('statue', -.3, -7.8);
 // in front of the hearth: serving staff and the 🔥 hearth pad (the one pad that opens everything else)
 makePad('server', 2.4, -.2); makePad('serverUp', 4.5, -.2); makePad('fire', 4.5, 2);
 // hunting gate (x 0, south): hunters on its left, gate defence (stone wall + guard supplies) on its right
-makePad('hunter', -2.4, 4.2); makePad('hunterUp', -2.4, 2); makePad('wall', 2.4, 4.2); makePad('guard', 2.4, 2);
+makePad('hunter', -2.4, 4.2); makePad('hunterUp', -2.4, 2);
 makePad('warehouse', -6.6, -.2);   // warehouse pad just above the warehouse
 // stage 2 east: fishers toward the pond, the fish oven by the fish shop, the leather workshop row by the tannery
 makePad('fisher', 6.6, -.2); makePad('fisherUp', 8.7, -.2); makePad('oven', 8.7, -5.3);
@@ -1895,12 +1900,11 @@ const arrowGeo = new THREE.CylinderGeometry(.03, .03, .8, 4).rotateX(Math.PI / 2
 function addHunter() {
   if (hunters.length >= S.lv.hunter) return;
   const p = makePerson(0x6b8e3a, 0x4a3020);
-  const bow = mesh(new THREE.TorusGeometry(.35, .04, 5, 12, Math.PI), mat(0x6b3d1f), -.45, .9, .1); bow.rotation.y = Math.PI / 2; p.body.add(bow);
   const carry = new THREE.Group(); carry.position.z = -.5; p.g.add(carry);
-  for (let i = 0; i < 16; i++) { const m = itemMesh('meat'); m.visible = false; carry.add(m); }
+  for (let i = 0; i < 28; i++) { const m = itemMesh('meat'); m.visible = false; carry.add(m); }
   for (let i = 0; i < 8; i++) { const m = itemMesh('hide'); m.visible = false; m.userData.hide = true; carry.add(m); }
-  const h = { ...p, carry, n: 0, hides: 0, hp: 8, down: 0, cd: 0, x: P.meatTile.x - hunters.length, z: P.meatTile.z + 1.4, path: [], state: 'out', prey: null };
-  p.g.position.set(h.x, 0, h.z); hunters.push(h); huntOut(h);
+  const h = { ...p, carry, n: 0, hides: 0, hp: HS().hp[stg()], down: 0, cd: 0, x: P.meatTile.x - hunters.length, z: P.meatTile.z + 1.4, path: [], state: 'out', prey: null };
+  p.g.position.set(h.x, 0, h.z); hunters.push(h); dressStaff(h, true); huntOut(h);
 }
 function huntOut(h) { h.state = 'out'; h.prey = null; h.path = h.z < 6 ? [GATE_IN.clone(), GATE_OUT.clone()] : []; }
 function huntHome(h) {
@@ -1914,7 +1918,7 @@ function hurtHunter(h, b) {
   if (h.hp <= 0) { h.down = 3; h.n = 0; h.hides = 0; h.state = 'down'; toast('🏹 사냥꾼이 곰에게 쓰러졌어요'); }
 }
 function shoot(h, b) {
-  const m = new THREE.Mesh(arrowGeo, mat(0x5a3a28)); scene.add(m);
+  const m = new THREE.Mesh(arrowGeo, mat(HUNTER_KIT[stg()].arrow, stg() >= 3 ? { emissive: 0x2a6f9e } : undefined)); scene.add(m);
   shots.push({ m, h, b, from: V(h.x, 1.1, h.z), t: 0 });
 }
 // watchtowers beside the gate (gate Lv4-6) shoot animals outside the fence
@@ -1957,7 +1961,7 @@ function updateShots(dt) {
     scene.remove(s.m); shots.splice(i, 1);
     if (!bears.includes(s.b)) continue;
     burst(s.b.x, 1.3, s.b.z, 0xffffff, 4, { spd: 3, up: 3, life: .35, size: .7 });
-    const dmg = s.dmg || ST.hunterDmg[M('hunter')];
+    const dmg = s.dmg || ST.hunterDmg[M('hunter')] + HS().dmg[stg()];
     popText(s.b.x, 2.5, s.b.z, `${dmg}`, s.dmg ? '#ffd36b' : '#c9f29b');
     if (bearHurt(s.b, dmg, s.h)) burst(s.b.x, 1, s.b.z, 0xffffff, 10, { spd: 5, up: 6, life: .6 });
   }
@@ -1971,13 +1975,13 @@ function updateHunters(dt) {
     });
     if (h.down > 0) {
       h.down -= dt; h.body.rotation.z = Math.PI / 2.3;
-      if (h.down <= 0) { h.body.rotation.z = 0; h.hp = 8; huntHome(h); }
+      if (h.down <= 0) { h.body.rotation.z = 0; h.hp = HS().hp[stg()]; huntHome(h); }
       continue;
     }
     h.cd -= dt;
-    if (h.state === 'out') { if (walkPath(h, dt, 3.4)) h.state = 'hunt'; continue; }
+    if (h.state === 'out') { if (walkPath(h, dt, hunterSpd())) h.state = 'hunt'; continue; }
     if (h.state === 'home') {
-      if (!walkPath(h, dt, 3.4)) continue;
+      if (!walkPath(h, dt, hunterSpd())) continue;
       const useWh = whOn() && !h.noWh;
       if (useWh) {
         h.n -= whPut('meat', h.n, V(h.x, 1.3, h.z)); h.hides -= whPut('hide', h.hides);
@@ -1991,14 +1995,14 @@ function updateHunters(dt) {
       continue;
     }
     if (h.state === 'hides') {
-      if (!walkPath(h, dt, 3.4)) continue;
+      if (!walkPath(h, dt, hunterSpd())) continue;
       S.stat.hides += h.hides;
       for (; h.hides > 0; h.hides--) { if (S.hide < T.max.hide) S.hide++; else S.coins += T.price.hide; }
       fly('hide', V(h.x, 1.3, h.z), V(TAN.in.x, .5, TAN.in.z)); huntOut(h);
       continue;
     }
     if (h.state === 'collect') {             // picking up meat/hides lying inside the village
-      if (!walkPath(h, dt, 3.4)) continue;
+      if (!walkPath(h, dt, hunterSpd())) continue;
       for (let i = pickups.length - 1; i >= 0; i--) {
         const pk = pickups[i];
         if (Math.hypot(pk.x - h.x, pk.z - h.z) > 1.4) continue;
@@ -2013,17 +2017,85 @@ function updateHunters(dt) {
     const loot = loosePickup(h);
     if (loot) { h.state = 'collect'; h.path = lootPath(h, loot); continue; }
     if (h.n >= huntCap() || h.hides >= hideCap()) { huntHome(h); continue; }
-    if (h.hp < 8 && tick('hReg' + hunters.indexOf(h), 2, dt)) h.hp++;
+    if (h.hp < HS().hp[stg()] && tick('hReg' + hunters.indexOf(h), 2, dt)) h.hp++;
     if (!h.prey || !bears.includes(h.prey) || h.prey.raider) {
       h.prey = null; let bd = 1e9;
       for (const b of bears) if (!b.raider && !b.boss && !b.sea) { const d = Math.hypot(b.x - h.x, b.z - h.z); if (d < bd) { bd = d; h.prey = b; } }
       if (!h.prey) { h.body.position.y = 0; continue; }
     }
     const b = h.prey, d = Math.hypot(b.x - h.x, b.z - h.z);
-    if (d > 4.5) move(h, b.x, b.z, 3.4 * (1 - .3 * S.stormK), dt);
+    if (d > 4.5) move(h, b.x, b.z, hunterSpd() * (1 - .3 * S.stormK), dt);
     else { h.g.rotation.y = Math.atan2(b.x - h.x, b.z - h.z); h.body.position.y = 0; if (h.cd <= 0) { h.cd = ST.hunterCd[M('hunter')]; shoot(h, b); } }
     h.z = Math.max(h.z, 7.5); h.g.position.set(h.x, 0, h.z);
   }
+}
+
+// rare trophies: keep only what the remaining legendary gear still needs (🐯 armour, 🦣 spear); the rest sells at a rare-item price
+const trophyNeed = m => { let n = 0; for (const k of ['saberCoat', 'tuskAxe']) { const ms = UP[k].mats && UP[k].mats[m]; if (ms) for (let l = S.lv[k]; l < ms.length; l++) n += ms[l]; } return n; };
+function sellSurplusTrophies() {
+  for (const m of ['pelt', 'tusk']) {
+    let extra = S.raw[m] + S.wh[m] + S.forgeRaw[m] + S.mats[m] - trophyNeed(m);
+    if (extra <= 0) continue;
+    const n = extra;
+    for (const box of [S.raw, S.wh, S.forgeRaw, S.mats]) { const k = Math.min(box[m], extra); box[m] -= k; extra -= k; }
+    const v = Math.round(n * T.price[m] * saleMul());
+    S.coins += v; coinBump = .5; play('coin', 45);
+    popText(pl.x, 3.4, pl.z, `💎 ${MAT_ICON[m]}${RAW_NAME[m]} ${n} 판매 +🪙${v}`, '#ffd36b', true);
+  }
+}
+// ───── staff outfits follow the village stage (hearth Lv6/10/15): scarf → fur hat + boots → ice parka hood + badge.
+// Hunters also change coat and weapon (bow → recurve → crossbow → glowing ice bow) and get faster, tougher and carry more.
+const hunterSpd = () => 3.4 * HS().speed[stg()];
+const HUNTER_KIT = [
+  { coat: 0x6b8e3a, arrow: 0x5a3a28, name: '나무 활' },
+  { coat: 0x4f7a36, arrow: 0x3a2a22, name: '합성 활' },
+  { coat: 0x8a5a3a, arrow: 0x2b2f3a, name: '석궁' },
+  { coat: 0x2c3e7a, arrow: 0x9fe8ff, name: '얼음 활' },
+];
+function staffWeapon(tier) {
+  const g = new THREE.Group(); g.position.set(-.45, .9, .1);
+  if (tier < 2) {   // wooden bow, then a bigger recurve with a string
+    const r = tier ? .42 : .35, bow = mesh(new THREE.TorusGeometry(r, tier ? .05 : .04, 5, 12, Math.PI), mat(tier ? 0x3a2a22 : 0x6b3d1f)); bow.rotation.y = Math.PI / 2; g.add(bow);
+    if (tier) g.add(mesh(new THREE.CylinderGeometry(.01, .01, r * 2, 3), mat(0xffffff)));
+  } else if (tier === 2) {   // crossbow: stock + short limbs
+    g.add(mesh(new THREE.BoxGeometry(.12, .12, .7), mat(0x5a3a28)));
+    const limb = mesh(new THREE.TorusGeometry(.3, .04, 5, 10, Math.PI), mat(0x3a3f4a), 0, 0, .3); limb.rotation.x = -Math.PI / 2; g.add(limb);
+  } else {   // glowing ice bow
+    const bow = mesh(new THREE.TorusGeometry(.48, .06, 6, 14, Math.PI), mat(0x9fe8ff, { emissive: 0x2a6f9e })); bow.rotation.y = Math.PI / 2; g.add(bow);
+    g.add(mesh(new THREE.CylinderGeometry(.012, .012, .96, 3), mat(0xffffff, { emissive: 0x8fe3ff })));
+  }
+  return g;
+}
+function dressStaff(w, isHunter) {
+  const tier = stg();
+  if (!w || !w.body || w.kitTier === tier) return;
+  w.kitTier = tier;
+  if (w.kit) w.body.remove(w.kit);
+  const k = w.kit = new THREE.Group(); w.body.add(k);
+  if (tier >= 1) {   // knitted scarf with a tail
+    k.add(mesh(new THREE.TorusGeometry(.3, .09, 6, 12).rotateX(Math.PI / 2), mat(tier >= 3 ? 0x2c3e7a : 0xc0392b), 0, 1.16, 0));
+    k.add(mesh(new THREE.BoxGeometry(.12, .34, .06), mat(tier >= 3 ? 0x2c3e7a : 0xc0392b), .14, .98, .3));
+  }
+  if (tier >= 2) {   // fur hat with ear flaps + sturdy boots
+    k.add(mesh(new THREE.CylinderGeometry(.3, .34, .26, 10), mat(tier >= 3 ? 0xdff2ff : 0x7a5a3a), 0, 1.74, -.02));
+    k.add(mesh(new THREE.SphereGeometry(.1, 8, 6), mat(0xffffff), 0, 1.92, -.02));
+    for (const sd of [-1, 1]) { k.add(mesh(new THREE.BoxGeometry(.08, .22, .18), mat(tier >= 3 ? 0xdff2ff : 0x7a5a3a), sd * .32, 1.5, 0)); k.add(mesh(new THREE.BoxGeometry(.2, .2, .26), mat(0x2b1d14), sd * .16, .1, .03)); }
+  }
+  if (tier >= 3) {   // ice-harbor parka: hood ring + glowing badge
+    k.add(mesh(new THREE.TorusGeometry(.36, .07, 6, 14), mat(0xffffff), 0, 1.45, .02));
+    k.add(mesh(new THREE.OctahedronGeometry(.08), mat(0x9fe8ff, { emissive: 0x2a8fbf }), .14, .85, .4));
+  }
+  if (isHunter) {
+    w.body.children[0].material = mat(HUNTER_KIT[tier].coat);
+    if (w.weapon) w.body.remove(w.weapon);
+    w.weapon = staffWeapon(tier); w.body.add(w.weapon);
+    w.hp = Math.max(w.hp, HS().hp[tier]);
+  }
+}
+const allStaff = () => [...helpers, ...servers, ...fishers, ...couriers, artisan, farmer, pizzaChefNpc, smithNpc, sushiChefNpc];
+function syncStaffLook() {
+  for (const w of allStaff()) dressStaff(w, false);
+  for (const h of hunters) dressStaff(h, true);
 }
 
 // fishers: catch fish at the ice holes and stock the fish shop
@@ -2261,9 +2333,12 @@ function makeBeast(kind) {
   return Object.assign(a, { kind, sc: B.scale, dmg: B.dmg, reach: kind === 'mammoth' ? 2.8 : kind === 'chief' ? 2.1 : 1.8, big: kind !== 'saber',
     wolf: false, alpha: false, raider: false, boss: false, hp, maxHp: hp, x: 0, z: 0, tx: 0, tz: 0, cd: 0, flash: 0, squash: 0, recoil: 0, stagger: 0, wander: 0 });
 }
+// 🐯🦣 trophy beasts only roam once the forge's legendary-gear pads exist (hearth Lv12), so their pelts/tusks always have a use
+const trophyOpen = () => S.lv.fire >= OPEN.saberCoat;
+const beastOk = (k, p = heroLv()) => { const B = T.beasts[k]; return B.power && p >= B.power && (!B.trophy || trophyOpen()); };
 function spawnBeast() {
   const p = heroLv();
-  const kinds = Object.keys(T.beasts).filter(k => T.beasts[k].power && p >= T.beasts[k].power && bears.filter(b => b.kind === k).length < T.beasts[k].max);
+  const kinds = Object.keys(T.beasts).filter(k => beastOk(k, p) && bears.filter(b => b.kind === k).length < T.beasts[k].max);
   if (!kinds.length) return;
   const k = kinds[Math.floor(Math.random() * kinds.length)], b = makeBeast(k);
   b.x = rand(-9, 9); b.z = rand(16, 22); b.tx = b.x; b.tz = b.z; bears.push(b);
@@ -2366,10 +2441,8 @@ function updatePets(dt) {
 }
 function spawnRaid() {
   const want = 1 + Math.floor(S.storms / 2), atGate = Math.max(0, want - S.lv.wall);
-  const guarded = Math.min(atGate, S.guard); S.guard -= guarded;
-  const n = atGate - guarded;
-  if (want > n) setTimeout(() => toast(`🛡️ 정문·경비가 곰 ${want - n}마리를 막았어요`), 1800);
-  const supply = pads.find(p => p.key === 'guard'); if (supply) drawPad(supply);
+  const n = Math.max(0, atGate - guardLv());
+  if (want > n) setTimeout(() => toast(`🛡️ 돌담·경비가 곰 ${want - n}마리를 막았어요`), 1800);
   for (let i = 0; i < n; i++) {
     const b = makeBear(true);
     b.x = rand(-3, 3); b.z = 17 + i * 2; bears.push(b);
@@ -2407,12 +2480,14 @@ function bearHurt(b, dmg, src = pl) {
   if (B) { const c = B.coins + T.beasts.coinsPer * heroLv(); S.coins += c; S.stat.beasts = (S.stat.beasts || 0) + 1; toast(`⚔ ${B.name} 처치! 보너스 🪙${c}`); return true; }
   if (b.boss) { S.stat.boss++; S.coins += 300; toast('👑 보스 곰 처치! 보너스 🪙300'); return true; }
   if (b.wolf) return true;
-  const fieldCount = bears.filter(x => !x.raider && !x.boss && !x.wolf && !x.kind).length + pendingBears.length;
-  if (fieldCount < Math.min(T.maxFieldBears, T.fieldBears + S.storms)) pendingBears.push(T.bearRespawn);
   return true;
 }
 const pendingBears = [];
+// field bears: a bigger herd each village stage, since pizza/sushi need far more meat
+const fieldTarget = () => Math.min(T.maxFieldBears + T.stageBears[stg()], T.fieldBears + T.stageBears[stg()] + S.storms);
+const fieldCount = () => bears.filter(x => !x.raider && !x.boss && !x.wolf && !x.kind && !x.dead).length + pendingBears.length;
 function updateBears(dt) {
+  if (tick('herd', .5, dt) && fieldCount() < fieldTarget()) pendingBears.push(T.stageRespawn[stg()]);
   for (let i = pendingBears.length - 1; i >= 0; i--) if ((pendingBears[i] -= dt) <= 0) { pendingBears.splice(i, 1); spawnFieldBear(); }
   if ((S.storms >= 1 || S.stat.sold >= T.wolfStartSold) && tick('wolfPack', T.wolfSpawn, dt) && bears.filter(b => b.wolf).length + T.wolfPackSize <= Math.min(T.maxWolves, 3 + 3 * Math.floor(S.storms / 2))) spawnPack();
   if (S.started && heroLv() >= T.beasts.chief.power && tick('beast', T.beasts.every, dt)) spawnBeast();
@@ -3009,14 +3084,22 @@ function levelUp(key) {
   if (key === 'fire') {   // 🔥 the one unlock: new pads, menus and village stages all come from hearth levels
     applyFireLook(); burst(P.fire.x, 1.5, P.fire.z, 0xffb347, 30, { spd: 5, up: 8, life: 1 });
     const h = T.hearth[Math.min(S.lv.fire, T.hearth.length - 1)], ns = stageOfFire(S.lv.fire);
-    if (ns > S.stage) { S.stage = ns; applyStage(true); }
+    S.lv.wall = Math.min(UP.wall.costs.length, defOf('wall'));
+    if (ns > S.stage) { S.stage = ns; applyStage(true); } else if (h.wall) applyStage(false);
     quietPadsUntil = performance.now() + 4000;
     const at = h.stage === 3 ? V(20, 0, -5) : h.stage === 4 ? V(31, 0, -3) : P.fire;
     spotlight(at.x, at.z, '🔥', `모닥불 Lv${S.lv.fire + 1}${h.stage ? ` · ${h.stage}단계 확장!` : ''}`, `<i>이제 할 수 있는 것</i>${h.say.join('<br>')}`);
+    // big new buildings get their own spotlight on the freshly revealed pad
+    const padAt = k => pads.find(q => q.key === k) || P.fire;
+    if (S.lv.fire === OPEN.warehouse) { const w = padAt('warehouse'); spotlight(w.x, w.z, '🏚️', '큰 창고 칸 등장!', '여기에 동전을 내면 창고가 지어져요<br>🪵🥩🐟 재료가 한곳에 모이고 🚚 배달원이 대신 날라요'); }
+    if (S.lv.fire === OPEN.saberCoat) {
+      const f = padAt('saberCoat'), list = ['saber', 'mammoth'].map(k => `${k === 'saber' ? '🐯' : '🦣'} ${T.beasts[k].name}: ${heroLv() >= T.beasts[k].power ? '지금부터 출현!' : `영웅 Lv${T.beasts[k].power}부터 출현`}`);
+      spotlight(f.x, f.z, '⚒️', '전설 장비 칸 등장!', `검치호 가죽 · 매머드 뿔로 전설 장비를 만들어요<br>${list.join('<br>')}`);
+    }
   }
   if (key === 'hero' || key === 'saberCoat' || key === 'tuskAxe') {
     S.maxHp = maxHpOf(); S.hp = S.maxHp;
-    const p = heroLv(), nb = Object.entries(T.beasts).find(([, B]) => B.power === p);
+    const p = heroLv(), nb = Object.entries(T.beasts).find(([k, B]) => B.power === p && beastOk(k, p));
     if (nb) setTimeout(() => toast(`⚔ 영웅 Lv${p}! 이제 ${josa(nb[1].name, '이', '가')} 나타나요`), 2400);
     applyGear(); burst(pl.x, 1, pl.z, 0xffd36b, 16, { spd: 3, up: 5, life: .7 });
   }
@@ -3311,7 +3394,7 @@ const SAVE_KEY = 'winter-rush-v1';
 function save() {
   try {
     const counter = { ...S.counter };
-    const keys = ['coins', 'ivory', 'whide', 'craft', 'craftT', 'craftT2', 'feastT', 'dockFish', 'dockTuna', 'suTuna', 'suFish', 'suVeg', 'suWood', 'sushi', 'blubber', 'guard', 'strike', 'paydayT', 'wh', 'mats', 'raw', 'forgeRaw', 'plots', 'pzFish', 'pzVeg', 'pzMeat', 'pzWood', 'pzFuel', 'pzT', 'pizza', 'smithT', 'wood', 'meat', 'fuel', 'warmth', 'grillItems', 'lv', 'storms', 'stat', 'goal', 'tut', 'woodIn', 'meatIn', 'steakIn', 'served', 'bought', 'hide', 'fishCrate', 'fishRaw', 'ovenWood', 'fishSmoked', 'fishStock', 'smokeFuel', 'leather', 'stage', 'petCount', 'petHits', 'packs', 'tanT', 'hp', 'phase', 'phaseT', 'stormFireOut'];
+    const keys = ['coins', 'ivory', 'whide', 'craft', 'craftT', 'craftT2', 'feastT', 'dockFish', 'dockTuna', 'suTuna', 'suFish', 'suVeg', 'suWood', 'sushi', 'blubber', 'guard', 'defV', 'strike', 'paydayT', 'wh', 'mats', 'raw', 'forgeRaw', 'plots', 'pzFish', 'pzVeg', 'pzMeat', 'pzWood', 'pzFuel', 'pzT', 'pizza', 'smithT', 'wood', 'meat', 'fuel', 'warmth', 'grillItems', 'lv', 'storms', 'stat', 'goal', 'tut', 'woodIn', 'meatIn', 'steakIn', 'served', 'bought', 'hide', 'fishCrate', 'fishRaw', 'ovenWood', 'fishSmoked', 'fishStock', 'smokeFuel', 'leather', 'stage', 'petCount', 'petHits', 'packs', 'tanT', 'hp', 'phase', 'phaseT', 'stormFireOut'];
     const data = Object.fromEntries(keys.map(k => [k, S[k]]));
     data.wh = { ...S.wh }; couriers.forEach(c => { for (const [it, n] of Object.entries(c.cargo)) if (it in data.wh) data.wh[it] += n; });   // cargo on a moving truck goes back to the warehouse on save
     data.v = 2; data.counter = counter; data.paid = Object.fromEntries(pads.map(p => [p.key, p.paid]));
@@ -3372,6 +3455,9 @@ function load() {
   if (S.lv.sushiChef) addSushiChef();
   buildCrane(); applyFireLook();
   if (!(d.v >= 2)) { const i = GOALS.findIndex(g => g.cur() < g.n); S.goal = i < 0 ? GOALS.length : i; }
+  // v3.4: 돌담 / 경비 보급 pads are gone, defence follows the hearth; refund what was bought on them once
+  if (!d.defV) { const bought = S.lv.wall || 0; S.coins += UP.wall.costs.slice(0, bought).reduce((a, c) => a + c, 0) + (S.guard || 0) * T.guard.baseCost; S.guard = 0; S.defV = 1; }
+  S.lv.wall = Math.min(UP.wall.costs.length, defOf('wall'));
   applyStage(false); pads.forEach(drawPad);
   return true;
 }
@@ -3380,8 +3466,10 @@ function load() {
 let shake = 0, shakeAmp = 0, last = performance.now();
 function shakeK(a) { shake = .25; shakeAmp = Math.max(shakeAmp, a); }
 const camOff = V(0, 20, 14);
+let paused = false;   // the update notice freezes the whole world (storm timer, fire, bears) until the player answers
 function frame(now) {
   const dt = Math.min(.05, (now - last) / 1000); last = now;
+  if (paused) { renderer.render(scene, camera); requestAnimationFrame(frame); return; }
   let g = dt;
   if (S.hitstop > 0) { S.hitstop -= dt; g = dt * .08; }
   if (S.started) {
@@ -3389,7 +3477,7 @@ function frame(now) {
     updateCustomers(g); updateHelpers(g); updateServers(g); updateHunters(g); updateShots(g); updatePets(g); updateTannery(g); updateFishers(g); updateOven(g); updateTowers(g); updateAnnex(g); updateHearth3(g); updatePayday(g); updateHarbor(g); updateTrade(g); updateFeast(g);
   }
   const glow = .5 + .5 * Math.sin(performance.now() / 160); IMAT.pelt.emissive.setRGB(.45 * glow, .3 * glow, 0); IMAT.tusk.emissive.setRGB(.45 * glow, .42 * glow, .25 * glow); IMAT.ivory.emissive.setRGB(.45 * glow, .43 * glow, .3 * glow); IMAT.whide.emissive.setRGB(.3 * glow, .2 * glow, .1 * glow);   // trophies pulse
-  updateTrees(g); updateFlyers(g); updateParts(g); updatePops(dt); updateShock(dt); updateFx(dt); updateSnow(dt); updateHud(dt); updateHpBadge(dt); syncGapFill();
+  updateTrees(g); updateFlyers(g); updateParts(g); updatePops(dt); updateShock(dt); updateFx(dt); updateSnow(dt); updateHud(dt); updateHpBadge(dt); syncGapFill(); syncStaffLook(); if (S.started && tick('trophySale', 1, dt)) sellSurplusTrophies();
   woodPile.set(S.wood); meatPile.set(S.meat); renderGrill();
   counterPile.set(S.counter.steak);
   updatePads(dt);
@@ -3415,6 +3503,17 @@ $('go').addEventListener('click', () => {
   audioInit(); setInterval(save, 4000);
 });
 addEventListener('pagehide', () => { if (S.started) save(); });
+// 🆕 live update: every minute compare the deployed version.json with the build this page loaded; on a new deploy pause and offer a reload
+const BUILD = window.WINTER_BUILD || '';
+let updLaterUntil = 0;
+function checkUpdate() {
+  if (!BUILD || paused || performance.now() < updLaterUntil) return;
+  fetch('version.json', { cache: 'no-store' }).then(r => r.json()).then(j => { if (j.v && j.v !== BUILD) { paused = true; $('update').hidden = false; } }).catch(() => {});
+}
+if (BUILD) setInterval(checkUpdate, 60000);
+$('updGo').addEventListener('click', () => { $('updGo').textContent = '업데이트 중…'; $('updGo').disabled = true; if (S.started) save(); location.reload(); });
+$('updLater').addEventListener('click', () => { $('update').hidden = true; paused = false; last = performance.now(); updLaterUntil = performance.now() + 5 * 60000; });
+document.addEventListener('visibilitychange', () => { if (!document.hidden) checkUpdate(); });
 document.addEventListener('visibilitychange', () => { if (document.hidden && S.started) save(); });
 $('snd').addEventListener('click', e => { SND.on = !SND.on; e.currentTarget.classList.toggle('off', !SND.on); });
 $('vib').addEventListener('click', e => { SND.vib = !SND.vib; e.currentTarget.classList.toggle('off', !SND.vib); buzz(30); });
@@ -3444,5 +3543,5 @@ function footprints() {
   }
   return f;
 }
-window.__winter = { hpBadge, danger, rushing, fly, earn, OPEN, STAGE_AT, migrateLv, applyStage, applyFireLook, buildCrane, hl, dockCap, costOf, econ, startSwing, spawnSea, boats, schools, syncBoats, HB, powerSlam, payday, get farmer() { return farmer; }, couriers, whPut, PLOTS, bearHurt, spawnBeast, dropPickup, pickups, footprints, spawnPup, addPet, spawnPack, applyPetLook, pups, stackAdd, pets, fishers, SHOPS, P, S, pl, stack, bears, trees, customers, pads, helpers, servers, hunters, camera, T, save, levelUp };
+window.__winter = { guardLv, defOf, raidSize, get paused() { return paused; }, checkUpdate, fieldTarget, fieldCount, spotQ, beastOk, trophyOpen, hpBadge, danger, rushing, fly, earn, OPEN, STAGE_AT, migrateLv, applyStage, applyFireLook, buildCrane, hl, dockCap, costOf, econ, startSwing, spawnSea, boats, schools, syncBoats, HB, powerSlam, payday, get farmer() { return farmer; }, couriers, whPut, PLOTS, bearHurt, spawnBeast, dropPickup, pickups, footprints, spawnPup, addPet, spawnPack, applyPetLook, pups, stackAdd, pets, fishers, SHOPS, P, S, pl, stack, bears, trees, customers, pads, helpers, servers, hunters, camera, T, save, levelUp };
 })();

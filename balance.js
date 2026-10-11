@@ -3,8 +3,8 @@ window.WinterRushData = {
     logFuel: 6,                   // seconds of fire per log (before hearth levels)
     cook: { steak: 2.5 }, burn: 35,
     meatPerSteak: [1, 2, 2], grillFeed: .45,   // by village stage: raw meat per steak; seconds between grill loads
-    price: { steak: 12, sfish: 18, leather: 32, hide: 4, meat: 2, pizza: 100, sushi: 150, craft: 280 },
-    guard: { baseCost: 600, costPerStorm: 200, max: 3 },
+    price: { steak: 12, sfish: 18, leather: 32, hide: 4, meat: 2, pizza: 100, sushi: 150, craft: 280, pelt: 150, tusk: 220 },   // pelt/tusk: rare trophies beyond what legendary gear still needs sell automatically
+    guard: { baseCost: 600, costPerStorm: 200, max: 3 },   // only used to refund old 경비 보급 stock
     burnGrow: .15, burnMax: 2.2,   // fire burns faster each blizzard survived (×1 → ×2.2)
     smoke: { time: 3.5, fishPerLog: 1, stormUse: 1.5 },   // oven: 1 log per fish, 1.5 logs in a blizzard
     ovenTime: [3.5, 2.6, 1.8], ovenCap: [18, 24, 30],   // fish oven level: seconds per fish, fish stacked on top
@@ -17,6 +17,7 @@ window.WinterRushData = {
       hunterDmg: [0, 2, 3, 4], hunterCd: [0, .7, .55, .4],
       shopSlots: 3, shopIv: .14,   // every shop serves 3 customers at once, one item every .14 s (no clerks)
       hunterCarry: [0, 8, 12, 16], hunterHides: [0, 4, 6, 8],   // meat / hides a hunter carries home by level
+      hunterStage: { speed: [1, 1.15, 1.3, 1.45], carry: [0, 4, 8, 12], dmg: [0, 1, 2, 4], hp: [8, 10, 12, 15] },   // by village stage 1-4 (hearth Lv6/10/15): new coat + weapon each stage
     farmerCarry: [0, 4, 8], farmerSpeed: [0, 3.4, 4.2], pizzaChefCarry: [0, 4, 8], pizzaChefSpeed: [0, 3.6, 4.4],
     fisherCatch: [0, 2.6, 1.9], fisherCarry: [0, 6, 10],
     },
@@ -31,37 +32,39 @@ window.WinterRushData = {
       kill: ['먼지', '나무 조각', '불티', '금빛 별', '얼음 파편', '화염', '번개', '빙하 분수', '오로라'],
     },
     // 🔥 what each hearth level opens (index = levels bought). stage: village expansion, say: the "이제 할 수 있는 것" card
+    // wall / guard: gate defence now grows with the hearth itself (no separate 돌담 / 경비 보급 pads)
     hearth: [
       { open: ['fire', 'hero'], say: ['🪓 나무를 베어 모닥불에 넣기', '🐻 곰 사냥 → 고기 굽기 → 스테이크 팔기'] },
       { open: ['helper', 'helperUp'], say: ['👷 나무꾼 고용: 장작을 대신 날라요'] },
       { open: ['server', 'serverUp'], say: ['🧑‍🍳 서빙 직원 고용: 스테이크를 진열대로 옮겨요'] },
       { open: ['hunter', 'hunterUp'], say: ['🏹 사냥꾼 고용: 곰을 잡아 고기를 가져와요'] },
       { open: [], sale: 3, say: ['🏪 단골손님이 늘어요: 모든 판매가 +3%'] },
-      { open: ['fisher', 'fisherUp', 'oven'], stage: 2, say: ['🎣 얼음 구멍에서 낚시하기', '🔥 생선 화덕에 생선 + 장작 → 생선구이 팔기', '🪝 낚시꾼 고용'] },
+      { guard: 1, open: ['fisher', 'fisherUp', 'oven'], stage: 2, say: ['🎣 얼음 구멍에서 낚시하기', '🔥 생선 화덕에 생선 + 장작 → 생선구이 팔기', '🪝 낚시꾼 고용', '🧣 직원 목도리 · 🏹 사냥꾼 합성 활: 빨라지고 더 많이 날라요', '🛡️ 경비 강화: 눈보라 습격 곰 1마리 더 막기'] },
       { open: [], sale: 3, say: ['🐟 생선구이 단골: 모든 판매가 +3%', '👷 두 번째 나무꾼 · 🏹 사냥꾼 고용 가능'] },
-      { open: ['artisan', 'artisanUp'], say: ['🟫 가죽이 떨어져요: 가죽 공방에 가져가기', '🧵 가죽 장인 고용 → 가죽 제품 팔기'] },
+      { guard: 1, open: ['artisan', 'artisanUp'], say: ['🟫 가죽이 떨어져요: 가죽 공방에 가져가기', '🧵 가죽 장인 고용 → 가죽 제품 팔기', '🛡️ 경비 강화: 눈보라 습격 곰 1마리 더 막기'] },
       { open: [], sale: 3, say: ['👜 가죽 제품 입소문: 모든 판매가 +3%'] },
-      { open: ['farmer', 'farmerUp', 'pizzaChef', 'pizzaChefUp', 'pizzaOven'], stage: 3, say: ['🥬 텃밭 채소 + 고기 + 생선 + 장작 → 피자', '🧑‍🌾 농부 · 👨‍🍳 피자 쉐프 고용'] },
-      { open: ['warehouse'], say: ['🏚️ 큰 창고: 재료가 한곳에 모이고 배달원이 날라요'] },
-      { open: ['smith', 'smithUp', 'saberCoat', 'tuskAxe'], say: ['⚒️ 대장간: 검치호 가죽 · 매머드 뿔로 전설 장비 만들기'] },
-      { open: ['wall', 'guard'], say: ['🧱 돌담 · 🛡️ 경비 보급으로 눈보라 습격 막기'] },
-      { open: ['statue'], say: ['🗿 명성 동상: 모든 판매가 상승'] },
-      { open: ['boat', 'sushiChef', 'sushiChefUp'], stage: 4, say: ['🚤 어선으로 참치 잡기', '🍣 참치 + 생선 + 채소 + 장작 → 초밥', '🍣 초밥 쉐프 고용'] },
+      { wall: 1, open: ['farmer', 'farmerUp', 'pizzaChef', 'pizzaChefUp', 'pizzaOven'], stage: 3, say: ['🥬 텃밭 채소 + 고기 + 생선 + 장작 → 피자', '🧑‍🌾 농부 · 👨‍🍳 피자 쉐프 고용', '🐻 곰이 더 많이 나와요 · 🏹 사냥꾼 4명까지', '🎩 직원 털모자 · 🏹 사냥꾼 석궁: 더 세고 튼튼해요', '🧱 울타리 강화: 돌담 · 습격 곰 1마리 덜 옴'] },
+      { guard: 1, open: ['warehouse'], say: ['🏚️ 큰 창고: 재료가 한곳에 모이고 배달원이 날라요', '🛡️ 경비 강화: 눈보라 습격 곰 1마리 더 막기'] },
+      { guard: 1, open: ['smith', 'smithUp', 'saberCoat', 'tuskAxe'], say: ['⚒️ 대장간: 검치호 가죽 · 매머드 뿔로 전설 장비 만들기', '🐯 검치호 · 🦣 매머드가 이제부터 숲 밖에 나타나요', '🛡️ 경비 강화: 눈보라 습격 곰 1마리 더 막기'] },
+      { wall: 1, open: [], say: ['🧱 울타리 강화: 두꺼운 돌담 · 습격 곰 1마리 덜 옴'] },
+      { guard: 1, open: ['statue'], say: ['🗿 명성 동상: 모든 판매가 상승', '🛡️ 경비 강화: 눈보라 습격 곰 1마리 더 막기'] },
+      { guard: 1, open: ['boat', 'sushiChef', 'sushiChefUp'], stage: 4, say: ['🚤 어선으로 참치 잡기', '🍣 참치 + 생선 + 채소 + 장작 → 초밥', '🍣 초밥 쉐프 고용', '❄️ 직원 방한 파카 · 🏹 사냥꾼 얼음 활: 가장 빠르고 강해요', '🛡️ 경비 강화: 눈보라 습격 곰 1마리 더 막기'] },
       { open: ['crane'], say: ['🏗️ 부두 크레인: 어획량 ↑, 적재 칸에 쌓이면 배달원이 창고로 옮겨요'] },
-      { open: [], sale: 5, say: ['💰 모든 판매가 +5%'] },
-      { open: [], sale: 10, say: ['🌌 오로라 모닥불 완성! 모든 판매가 +10%'] },
+      { guard: 1, open: [], sale: 5, say: ['💰 모든 판매가 +5%', '🛡️ 경비 강화: 눈보라 습격 곰 1마리 더 막기'] },
+      { guard: 1, open: [], sale: 10, say: ['🌌 오로라 모닥불 완성! 모든 판매가 +10%', '🛡️ 경비 강화: 눈보라 습격 곰 1마리 더 막기'] },
     ],
     combat: { autoInterval: .75, manualSwing: .24, comboWindow: 1.6, critChance: .15, slamEvery: 4, tapRange: 2.7 },
     alpha: { every: 3, hp: 12, meat: 4, coins: 80, pupChance: .6 },   // every 3rd wolf pack (from the 2nd blizzard) brings an alpha
     pet: { tameMeat: 8, hits: [0, 15, 40, 80, 140], dmg: [1, 2, 3, 4, 6], cd: [1, .9, .8, .7, .6], scale: [.55, .65, .78, .9, 1.05] },
     calmTime: 70, firstCalm: 80, warnTime: 8, stormTime: 25,
     stormBurn: 3.5, stormSlow: .35,
-    fieldBears: 5, maxFieldBears: 9, bearRespawn: 5, bearHp: 4, bossEvery: 4,
+    fieldBears: 5, maxFieldBears: 9, bearRespawn: 5, stageBears: [0, 1, 3, 5], stageRespawn: [5, 4, 3, 2.5],   // pizza/sushi eat meat: more bears and faster respawn by village stage 1-4
+    bearHp: 4, bossEvery: 4,
     wolfPackSize: 3, maxWolves: 10, wolfSpawn: 14, wolfStartSold: 8, hurtGrace: .8,
     hideChance: { bear: .6, wolf: .35 },   // hides drop only sometimes; bosses/alpha/beasts always drop theirs
     leatherShop: { iv: 3.5, maxQ: 5, slots: 2 },   // customers only come while there is stock (leather + hides) to serve them
     axeChop: [.42, .34, .27, .21, .19, .17, .15, .13, .12],   // seconds per chop by axe level
-    // hero power = hero level + legendary gear; field animals get tougher and new beasts appear
+    // hero power = hero level + legendary gear; field animals get tougher and new beasts appear (trophy beasts only from hearth Lv12, when the gear pads open)
     powerHp: { bear: 1.2, wolf: .7, alpha: 2, boss: 4 },
     beasts: {
       every: 25, coinsPer: 6,
@@ -112,7 +115,7 @@ window.WinterRushData = {
     helperUp: { name: '나무꾼',   icon: '👷', up: 'helper', costs: [220, 450], vals: [1, 2, 3] },
     server:  { name: '서빙 직원',  icon: '🧑‍🍳', hire: 1, costs: [150], vals: [0, 1] },
     serverUp: { name: '서빙 직원', icon: '🧑‍🍳', up: 'server', costs: [300, 600], vals: [1, 2, 3] },
-    hunter:  { name: '사냥꾼',    icon: '🏹', hire: 1, costs: [200, 700, 1500], vals: [0, 1, 2, 3], stage: [1, 2, 3] },
+    hunter:  { name: '사냥꾼',    icon: '🏹', hire: 1, costs: [200, 700, 1500, 2600], vals: [0, 1, 2, 3, 4], stage: [1, 2, 3, 3] },   // 4th hunter with the pizza stage
     hunterUp: { name: '사냥꾼',   icon: '🏹', up: 'hunter', costs: [500, 1000], vals: [1, 2, 3], stage: [1, 2] },
     fisher:  { name: '낚시꾼',    icon: '🪝', hire: 1, costs: [300, 800], vals: [0, 1, 2] },
     fisherUp: { name: '낚시꾼',   icon: '🪝', up: 'fisher', costs: [700], vals: [1, 2] },
