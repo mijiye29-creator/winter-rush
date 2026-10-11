@@ -42,6 +42,20 @@
   </div>
 </div>
 
-<script src="vendor/three.min.js"></script>
-<script src="balance.js"></script>
-<script src="game.js"></script>
+<div id="update" hidden>
+  <div class="card">
+    <h2>🆕 새 버전이 나왔어요</h2>
+    <div class="sub">게임을 잠깐 멈췄어요. 지금까지 진행은 그대로 저장돼요.</div>
+    <button id="updGo">지금 업데이트</button>
+    <button id="updLater" class="ghost">나중에 (계속 하기)</button>
+  </div>
+</div>
+
+<script>
+// load the game with the deployed build id so a fresh deploy never runs from a stale cache
+(function () {
+  const add = (src, v) => new Promise(ok => { const e = document.createElement('script'); e.src = src + (v ? '?v=' + v : ''); e.onload = e.onerror = ok; document.body.appendChild(e); });
+  (location.protocol === 'file:' ? Promise.resolve('') : fetch('version.json', { cache: 'no-store' }).then(r => r.json()).then(j => j.v || '').catch(() => ''))
+    .then(async v => { window.WINTER_BUILD = v; await add('vendor/three.min.js'); await add('balance.js', v); await add('game.js', v); });
+})();
+</script>
