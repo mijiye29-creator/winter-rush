@@ -48,19 +48,21 @@ window.WinterRushData = {
       { guard: 1, open: ['smith', 'smithUp', 'saberCoat', 'tuskAxe'], say: ['⚒️ 대장간: 검치호 가죽 · 매머드 뿔로 전설 장비 만들기', '🐯 검치호 · 🦣 매머드가 이제부터 숲 밖에 나타나요', '🛡️ 경비 강화: 눈보라 습격 곰 1마리 더 막기'] },
       { wall: 1, open: [], say: ['🧱 울타리 강화: 두꺼운 돌담 · 습격 곰 1마리 덜 옴'] },
       { guard: 1, open: ['statue'], say: ['🗿 명성 동상: 모든 판매가 상승', '🛡️ 경비 강화: 눈보라 습격 곰 1마리 더 막기'] },
-      { guard: 1, open: ['boat', 'sushiChef', 'sushiChefUp'], stage: 4, say: ['🚤 어선으로 참치 잡기', '🍣 참치 + 생선 + 채소 + 장작 → 초밥', '🍣 초밥 쉐프 고용', '❄️ 직원 방한 파카 · 🏹 사냥꾼 얼음 활: 가장 빠르고 강해요', '🛡️ 경비 강화: 눈보라 습격 곰 1마리 더 막기'] },
+      { guard: 1, open: ['boat', 'sushiChef', 'sushiChefUp'], stage: 4, say: ['🚤 어선으로 참치 잡기', '🍣 참치 + 생선 + 채소 + 장작 → 초밥', '🍣 초밥 쉐프 고용', '❄️ 직원 방한 파카 · 🏹 사냥꾼 얼음 활: 가장 빠르고 강해요', '🚣 부두 끝에서 배 타고 바다로: 참치 작살 · 범고래 전투 · 🦭 바다표범 친구', '🛡️ 경비 강화: 눈보라 습격 곰 1마리 더 막기'] },
       { open: ['crane'], say: ['🏗️ 부두 크레인: 어획량 ↑, 적재 칸에 쌓이면 배달원이 창고로 옮겨요'] },
       { guard: 1, open: [], sale: 5, say: ['💰 모든 판매가 +5%', '🛡️ 경비 강화: 눈보라 습격 곰 1마리 더 막기'] },
       { guard: 1, open: [], sale: 10, say: ['🌌 오로라 모닥불 완성! 모든 판매가 +10%', '🛡️ 경비 강화: 눈보라 습격 곰 1마리 더 막기'] },
     ],
     combat: { autoInterval: .75, manualSwing: .24, comboWindow: 1.6, critChance: .15, slamEvery: 4, tapRange: 2.7 },
     alpha: { every: 3, hp: 12, meat: 4, coins: 80, pupChance: .6 },   // every 3rd wolf pack (from the 2nd blizzard) brings an alpha
-    pet: { tameMeat: 8, hits: [0, 15, 40, 80, 140], dmg: [1, 2, 3, 4, 6], cd: [1, .9, .8, .7, .6], scale: [.55, .65, .78, .9, 1.05] },
+    pet: { tameMeat: 8, tameFish: 6, sealPup: .35,   // 🦭 seal pups (stage 4 floes) are tamed with fish; one wolf + one seal pet at most
+      hits: [0, 15, 40, 80, 140], dmg: [1, 2, 3, 4, 6], cd: [1, .9, .8, .7, .6], scale: [.55, .65, .78, .9, 1.05] },
     calmTime: 70, firstCalm: 80, warnTime: 8, stormTime: 25,
     stormBurn: 3.5, stormSlow: .35,
-    fieldBears: 5, maxFieldBears: 9, bearRespawn: 5, stageBears: [0, 1, 3, 5], stageRespawn: [5, 4, 3, 2.5],   // pizza/sushi eat meat: more bears and faster respawn by village stage 1-4
+    fieldBears: 5, maxFieldBears: 9, bearRespawn: 5, stageBears: [0, 2, 5, 8], stageRespawn: [5, 3.5, 2.5, 1.8],   // pizza/sushi eat meat: more bears and faster respawn by village stage 1-4
     bearHp: 4, bossEvery: 4,
-    wolfPackSize: 3, maxWolves: 10, wolfSpawn: 14, wolfStartSold: 8, hurtGrace: .8,
+    wolfPackSize: 3, maxWolves: 10, wolfSpawn: 14, stageWolves: [0, 3, 6, 9], stagePack: [0, 0, 1, 1], stageWolfSpawn: [14, 12, 10, 8],   // later stages: more and bigger packs, more meat
+    wolfStartSold: 8, hurtGrace: .8,
     hideChance: { bear: .6, wolf: .35 },   // hides drop only sometimes; bosses/alpha/beasts always drop theirs
     leatherShop: { iv: 3.5, maxQ: 5, slots: 2 },   // customers only come while there is stock (leather + hides) to serve them
     axeChop: [.42, .34, .27, .21, .19, .17, .15, .13, .12],   // seconds per chop by axe level
