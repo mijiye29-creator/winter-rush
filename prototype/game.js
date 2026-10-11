@@ -1683,6 +1683,17 @@ function makePerson(coat, hair) {
 
 const player = makePerson(0x3a9ad9, 0x3a9ad9);
 player.body.add(mesh(new THREE.SphereGeometry(.38, 10, 8, 0, Math.PI * 2, 0, 1.2), mat(0xffffff), 0, 1.5, -.06));
+// hero model (models/hero_lv1.glb, built by tools/models): replaces the shape hero once it loads; the shapes stay as the fallback
+const heroBase = [...player.body.children];
+if (THREE.GLTFLoader) new THREE.GLTFLoader().load('models/hero_lv1.glb' + (window.WINTER_BUILD ? '?v=' + window.WINTER_BUILD : ''), gltf => {
+  const lam = {}, m = gltf.scene; m.name = 'heroModel';
+  m.traverse(o => {
+    if (!o.isMesh) return;
+    const k = o.material.name; o.material = lam[k] || (lam[k] = new THREE.MeshLambertMaterial({ color: o.material.color, name: k }));
+    o.castShadow = o.receiveShadow = true;
+  });
+  heroBase.forEach(o => (o.visible = false)); player.body.add(m);
+}, undefined, () => {});
 let axeHead = null;   // main blade of the current weapon (glows on combos)
 const axe = new THREE.Group(); axe.position.set(.45, .8, .15); player.body.add(axe);
 // gear: boots and coat levels change the hero's look
@@ -3685,5 +3696,5 @@ function footprints() {
   }
   return f;
 }
-window.__winter = { spawnSealPup, get pizzaChef() { return pizzaChefNpc; }, buildWarehouse, guardLv, defOf, raidSize, get paused() { return paused; }, checkUpdate, fieldTarget, fieldCount, spotQ, beastOk, trophyOpen, hpBadge, danger, rushing, fly, earn, OPEN, STAGE_AT, migrateLv, applyStage, applyFireLook, buildCrane, hl, dockCap, costOf, econ, startSwing, spawnSea, boats, schools, syncBoats, HB, powerSlam, payday, get farmer() { return farmer; }, couriers, whPut, PLOTS, bearHurt, spawnBeast, dropPickup, pickups, footprints, spawnPup, addPet, spawnPack, applyPetLook, pups, stackAdd, pets, fishers, SHOPS, P, S, pl, stack, bears, trees, customers, pads, helpers, servers, hunters, camera, T, save, levelUp };
+window.__winter = { spawnSealPup, get pizzaChef() { return pizzaChefNpc; }, buildWarehouse, guardLv, defOf, raidSize, get paused() { return paused; }, checkUpdate, fieldTarget, fieldCount, spotQ, beastOk, trophyOpen, hpBadge, danger, rushing, fly, earn, OPEN, STAGE_AT, migrateLv, applyStage, applyFireLook, buildCrane, hl, dockCap, costOf, econ, startSwing, spawnSea, boats, schools, syncBoats, HB, powerSlam, payday, get farmer() { return farmer; }, couriers, whPut, PLOTS, bearHurt, spawnBeast, dropPickup, pickups, footprints, spawnPup, addPet, spawnPack, applyPetLook, pups, stackAdd, pets, fishers, SHOPS, P, S, pl, stack, bears, trees, customers, pads, helpers, servers, hunters, camera, player, T, save, levelUp };
 })();

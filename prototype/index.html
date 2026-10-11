@@ -56,6 +56,6 @@
 (function () {
   const add = (src, v) => new Promise(ok => { const e = document.createElement('script'); e.src = src + (v ? '?v=' + v : ''); e.onload = e.onerror = ok; document.body.appendChild(e); });
   (location.protocol === 'file:' ? Promise.resolve('') : fetch('version.json', { cache: 'no-store' }).then(r => r.json()).then(j => j.v || '').catch(() => ''))
-    .then(async v => { window.WINTER_BUILD = v; await add('vendor/three.min.js'); await add('balance.js', v); await add('game.js', v); });
+    .then(async v => { window.WINTER_BUILD = v; await add('vendor/three.min.js'); await add('vendor/GLTFLoader.js'); await add('balance.js', v); await add('game.js', v); });
 })();
 </script>
