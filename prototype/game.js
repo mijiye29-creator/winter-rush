@@ -1683,13 +1683,13 @@ function makePerson(coat, hair) {
 
 const player = makePerson(0x3a9ad9, 0x3a9ad9);
 player.body.add(mesh(new THREE.SphereGeometry(.38, 10, 8, 0, Math.PI * 2, 0, 1.2), mat(0xffffff), 0, 1.5, -.06));
-// hero model (models/hero_lv1.glb, built by tools/models): replaces the shape hero once it loads; the shapes stay as the fallback
+// hero model (models/hero_lv1.glb, built by tools/models: one mesh, ~1,500 triangles): replaces the shape hero once it loads; the shapes stay as the fallback
 const heroBase = [...player.body.children];
 if (THREE.GLTFLoader) new THREE.GLTFLoader().load('models/hero_lv1.glb' + (window.WINTER_BUILD ? '?v=' + window.WINTER_BUILD : ''), gltf => {
   const lam = {}, m = gltf.scene; m.name = 'heroModel';
   m.traverse(o => {
     if (!o.isMesh) return;
-    const k = o.material.name; o.material = lam[k] || (lam[k] = new THREE.MeshLambertMaterial({ color: o.material.color, name: k }));
+    const k = o.material.name; o.material = lam[k] || (lam[k] = new THREE.MeshLambertMaterial({ color: o.material.color, vertexColors: o.material.vertexColors, name: k }));
     o.castShadow = o.receiveShadow = true;
   });
   heroBase.forEach(o => (o.visible = false)); player.body.add(m);
