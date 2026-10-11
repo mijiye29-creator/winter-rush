@@ -21,3 +21,6 @@ cd prototype && python3 -m http.server 8000
 조작: 화면을 탭/클릭하면 그 위치로 이동, 드래그하면 가상 조이스틱, PC는 WASD 또는 방향키.
 
 수치·업그레이드 비용은 `prototype/balance.js`, 게임 규칙은 `prototype/game.js`, 화면은 `prototype/index.html`과 `prototype/style.css`에서 관리합니다.
+
+## Godot 시제품 (보류)
+저장소 루트의 `project.godot`, `scenes/`, `scripts/`, `tests/`는 Codex가 만든 Godot 4 격자형 시제품입니다. 지금 개발·배포하는 게임은 위의 웹 프로토타입이며, 앱 이식을 시작할 때 참고합니다. 실행: Godot 4.3 이상으로 `project.godot`를 열고 F5, 검사는 `./tools/check.sh`. 모바일 출시 준비는 [`docs/MOBILE_RELEASE.md`](docs/MOBILE_RELEASE.md)에 있습니다.
