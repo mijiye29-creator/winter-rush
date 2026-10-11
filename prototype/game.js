@@ -157,6 +157,26 @@ function mesh(geo, material, x = 0, y = 0, z = 0, shadow = true) {
   m.castShadow = shadow; m.receiveShadow = true;
   return m;
 }
+// GLB models built by tools/models (one baked mesh, ~500-1,500 triangles each). Each loads once and is shared by every copy;
+// it replaces the shape version (base) when it arrives, and the shapes stay if it can't load (e.g. opened as a file).
+const models = {};
+function useModel(name, parent, base) {
+  if (!THREE.GLTFLoader) return;
+  const put = src => { base.forEach(o => (o.visible = false)); const m = src.clone(); m.name = name; parent.add(m); };
+  const e = models[name] || (models[name] = { src: null, wait: [] });
+  if (e.src) return put(e.src);
+  e.wait.push(put);
+  if (e.wait.length > 1) return;
+  new THREE.GLTFLoader().load(`models/${name}.glb` + (window.WINTER_BUILD ? '?v=' + window.WINTER_BUILD : ''), gltf => {
+    const lam = {};
+    gltf.scene.traverse(o => {
+      if (!o.isMesh) return;
+      const k = o.material.name; o.material = lam[k] || (lam[k] = new THREE.MeshLambertMaterial({ color: o.material.color, vertexColors: o.material.vertexColors, name: k }));
+      o.castShadow = o.receiveShadow = true;
+    });
+    e.src = gltf.scene; e.wait.forEach(f => f(e.src)); e.wait = [];
+  }, undefined, () => (e.wait = []));
+}
 function disposeActor(group, sharedGeometry = null) {
   const geometries = new Set();
   group.traverse(o => { if (o.isMesh && o.geometry !== sharedGeometry) geometries.add(o.geometry); });
@@ -500,6 +520,7 @@ for (let i = 0; i < 3; i++) {
   const l = mesh(new THREE.CylinderGeometry(.1, .12, 1.1, 6), mat(0x5a3a28), 0, .35, 0);
   l.rotation.set(.9, i * 2.1, 0); fireBase.add(l);
 }
+useModel('hearth_lv1', fireBase, [...fireBase.children]);
 const flameO = new THREE.Mesh(new THREE.ConeGeometry(.5, 1.3, 7), new THREE.MeshBasicMaterial({ color: 0xff8a2a }));
 const flameI = new THREE.Mesh(new THREE.ConeGeometry(.28, .8, 7), new THREE.MeshBasicMaterial({ color: 0xffd34a }));
 flameO.position.y = .75; flameI.position.y = .55; fireG.add(flameO, flameI);
@@ -1683,17 +1704,7 @@ function makePerson(coat, hair) {
 
 const player = makePerson(0x3a9ad9, 0x3a9ad9);
 player.body.add(mesh(new THREE.SphereGeometry(.38, 10, 8, 0, Math.PI * 2, 0, 1.2), mat(0xffffff), 0, 1.5, -.06));
-// hero model (models/hero_lv1.glb, built by tools/models: one mesh, ~1,500 triangles): replaces the shape hero once it loads; the shapes stay as the fallback
-const heroBase = [...player.body.children];
-if (THREE.GLTFLoader) new THREE.GLTFLoader().load('models/hero_lv1.glb' + (window.WINTER_BUILD ? '?v=' + window.WINTER_BUILD : ''), gltf => {
-  const lam = {}, m = gltf.scene; m.name = 'heroModel';
-  m.traverse(o => {
-    if (!o.isMesh) return;
-    const k = o.material.name; o.material = lam[k] || (lam[k] = new THREE.MeshLambertMaterial({ color: o.material.color, vertexColors: o.material.vertexColors, name: k }));
-    o.castShadow = o.receiveShadow = true;
-  });
-  heroBase.forEach(o => (o.visible = false)); player.body.add(m);
-}, undefined, () => {});
+useModel('hero_lv1', player.body, [...player.body.children]);
 let axeHead = null;   // main blade of the current weapon (glows on combos)
 const axe = new THREE.Group(); axe.position.set(.45, .8, .15); player.body.add(axe);
 // gear: boots and coat levels change the hero's look
@@ -1831,6 +1842,7 @@ const helpers = [];
 function addHelper() {
   if (helpers.length >= S.lv.helper) return;
   const p = makePerson(0xe0803a, 0x6b3d1f);
+  useModel('woodcutter_lv1', p.body, [...p.body.children]);
   const carry = new THREE.Group(); carry.position.z = -.5; p.g.add(carry);
   for (let i = 0; i < 12; i++) { const m = itemMesh('log'); m.position.set(i < 6 ? 0 : .5, 1.1 + (i % 6) * .4, 0); m.visible = false; carry.add(m); }
   const h = { ...p, carry, n: 0, x: -6.5, z: -4 + helpers.length, path: [], state: 'idle', tree: null, t: 0 };
@@ -1975,6 +1987,7 @@ const arrowGeo = new THREE.CylinderGeometry(.03, .03, .8, 4).rotateX(Math.PI / 2
 function addHunter() {
   if (hunters.length >= S.lv.hunter) return;
   const p = makePerson(0x6b8e3a, 0x4a3020);
+  useModel('hunter_lv1', p.body, [...p.body.children]);
   const carry = new THREE.Group(); carry.position.z = -.5; p.g.add(carry);
   for (let i = 0; i < 28; i++) { const m = itemMesh('meat'); m.visible = false; carry.add(m); }
   for (let i = 0; i < 8; i++) { const m = itemMesh('hide'); m.visible = false; m.userData.hide = true; carry.add(m); }

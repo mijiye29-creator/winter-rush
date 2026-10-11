@@ -2,31 +2,42 @@
 <meta charset="utf-8">
 <title>Winter Rush model export</title>
 <style>body{margin:0;font:14px sans-serif;background:#dfeaf5}#ui{position:fixed;top:8px;left:8px}</style>
-<div id="ui"><button id="dl">hero_lv1.glb 내려받기</button></div>
+<div id="ui"></div>
 <script src="../../prototype/vendor/three.min.js"></script>
 <script src="vendor/GLTFExporter.js"></script>
-<script src="hero_lv1.js"></script>
+<script src="kit.js"></script>
 <script src="bake.js"></script>
+<script src="hero_lv1.js"></script>
+<script src="woodcutter_lv1.js"></script>
+<script src="hunter_lv1.js"></script>
+<script src="hearth_lv1.js"></script>
 <script>
-// Builds the hero, shows it from the front, side, back and the game camera angle, and exports it as GLB.
+// Each model: shown from the front, side, back and the game camera angle (open with ?m=name), and exported as one baked GLB mesh.
+const MODELS = { hero_lv1: buildHeroLv1, woodcutter_lv1: buildWoodcutterLv1, hunter_lv1: buildHunterLv1, hearth_lv1: buildHearthLv1 };
+const lean = name => bakeModel(THREE, MODELS[name](THREE));   // one mesh, one material, vertex colors: light for phones
 const W = 1000, H = 420, r = new THREE.WebGLRenderer({ antialias: true });
 r.setSize(W, H); r.setScissorTest(true); document.body.appendChild(r.domElement);
-const scene = new THREE.Scene(); scene.background = new THREE.Color(0xdfeaf5);
-scene.add(new THREE.HemisphereLight(0xffffff, 0xb0c4de, .8));
-const sun = new THREE.DirectionalLight(0xffffff, .75); sun.position.set(8, 16, 10); scene.add(sun);
-const hero = bakeModel(THREE, buildHeroLv1(THREE)); scene.add(hero);
-document.title = `${hero.geometry.index.count / 3} triangles`;
-const views = [[0, 1.2, 4], [4, 1.2, 0], [0, 1.2, -4], [0, 20 / 7, 14 / 7]];   // front, side, back, game camera direction
-views.forEach(([x, y, z], i) => {
-  const c = new THREE.PerspectiveCamera(30, (W / 4) / H, .1, 50); c.position.set(x, y, z); c.lookAt(0, .95, 0);
-  r.setViewport(i * W / 4, 0, W / 4, H); r.setScissor(i * W / 4, 0, W / 4, H); r.render(scene, c);
-});
-// one mesh, one material, vertex colors: light for phones
-const lean = () => bakeModel(THREE, buildHeroLv1(THREE));
-window.exportGLB = () => new Promise(ok => new THREE.GLTFExporter().parse(lean(), buf => {
+window.preview = name => {
+  const scene = new THREE.Scene(); scene.background = new THREE.Color(0xdfeaf5);
+  scene.add(new THREE.HemisphereLight(0xffffff, 0xb0c4de, .8));
+  const sun = new THREE.DirectionalLight(0xffffff, .75); sun.position.set(8, 16, 10); scene.add(sun);
+  const m = lean(name); scene.add(m);
+  m.geometry.computeBoundingSphere(); const { center: ctr, radius: rad } = m.geometry.boundingSphere, k = rad / 1.05;
+  [[0, .25, 4], [4, .25, 0], [0, .25, -4], [0, 20 / 7, 14 / 7]].forEach(([x, y, z], i) => {   // front, side, back, game camera direction
+    const c = new THREE.PerspectiveCamera(30, (W / 4) / H, .1, 50); c.position.set(ctr.x + x * k, ctr.y + y * k, ctr.z + z * k); c.lookAt(ctr);
+    r.setViewport(i * W / 4, 0, W / 4, H); r.setScissor(i * W / 4, 0, W / 4, H); r.render(scene, c);
+  });
+  return m.geometry.index.count / 3;
+};
+window.exportGLB = name => new Promise(ok => new THREE.GLTFExporter().parse(lean(name), buf => {
   let s = ''; new Uint8Array(buf).forEach(b => (s += String.fromCharCode(b))); ok(btoa(s));
 }, { binary: true }));
-document.getElementById('dl').onclick = () => new THREE.GLTFExporter().parse(lean(), buf => {
-  const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([buf])); a.download = 'hero_lv1.glb'; a.click();
-}, { binary: true });
+const ui = document.getElementById('ui'), shown = new URLSearchParams(location.search).get('m') || 'hero_lv1';
+document.title = `${shown}: ${preview(shown)} triangles`;
+for (const name of Object.keys(MODELS)) {
+  const b = document.createElement('button'); b.textContent = name + '.glb'; ui.appendChild(b);
+  b.onclick = () => new THREE.GLTFExporter().parse(lean(name), buf => {
+    const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([buf])); a.download = name + '.glb'; a.click();
+  }, { binary: true });
+}
 </script>
