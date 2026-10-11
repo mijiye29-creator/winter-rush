@@ -18,6 +18,7 @@ body { background: var(--night); color: var(--snow); font-family: var(--display)
 #hud { position: fixed; left: 0; right: 0; top: 0; padding: calc(env(safe-area-inset-top, 0px) + 10px) 12px 0; display: grid; gap: 8px; pointer-events: none; }
 .row { display: flex; gap: 8px; justify-content: space-between; align-items: center; }
 .pill { background: var(--glass); border-radius: 999px; padding: 6px 12px; font-size: 17px; white-space: nowrap; font-variant-numeric: tabular-nums; backdrop-filter: blur(4px); }
+#coins { transition: transform .08s; transform-origin: left center; color: #ffd36b; font-weight: 700; }
 #storm.warn { background: rgba(160, 90, 20, .8); }
 #storm.on { background: rgba(70, 110, 160, .85); color: #fff; }
 #hp { color: var(--blood); letter-spacing: 1px; }
@@ -47,7 +48,8 @@ body { background: var(--night); color: var(--snow); font-family: var(--display)
 #spot.show { opacity: 1; transform: translate(-50%, -50%) scale(1); }
 #spot .ic { font-size: 46px; line-height: 1.1; }
 #spot b { display: block; font-size: 24px; margin: 4px 0; }
-#spot span { display: block; font-size: 15px; line-height: 1.35; }
+#spot span { display: block; font-size: 15px; line-height: 1.45; }
+#spot span i { display: block; font-style: normal; font-size: 13px; color: #a0581a; letter-spacing: .5px; margin-bottom: 2px; }
 #frost { position: fixed; inset: 0; pointer-events: none; opacity: 0; background: radial-gradient(ellipse at center, transparent 45%, rgba(225,240,255,.85) 100%); }
 #hurt { position: fixed; inset: 0; pointer-events: none; opacity: 0; background: radial-gradient(ellipse at center, transparent 40%, rgba(229,72,77,.6) 100%); transition: opacity .3s; }
 
