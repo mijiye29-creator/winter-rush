@@ -3,7 +3,7 @@
 ## 현재 진행 상황 (Progress)
 - 게임은 웹 시제품. `prototype/index.html`은 시작 페이지, `style.css`는 화면, `balance.js`는 수치·업그레이드, `game.js`는 로직이다. 로컬 Three.js를 사용하므로 빌드 없이 실행한다.
 - 채집·판매·마을 확장·눈보라 방어에 낚시, 직원, 늑대, 가죽 장비, 펫, 보스, 저장 기능이 추가됐다.
-- 개발 브랜치는 `ccr-023f5a43-0sn456`(PR #2). 공개용 `gh-pages`는 `prototype/`을 루트에 게시한다. `main`은 아직 초기 README다.
+- `main` = 최신 웹 게임. 작업은 이슈별 브랜치 → `main` PR. 배포는 `main`의 `prototype/{balance.js,game.js,index.html,style.css}`를 `gh-pages` 루트로 복사하고 `version.json`에 배포 커밋 sha를 쓴다.
 - 수치와 장시간 검사 기록은 `docs/GDD.md`, `docs/PLAYTEST.md`를 본다. 협업 방식은 `AGENTS.md`, `docs/WORKFLOW.md`를 따른다.
 
 ## 현재 직면한 문제 또는 에러 (Current State/Blockers)
@@ -12,7 +12,7 @@
 - Android·iOS 네이티브 빌드와 실기기 성능은 아직 확인하지 않았다.
 
 ## 다음에 즉시 실행해야 할 작업 (Next Steps)
-1. `git fetch origin ccr-023f5a43-0sn456` 후 `git status`와 원격 최신 커밋을 확인한다.
+1. `git fetch origin main` 후 `git status`와 원격 최신 커밋을 확인한다.
 2. `cd prototype && python3 -m http.server 8000`으로 실행해 모바일 화면에서 판매·눈보라·저장 후 이어하기를 확인한다.
 3. 사람 5명의 10분 플레이를 `docs/PLAYTEST.md` 양식으로 기록한다. 그 결과로 초반 수치를 조정한다.
 4. 배달 중 저장 시 화물 소실을 수정하고, 현 24개 목표와 3단계 피자·배달 동선을 사람 플레이로 검증한다.
