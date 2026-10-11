@@ -2422,9 +2422,11 @@ function makeBeast(kind) {
   return Object.assign(a, { kind, sc: B.scale, dmg: B.dmg, reach: kind === 'mammoth' ? 2.8 : kind === 'chief' ? 2.1 : 1.8, big: kind !== 'saber',
     wolf: false, alpha: false, raider: false, boss: false, hp, maxHp: hp, x: 0, z: 0, tx: 0, tz: 0, cd: 0, flash: 0, squash: 0, recoil: 0, stagger: 0, wander: 0 });
 }
-// 🐯🦣 trophy beasts only roam once the forge's legendary-gear pads exist (hearth Lv12), so their pelts/tusks always have a use
+// 🐯🦣 trophy beasts only roam once their pelts/tusks can actually be used: gear pads open (hearth Lv12), a smith hired to process them,
+// and the legendary gear still needs more of that trophy
 const trophyOpen = () => S.lv.fire >= OPEN.saberCoat;
-const beastOk = (k, p = heroLv()) => { const B = T.beasts[k]; return B.power && p >= B.power && (!B.trophy || trophyOpen()); };
+const trophyUsable = m => trophyOpen() && S.lv.smith > 0 && trophyNeed(m) > S.raw[m] + S.wh[m] + S.forgeRaw[m] + S.mats[m];
+const beastOk = (k, p = heroLv()) => { const B = T.beasts[k]; return B.power && p >= B.power && (!B.trophy || trophyUsable(B.trophy)); };
 function spawnBeast() {
   const p = heroLv();
   const kinds = Object.keys(T.beasts).filter(k => beastOk(k, p) && bears.filter(b => b.kind === k).length < T.beasts[k].max);
@@ -3223,9 +3225,13 @@ function levelUp(key) {
     const padAt = k => pads.find(q => q.key === k) || P.fire;
     if (S.lv.fire === OPEN.warehouse) { const w = padAt('warehouse'); spotlight(w.x, w.z, '🏚️', '큰 창고 칸 등장!', '여기에 동전을 내면 창고가 지어져요<br>🪵🥩🐟 재료가 한곳에 모이고 🚚 배달원이 대신 날라요'); }
     if (S.lv.fire === OPEN.saberCoat) {
-      const f = padAt('saberCoat'), list = ['saber', 'mammoth'].map(k => `${k === 'saber' ? '🐯' : '🦣'} ${T.beasts[k].name}: ${heroLv() >= T.beasts[k].power ? '지금부터 출현!' : `영웅 Lv${T.beasts[k].power}부터 출현`}`);
+      const f = padAt('saberCoat'), list = ['saber', 'mammoth'].map(k => `${k === 'saber' ? '🐯' : '🦣'} ${T.beasts[k].name}: ${heroLv() >= T.beasts[k].power ? '⚒️ 대장장이를 고용하면 출현' : `영웅 Lv${T.beasts[k].power} + 대장장이 고용 후 출현`}`);
       spotlight(f.x, f.z, '⚒️', '전설 장비 칸 등장!', `검치호 가죽 · 매머드 뿔로 전설 장비를 만들어요<br>${list.join('<br>')}`);
     }
+  }
+  if (key === 'smith' && S.lv.smith === 1) {
+    const on = ['saber', 'mammoth'].filter(k => beastOk(k)).map(k => T.beasts[k].name);
+    if (on.length) setTimeout(() => toast(`⚒️ 대장장이 고용! 이제 숲 밖에 ${on.join(' · ')} 출현`), 2400);
   }
   if (key === 'hero' || key === 'saberCoat' || key === 'tuskAxe') {
     S.maxHp = maxHpOf(); S.hp = S.maxHp;
@@ -3344,7 +3350,12 @@ let toastT = 0;
 // unlock close-up: the camera flies to the new thing for a moment with a big card (tap anywhere to skip)
 const spotEl = document.createElement('div'); spotEl.id = 'spot'; document.body.appendChild(spotEl);
 const spotQ = []; let spot = null;
-function spotlight(x, z, icon, title, sub) { if (!S.started || spotQ.length >= 4) return; spotQ.push({ x, z, icon, title, sub }); }
+function spotlight(x, z, icon, title, sub) {
+  if (!S.started) return;
+  if (spotQ.length >= 2) spotQ.shift();   // keep only the newest cards
+  spotQ.push({ x, z, icon, title, sub });
+  if (spot && spot.t > 1) spot.t = 99;   // a fresh level-up card shows right away instead of waiting behind the old one
+}
 function showSpot(s) { spotEl.innerHTML = `<div class="ic">${s.icon}</div><b>${s.title}</b><span>${s.sub}</span>`; spotEl.classList.add('show'); play('up'); buzz([30, 60, 30]); burst(s.x, .8, s.z, 0xffd36b, 26, { spd: 4, up: 8, life: 1 }); }
 addEventListener('pointerdown', () => { if (spot && spot.t > .6) spot.t = 99; });
 function toast(msg) { toastEl.textContent = msg; toastEl.classList.add('show'); toastT = 2.6; }
@@ -3509,12 +3520,12 @@ function claimQuest(g) {
   for (const [k, n] of Object.entries(g.gift || {})) GIFT[k](n)[1]();
   for (let i = 0; i < Math.min(12, 4 + Math.floor(g.reward / 100)); i++) setTimeout(() => fly('coin', V(pl.x + rand(-2.5, 2.5), 4.5, pl.z + rand(-2.5, 2.5)), V(pl.x, 1.6, pl.z), .4), i * 70);   // coin shower onto the hero
   popText(pl.x, 3.2, pl.z, `+🪙${g.reward}`, '#ffd36b', true);
-  spotlight(pl.x, pl.z, '📜', '퀘스트 완료!', `<i>${g.text}</i>🎁 🪙${g.reward}` + giftText(g).map(t => '<br>' + t).join(''));
   toast(`📜 퀘스트 완료: ${g.text} → ${rewardShort(g)}`); play('up'); buzz([30, 40, 30]);
 }
+let questGap = 0;
 function updateGoals() {
   const g = GOALS[S.goal];
-  if (g && S.started && g.cur() >= g.n) { claimQuest(g); S.goal++; }
+  if (g && S.started && g.cur() >= g.n && performance.now() > questGap) { claimQuest(g); S.goal++; questGap = performance.now() + 1500; }   // rewards show the moment a quest is done; several finished together come 1.5 s apart
   const ng = GOALS[S.goal];
   setText(goalEl, `Day ${S.storms + 1} · ` + (ng ? `📜 ${ng.text} ${Math.min(ng.cur(), ng.n)}/${ng.n} · 🎁 ${rewardShort(ng)}` : '🎉 모든 퀘스트 완료!'));
 }
