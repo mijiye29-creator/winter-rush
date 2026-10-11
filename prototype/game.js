@@ -920,23 +920,17 @@ function updateFarmer(dt) {
     if (plotRipe(f.plot) && f.n < ST.farmerCarry[lv]) { S.plots[f.plot] = 0; f.n++; S.stat.veg = (S.stat.veg || 0) + 1; burst(PLOTS[f.plot].x, .5, PLOTS[f.plot].z, 0x6fbf4a, 5, { spd: 2, up: 3, life: .4 }); }
     f.state = 'idle';
   }
-  if (f.state === 'unload') {   // into the warehouse, or straight onto the pizza tile before there is one
-    if (!f.dest && S.vegBox < T.max.vegCrate) { const k = Math.min(f.n, T.max.vegCrate - S.vegBox); S.vegBox += k; f.n -= k; fly('veg', V(f.x, 1.3, f.z), V(P.vegBox.x, .4, P.vegBox.z)); if (!f.n) { f.state = 'idle'; return; } }
-    const t = f.dest || (whOn() && whRoom() > 0 ? WH_SPOT : sinkFor('veg', f));
-    const k = !t ? 0 : t.wh ? whPut('veg', f.n, V(f.x, 1.3, f.z)) : Math.min(f.n, t.max() - t.get());
-    if (k > 0 && !t.wh) { t.add(k); fly('veg', V(f.x, 1.3, f.z), V(t.at().x, .4, t.at().z)); }
-    f.n -= k; f.dest = null;
-    if (f.n) {   // that spot filled up: warehouse → a tile that uses veg → sell the rest
-      const nx = whOn() && whRoom() > 0 ? WH_SPOT : sinkFor('veg', f);
-      if (nx && nx !== t) { f.dest = nx; f.path = [V(nx.at().x, 0, nx.at().z + (nx.wh ? -1.3 : 1.3))]; return; }
-      sellSurplus('veg', f.n, f.x, f.z); f.n = 0;
-    }
+  if (f.state === 'unload') {   // into the 🥬 crate beside the garden (never the warehouse)
+    const k = Math.min(f.n, T.max.vegCrate - S.vegBox); if (k > 0) { S.vegBox += k; f.n -= k; fly('veg', V(f.x, 1.3, f.z), V(P.vegBox.x, .4, P.vegBox.z)); }
     f.state = 'idle';
   }
   let best = -1, bd = 1e9;
   PLOTS.forEach((p, i) => { const d = Math.hypot(p.x - f.x, p.z - f.z); if (plotRipe(i) && d < bd) { bd = d; best = i; } });
-  if ((f.n >= ST.farmerCarry[lv] || (f.n && best < 0)) && S.vegBox < T.max.vegCrate) { f.dest = null; f.state = 'unload'; f.path = [V(P.vegBox.x + 1.3, 0, P.vegBox.z)]; return; }
-  if (f.n >= ST.farmerCarry[lv] || (f.n && best < 0)) { const t = whOn() && whRoom() > 0 ? WH_SPOT : sinkFor('veg', f) || { at: () => P.pizzaIn }; f.dest = t.get || t.wh ? t : null; f.state = 'unload'; f.path = [V(t.at().x, 0, t.at().z + (t.wh ? -1.3 : 1.3))]; return; }
+  if (f.n >= ST.farmerCarry[lv] || (f.n && best < 0)) {   // the farmer only ever works garden ↔ crate; a full crate means wait beside it for the chef / couriers
+    if (S.vegBox < T.max.vegCrate) { f.dest = null; f.state = 'unload'; f.path = [V(P.vegBox.x + 1.3, 0, P.vegBox.z)]; }
+    else if (Math.hypot(f.x - P.vegBox.x - 1.3, f.z - P.vegBox.z) > .3) f.path = [V(P.vegBox.x + 1.3, 0, P.vegBox.z)];
+    return;
+  }
   if (best >= 0) { f.state = 'harvest'; f.plot = best; f.path = [V(PLOTS[best].x, 0, PLOTS[best].z + .95)]; }
 }
 // couriers: warehouse → whichever input tile is running lowest
@@ -3029,6 +3023,29 @@ function updateFx(dt) {
   }
 }
 const fade = (o, a) => o.traverse(m => { if (m.material) { m.material.transparent = true; m.material.opacity = a; } });
+// top-tier flourish (오로라 영웅 and up): spinning stars spray out and purple shock waves roll across the ground
+const STAR_GEO = (() => { const sh = new THREE.Shape(); for (let i = 0; i < 10; i++) { const a = i / 10 * Math.PI * 2 - Math.PI / 2, r = i % 2 ? .16 : .38; sh[i ? 'lineTo' : 'moveTo'](Math.cos(a) * r, Math.sin(a) * r); } return new THREE.ShapeGeometry(sh); })();
+function starBurst(x, z, n, R, y = .8) {
+  const cols = [0xffe066, 0xffffff, 0xd9a8ff, 0xff9ad8, 0x9fd8ff];
+  for (let i = 0; i < n; i++) {
+    const a = i / n * Math.PI * 2 + rand(-.2, .2), d = R * rand(.5, 1.1), up = rand(2.5, 4.5), sc = rand(.7, 1.4);
+    const st = new THREE.Mesh(STAR_GEO.clone(), new THREE.MeshBasicMaterial({ color: cols[i % cols.length], transparent: true, depthWrite: false, side: THREE.DoubleSide }));
+    st.position.set(x, y, z); st.scale.setScalar(sc); const spin = rand(6, 12) * (i % 2 ? 1 : -1);
+    addFx(st, rand(1.1, 1.5), (o, k) => {
+      o.position.set(x + Math.cos(a) * d * k, y + up * k - 3.2 * k * k, z + Math.sin(a) * d * k);
+      o.lookAt(camera.position); o.rotateZ(spin * k); o.scale.setScalar(sc * (k < .15 ? k / .15 : 1 - .5 * k)); fade(o, k < .7 ? 1 : (1 - k) / .3);
+    });
+  }
+}
+function purpleWave(x, z, R) {
+  for (const [delay, col, w] of [[0, 0xb06bff, .55], [.12, 0xd9a8ff, .35], [.24, 0x7a3cff, .25]]) {
+    const ring = new THREE.Mesh(new THREE.RingGeometry(.82, 1, 48).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ color: col, transparent: true, depthWrite: false, side: THREE.DoubleSide }));
+    ring.position.set(x, .12 + delay * .2, z); ring.scale.setScalar(.01);
+    addFx(ring, 1.05 + delay, (o, k) => { const e = Math.max(0, (k * (1.05 + delay) - delay) / 1.05); o.scale.setScalar(.01 + e * R * 1.5); fade(o, e <= 0 ? 0 : w * 2 * (1 - e)); });
+  }
+  const glow = new THREE.Mesh(new THREE.CircleGeometry(R * .9, 40).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ color: 0x8a4dff, transparent: true, depthWrite: false }));
+  glow.position.set(x, .08, z); addFx(glow, .8, (o, k) => { o.scale.setScalar(.6 + k * .6); fade(o, .45 * (1 - k)); });
+}
 function slamFx(x, z, R, hit) {
   const w = weaponLook(), tier = S.lv.tuskAxe ? 9 : Math.min(hl(), 8), basic = c => new THREE.MeshBasicMaterial({ color: c, transparent: true, depthWrite: false });
   shock.material.color.setHex(w.trail);
@@ -3049,6 +3066,7 @@ function slamFx(x, z, R, hit) {
     addFx(fl, .75, (o, k) => { o.scale.set(1 - k * .4, .3 + Math.sin(Math.min(1, k * 1.4) * Math.PI) * 1.3, 1 - k * .4); fade(o, k < .5 ? 1 : 2 * (1 - k)); });
     if (tier === 5 || tier === 7) burst(fl.position.x, .5, fl.position.z, tier === 7 ? 0xbfe3f5 : 0xff8a3c, 4, { spd: 2, up: 8, life: .7, size: 1 });
   }
+  if (tier >= 8) { purpleWave(x, z, R); starBurst(x, z, 18, R * 1.1); }
   if (tier === 8) for (const [r, col, d] of [[R * .5, 0x7fffd0, 0], [R * .8, 0xc89bff, .1], [R * 1.05, 0x8fd8ff, .2]]) {   // aurora: three coloured rings ripple outward
     const ring = new THREE.Mesh(new THREE.TorusGeometry(r, .12, 6, 40).rotateX(Math.PI / 2), basic(col)); ring.position.set(x, .4, z);
     addFx(ring, .8 + d, (o, k) => { o.scale.setScalar(.4 + k * .9); o.position.y = .4 + k * 1.5; fade(o, 1 - k); });
@@ -3126,6 +3144,7 @@ function killFx(b) {
   if (t === 4 || t === 7) for (let i = 0; i < 6; i++) { const a = i / 6 * Math.PI * 2, sh = new THREE.Mesh(new THREE.ConeGeometry(.18, .9, 5), new THREE.MeshLambertMaterial({ color: t === 4 ? 0xdff8ff : 0x7fe0ff, emissive: 0x2a8fbf })); sh.position.set(x + Math.cos(a) * .8, -.4, z + Math.sin(a) * .8); addFx(sh, .6, (o, k) => { o.position.y = k < .25 ? -.4 + 1.2 * k / .25 : .8; fade(o, k < .5 ? 1 : 2 * (1 - k)); }); }
   if (t === 5) { const fl = new THREE.Mesh(new THREE.ConeGeometry(.7, 2.4, 8), basic(0xff4a1a)); fl.position.set(x, 1.2, z); addFx(fl, .5, (o, k) => { o.scale.set(1 - k * .5, .4 + k * 1.2, 1 - k * .5); fade(o, 1 - k); }); }
   if (t === 6) { const bolt = new THREE.Mesh(new THREE.CylinderGeometry(.12, .12, 9, 5), basic(0xe8dcff)); bolt.position.set(x, 4.5, z); addFx(bolt, .3, (o, k) => fade(o, Math.random() < .7 ? 1 - k : .2)); }
+  if (t >= 8) { starBurst(x, z, 7, 1.6, 1); purpleWave(x, z, 1.4); }
   if (t >= 8) { const ring = new THREE.Mesh(new THREE.TorusGeometry(1, .1, 6, 32).rotateX(Math.PI / 2), basic(t === 9 ? 0xfff3c0 : 0x7fffd0)); ring.position.set(x, .5, z); addFx(ring, .7, (o, k) => { o.scale.setScalar(.3 + k * 1.6); o.position.y = .5 + k * 2; fade(o, 1 - k); }); }
 }
 function levelUp(key) {
