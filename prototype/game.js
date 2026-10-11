@@ -477,15 +477,14 @@ for (let i = 0; i < T.max.grill; i++) {
   m.position.set(P.grill.x + (j % 3 - 1) * .62, .22, P.grill.z + (Math.floor(j / 3) - 1) * .44);
   m.visible = false; scene.add(m); grillSlots.push(m);
 }
-const RAW = { steak: new THREE.Color(0xef7b7b), fishc: new THREE.Color(0x9fb6c8) };
-const DONE = { steak: new THREE.Color(0x8b3a1f), fishc: new THREE.Color(0xd9a441) }, BURNT = new THREE.Color(0x2a1d18);
+const RAW = { steak: new THREE.Color(0xef7b7b) };
+const DONE = { steak: new THREE.Color(0x8b3a1f) }, BURNT = new THREE.Color(0x2a1d18);
 const isReady = it => it.t >= T.cook[it.type] && it.t < T.cook[it.type] + T.burn;
 function renderGrill() {
   const now = performance.now();
   grillSlots.forEach((m, i) => {
     const it = S.grillItems[i]; m.visible = !!it; if (!it) return;
     const c = T.cook[it.type];
-    m.geometry = it.type === 'fishc' ? GEO.fish : GEO.steak;
     if (it.t < c) m.material.color.copy(RAW[it.type]).lerp(DONE[it.type], it.t / c);
     else m.material.color.copy(DONE[it.type]).lerp(BURNT, clamp((it.t - c - T.burn + 6) / 6, 0, 1));
     m.position.y = .22 + Math.floor(i / 9) * .15 + (it.t < c && S.fuel > 0 ? Math.abs(Math.sin(now / 60 + i)) * .04 : 0);
@@ -2167,7 +2166,7 @@ function updateCustomers(dt) {
       drawBubble(c);
       if (!there || i >= serveN) return;
       c.g.rotation.y = sh.face; c.wait += dt;
-      if (c.wait > 30 && !sh.stock()) { c.state = 'leave'; drawBubble(c); toast('😠 기다리다 지친 손님이 떠났어요'); return; }
+      if (c.wait > 30 && !sh.stock()) { c.state = 'leave'; drawBubble(c); if (!(S.timers.leaveToast > 0)) { toast(`😠 ${sh.icon} 재고가 없어 손님이 떠났어요`); S.timers.leaveToast = 12; } return; }
       if (sh.stock() > 0 && tick('serve' + key + i, ST.clerkIv[ck], dt)) {
         sh.take(); c.need--; c.wait = 0; S[sh.coin] += Math.round(T.price[sh.item] * econ('sale') * (1 + val('statue') / 100) * (S.feastT > 0 ? T.feast.saleMul : 1)); S.stat[sh.stat]++;
         fly(sh.item, V(sh.at.x, 1, sh.at.z), V(c.x, 1.2, c.z), .25);
@@ -3238,6 +3237,7 @@ function updateHud(dt) {
   if (S.timers.burnToast) S.timers.burnToast -= dt;
   if (S.timers.bagToast) S.timers.bagToast -= dt;
   if (S.timers.meatToast) S.timers.meatToast -= dt;
+  if (S.timers.leaveToast) S.timers.leaveToast -= dt;
   updateGoals();
   setText(coinsEl, `🪙 ${S.coins}`);
   setText(hpEl, `⚔${heroLv()} ` + (S.maxHp > 5 ? `♥ ${Math.max(0, S.hp)}/${S.maxHp}` : '♥'.repeat(clamp(S.hp, 0, 20)) + '♡'.repeat(clamp(S.maxHp - S.hp, 0, 20))));
