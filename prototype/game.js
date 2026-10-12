@@ -165,19 +165,23 @@ function useModel(name, parent, base, fur) {
   if (!THREE.GLTFLoader) return;
   const put = src => {
     base.forEach(o => (o.visible = false)); const m = src.clone(); m.name = name; parent.add(m);
-    const t = m.getObjectByName('tint');
-    if (t && fur) {
+    // legs come as their own pieces (leg_FL, leg_BR…) pivoting at the hip; walkAnim swings them, diagonal pairs together
+    const legs = []; m.traverse(o => /^leg_/.test(o.name) && legs.push(o));
+    legs.forEach(l => (l.userData.ph = /FL|BR|_L$/.test(l.name) ? 0 : Math.PI)); parent.userData.legs = legs;
+    const tints = []; m.traverse(o => o.name === 'tint' && o.isMesh && tints.push(o));
+    if (fur) for (const t of tints) {
       if (!fur.vertexColors) { fur.vertexColors = true; fur.needsUpdate = true; }
       t.material = fur;
-      if (!e.outline) {   // tint parts pushed out along their normals, drawn back-face only
-        const g = t.geometry.clone(), p = g.attributes.position, n = g.attributes.normal;
+      let ol = e.outline.get(t.geometry);
+      if (!ol) {   // tint parts pushed out along their normals, drawn back-face only
+        const g = ol = t.geometry.clone(), p = g.attributes.position, n = g.attributes.normal;
         for (let i = 0; i < p.count; i++) p.setXYZ(i, p.getX(i) + n.getX(i) * .04, p.getY(i) + n.getY(i) * .04, p.getZ(i) + n.getZ(i) * .04);
-        g.deleteAttribute('color'); g.userData.shared = true; e.outline = g;
+        g.deleteAttribute('color'); g.userData.shared = true; e.outline.set(t.geometry, g);
       }
-      const ol = new THREE.Mesh(e.outline, outlineMat); ol.position.copy(t.position); t.parent.add(ol);
+      const o = new THREE.Mesh(ol, outlineMat); o.position.copy(t.position); t.parent.add(o);
     }
   };
-  const e = models[name] || (models[name] = { src: null, wait: [] });
+  const e = models[name] || (models[name] = { src: null, wait: [], outline: new Map() });
   if (e.src) return put(e.src);
   e.wait.push(put);
   if (e.wait.length > 1) return;
@@ -194,6 +198,16 @@ function useModel(name, parent, base, fur) {
   const inl = window.WINTER_MODELS && window.WINTER_MODELS[name];
   if (inl) new THREE.GLTFLoader().parse(Uint8Array.from(atob(inl), c => c.charCodeAt(0)).buffer, '', done, fail);
   else new THREE.GLTFLoader().load(`models/${name}.glb` + (window.WINTER_BUILD ? '?v=' + window.WINTER_BUILD : ''), done, undefined, fail);
+}
+// Walking: speed comes from how far the actor moved since last frame. Legs swing in a trot, the body rocks;
+// returns the roll/pitch to add on top of the caller's own body tilt (b.body.userData.waddle / .bounce tune it per animal).
+function walkAnim(a, dt) {
+  const u = a.body.userData, p = a.g.position, sc = a.g.scale.x || 1;
+  const v = u.lx === undefined || dt <= 0 ? 0 : Math.hypot(p.x - u.lx, p.z - u.lz) / dt / sc; u.lx = p.x; u.lz = p.z;
+  u.amp = (u.amp || 0) + ((v > .3 ? Math.min(.65, .25 + v * .1) : 0) - (u.amp || 0)) * Math.min(1, dt * 10);
+  u.ph = (u.ph || 0) + dt * Math.min(16, 3 + v * 2.6);
+  for (const l of u.legs || []) l.rotation.x = Math.sin(u.ph + l.userData.ph) * u.amp;
+  return { roll: Math.sin(u.ph) * u.amp * (u.waddle || .06), pitch: -Math.abs(Math.sin(u.ph)) * u.amp * (u.bounce || 0) };
 }
 function disposeActor(group, sharedGeometry = null) {
   const geometries = new Set();
@@ -1315,14 +1329,14 @@ function makePenguin() {
   m(new THREE.CylinderGeometry(.28, .36, .8, 10), 0, .45, 0); m(new THREE.SphereGeometry(.26, 10, 8), 0, .98, 0);
   a.body.add(mesh(new THREE.CylinderGeometry(.22, .3, .6, 10), mat(0xffffff), 0, .42, .12), mesh(new THREE.ConeGeometry(.08, .2, 6).rotateX(Math.PI / 2), mat(0xffa030), 0, .95, .3));
   for (const sx of [-1, 1]) a.body.add(mesh(new THREE.BoxGeometry(.06, .06, .03), mat(0xff3030, { emissive: 0xaa0000 }), sx * .1, 1.04, .23), mesh(new THREE.BoxGeometry(.06, .4, .2), mat(0x22262e), sx * .33, .55, 0));
-  useModel('penguin', a.body, [...a.body.children], a.fur);
+  useModel('penguin', a.body, [...a.body.children], a.fur); a.body.userData.waddle = .45;
   return a;
 }
 function makeSeal() {
   const a = seaShell(0x8a8f99, 1.2), { m } = a;
   m(new THREE.SphereGeometry(.5, 10, 8).scale(1, .7, 1.8), 0, .35, 0); m(new THREE.SphereGeometry(.32, 10, 8), 0, .55, .8);
   for (const sx of [-1, 1]) a.body.add(mesh(new THREE.BoxGeometry(.4, .06, .2), mat(0x6e6a72), sx * .45, .12, .2), mesh(new THREE.BoxGeometry(.06, .06, .03), mat(0x1b1b22), sx * .12, .62, 1.08));
-  useModel('seal', a.body, [...a.body.children], a.fur);
+  useModel('seal', a.body, [...a.body.children], a.fur); Object.assign(a.body.userData, { waddle: .02, bounce: .3 });   // flops along instead of walking
   return a;
 }
 function makeWalrus() {
@@ -1330,7 +1344,7 @@ function makeWalrus() {
   m(new THREE.SphereGeometry(1, 12, 10).scale(1.2, .9, 1.6), 0, .9, 0); m(new THREE.SphereGeometry(.6, 10, 8), 0, 1.2, 1.4);
   for (const sx of [-1, 1]) a.body.add(mesh(new THREE.ConeGeometry(.09, .9, 6).rotateX(Math.PI), mat(0xf4efe2), sx * .22, .65, 1.75), mesh(new THREE.BoxGeometry(.1, .1, .04), mat(0x1b1b22), sx * .25, 1.45, 1.92));
   a.body.add(mesh(new THREE.ConeGeometry(.3, .35, 5), mat(0xffc83d, { emissive: 0x664400 }), 0, 1.95, 1.3));   // crown
-  useModel('walrus', a.body, [...a.body.children], a.fur);
+  useModel('walrus', a.body, [...a.body.children], a.fur); Object.assign(a.body.userData, { waddle: .02, bounce: .2 });   // flops along instead of walking
   return a;
 }
 function makeOrca() {
@@ -1338,7 +1352,7 @@ function makeOrca() {
   m(new THREE.SphereGeometry(.9, 12, 8).scale(1, .6, 2.6), 0, .25, 0);
   a.body.add(mesh(new THREE.SphereGeometry(.6, 10, 8).scale(1, .4, 2), mat(0xffffff), 0, .05, .4), mesh(new THREE.ConeGeometry(.3, 1.4, 4), mat(0x15171c), 0, 1.0, -.3), mesh(new THREE.BoxGeometry(1.6, .08, .5), mat(0x15171c), 0, .2, -2.2));
   for (const sx of [-1, 1]) a.body.add(mesh(new THREE.SphereGeometry(.14, 8, 6), mat(0xffffff), sx * .4, .35, 1.3));
-  useModel('orca', a.body, [...a.body.children], a.fur);
+  useModel('orca', a.body, [...a.body.children], a.fur); Object.assign(a.body.userData, { waddle: .02, bounce: .12 });   // flops along instead of walking
   return a;
 }
 const SEA_MAKERS = { penguin: makePenguin, seal: makeSeal, walrus: makeWalrus, orca: makeOrca };
@@ -1351,7 +1365,6 @@ function spawnSea(kind, x, z, extra) {
 const onPier = (x, z) => x >= 33.5 && x <= 44.2 && z >= HB.pierZ1 && z <= HB.pierZ2;
 const SEA_AI = {
   penguin(b, dt, dist) {   // waddle up the pier, steal fish from the dock crate, run back to the sea
-    b.body.rotation.z = Math.sin(performance.now() / 90 + b.x) * .2;
     if (dist < 2.2 && pl.stunFree && !pl.boat) return { chase: true };
     if (b.loot) { b.tx = HB.boatDock.x; b.tz = -2; if (b.x > 44) { bears.splice(bears.indexOf(b), 1); scene.remove(b.g); toast('🐧 펭귄이 생선을 물고 달아났어요!'); } return { sp: 3 }; }
     const route = b.x > 34.2 ? V(33.4, 0, -2) : V(P.dockCrate.x, 0, P.dockCrate.z + 1);
@@ -2593,6 +2606,7 @@ function updatePets(dt) {
     if (S.stage >= 4 && !w.seal && w.x > HB.shoreX - .4 && !onPier(w.x, w.z)) { w.x = clamp(w.x, 34.4, 43.4); w.z = clamp(w.z, -2.7, -1.3); }
     const sc = w.g.scale.x + (T.pet.scale[w.lv] - w.g.scale.x) * Math.min(1, dt * 3); w.g.scale.setScalar(sc);
     w.g.position.x = w.x; w.g.position.z = w.z;
+    const wk = walkAnim(w, dt); w.body.rotation.z = wk.roll; w.body.rotation.x = wk.pitch;
   });
 }
 function spawnRaid() {
@@ -2701,12 +2715,13 @@ function updateBears(dt) {
     b.g.scale.set(bs * (1 + .25 * sq), bs * (1 - .22 * sq), bs * (1 + .25 * sq));
     b.recoil = Math.max(0, b.recoil - dt);
     const pain = Math.sin(Math.PI * b.recoil / .28);
-    b.body.rotation.x = -.35 * pain;
-    b.body.rotation.z = .16 * pain;
     b.body.position.y = .2 * pain;
     b.flash -= dt;
     b.fur.emissive.setHex(b.flash > 0 ? 0xff4040 : 0x000000);
     b.g.position.set(b.x, Math.abs(Math.sin(performance.now() / 160 + b.x)) * (d > .2 ? .06 : 0), b.z);
+    const wk = walkAnim(b, dt);
+    b.body.rotation.x = -.35 * pain + wk.pitch;
+    b.body.rotation.z = .16 * pain + wk.roll;
     b.fill.scale.x = Math.max(0, b.hp / b.maxHp); b.fill.position.x = -(1 - b.fill.scale.x) * .6;
     b.bar.quaternion.copy(camera.quaternion);
     b.bar.parent.updateMatrixWorld();

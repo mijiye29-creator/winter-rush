@@ -17,7 +17,7 @@ function animalKit(THREE, name) {
 
 // polar bear: chubby round body, puffy cheeks, stubby legs, fluffy ruff, tufts down the back
 function buildBear(THREE) {
-  const { root, M, add, sph, T, T2, eyes, cyl } = animalKit(THREE, 'bear');
+  const k = animalKit(THREE, 'bear'), { root, M, add, sph, T, T2, eyes, cyl } = k;
   const cream = M('tintCream', 0xf3ecdc);
   add('body', sph(1, 11, 7), T, 0, 1.0, 0, { s: [.7, .6, .98] });
   for (const s of [-1, 1]) {
@@ -44,8 +44,10 @@ function buildBear(THREE) {
     add('ear', sph(.13, 6, 4), T, s * .29, 1.78, .98, { s: [1, 1, .6] });
     add('earIn', sph(.07, 5, 3), M('pink', 0xf2a7a7), s * .29, 1.78, 1.04, { s: [1, 1, .4] });
     for (const f of [-1, 1]) {
+      k.limb = legLimb(s, f, .38, .62, .55);
       add('leg', new THREE.CylinderGeometry(.22, .25, .5, 8, 1, true), T, s * .38, .32, f * .55);
       add('paw', sph(.24, 6, 4), cream, s * .38, .09, f * .55 + .05, { s: [1, .55, 1.2] });
+      k.limb = null;
     }
   }
   add('nose', sph(.08, 6, 4), M('nose', 0x1f1a24), 0, 1.35, 1.64, { s: [1.3, .9, 1] });
@@ -53,6 +55,9 @@ function buildBear(THREE) {
   eyes(.16, 1.51, 1.39, .06);   // ~1,500 triangles in all
   return root;
 }
+
+// a leg that swings from the hip: legLimb(side, front/back, x, hip height, z) → named leg_FL, leg_FR, leg_BL, leg_BR
+const legLimb = (s, f, x, y, z) => ({ name: 'leg_' + (f > 0 ? 'F' : 'B') + (s < 0 ? 'L' : 'R'), pivot: [s * x, y, f * z] });
 
 // a fan of fur tufts: n cones spread around a ring (centre x,y,z, radius r) facing outward in the x/y plane
 function tuftRing(k, name, m, n, x, y, z, r, size, from = 0, to = Math.PI * 2, tilt = 0) {
@@ -82,8 +87,10 @@ function buildWolf(THREE, pup) {
     add('ear', new THREE.ConeGeometry(.095, pup ? .2 : .26, 4), T, s * .14 * H, 1.25 * (pup ? 1.03 : 1), .64, { r: [0, 0, s * (pup ? -.45 : -.2)] });
     add('earIn', new THREE.ConeGeometry(.05, .14, 4), M('pink', 0xf2a7a7), s * .14 * H, 1.23 * (pup ? 1.03 : 1), .67, { r: [0, 0, s * (pup ? -.45 : -.2)] });
     for (const f of [-1, 1]) {
+      k.limb = legLimb(s, f, .18, .5, .38);
       add('leg', cyl(.065, .08, .5, 6), T, s * .18, .26, f * .38);
       add('paw', sph(.085, 6, 3), cream, s * .18, .04, f * .38 + .03, { s: [1, .6, 1.25] });
+      k.limb = null;
     }
   }
   // big bushy tail: three puffs rising behind, cream tip
@@ -131,8 +138,10 @@ function buildSaber(THREE) {
     add('fangTip', new THREE.ConeGeometry(.03, .16, 5), fangM, s * .09, .73, 1.36, { r: [Math.PI + .45, 0, 0] });
     add('blush', sph(.045, 5, 3), M('blush', 0xf4a9a9), s * .2, 1.12, 1.17, { s: [1, .6, .4] });
     for (const f of [-1, 1]) {
+      k.limb = legLimb(s, f, .25, .7, .5);
       add('leg', cyl(.1, .13, .66, 6), T, s * .25, .35, f * .5);
       add('paw', sph(.14, 6, 3), cream, s * .25, .05, f * .5 + .05, { s: [1, .55, 1.2] });
+      k.limb = null;
     }
   }
   eyes(.13, 1.25, 1.18, .07, 0x2a2230);
@@ -162,9 +171,11 @@ function buildMammoth(THREE) {
     [[1.5, 2.05, 2.6], [1.3, 2.3, 2.0], [1.2, 2.6, 1.55], [1.25, 2.92, .95], [1.42, 3.12, .35]]
       .forEach(([y, z, th], i) => add('tusk', cyl(.06 - i * .006, .08 - i * .006, .38, 5), ivory, s * (.36 + i * .04), y, z, { r: [th, 0, 0] }));
     for (const f of [-1, 1]) {
+      k.limb = legLimb(s, f, .6, 1.2, .85);
       add('leg', cyl(.32, .35, 1.15, 7), T, s * .6, .6, f * .85);
       for (let i = 0; i < 3; i++) { const a = i / 3 * Math.PI * 2 + .4; add('legFur', new THREE.ConeGeometry(.16, .4, 4), i % 2 ? T3 : T2, s * .6 + Math.cos(a) * .3, .72, f * .85 + Math.sin(a) * .3, { r: [Math.PI + Math.sin(a) * .3, 0, -Math.cos(a) * .3] }); }
       add('foot', cyl(.37, .37, .12, 7), M('toe', 0x4a3424), s * .6, .06, f * .85);
+      k.limb = null;
     }
   }
   eyes(.34, 2.38, 2.05, .1);
@@ -188,8 +199,10 @@ function buildPenguin(THREE) {
   for (const s of [-1, 1]) add('shoulderStripe', new THREE.BoxGeometry(.05, .03, .26), white, s * .2, .86, -.04, { r: [.4, 0, s * .5] });
   for (const s of [-1, 1]) {
     add('flipper', sph(.22, 6, 4), T, s * .38, .56, 0, { s: [.22, 1, .5], r: [0, 0, s * .45] });
+    k.limb = { name: s < 0 ? 'leg_L' : 'leg_R', pivot: [s * .13, .12, .1] };
     add('foot', sph(.1, 5, 3), orange, s * .13, .04, .14, { s: [1.1, .4, 1.6] });
     for (let t = -1; t <= 1; t++) add('toe', new THREE.ConeGeometry(.025, .08, 3), orange, s * .13 + t * .05, .03, .28, { r: [Math.PI / 2, 0, 0] });
+    k.limb = null;
     add('blush', sph(.04, 5, 3), M('blush', 0xf4a9a9), s * .14, .94, .25, { s: [1, .6, .4] });
     tuftRing(k, 'crest', crest, 3, s * .14, 1.1, .1, .03, .2, s > 0 ? -.3 : Math.PI - .5, s > 0 ? .5 : Math.PI + .3, .2);
   }
