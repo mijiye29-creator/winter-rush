@@ -13,3 +13,5 @@
 면수 기준: 모델 하나에 삼각형 약 1,500개 이하, 메시 1개. 미리보기 페이지 제목에 삼각형 수가 나옵니다.
 
 claude.ai 아티팩트처럼 .glb 파일을 못 올리는 곳에서는 모델을 base64로 담은 `models/models.js`(`window.WINTER_MODELS = {이름: base64}`)를 만들어 `game.js`보다 먼저 읽히면 됩니다. 게임은 그게 있으면 파일 대신 그걸 씁니다.
+
+주인공·사냥꾼은 합친 메시의 `userData.colorRegions`에 원래 파츠 이름·재질·버텍스 범위·기본 색을 보존합니다. 게임은 배우별 geometry 복사본에 성장 색을 적용해 한 메시를 유지하며 다른 배우나 캐시 모델은 변경하지 않습니다. 해당 의상 수정 후 두 GLB를 다시 생성해야 합니다. 회귀 확인: `node tests/model_growth.test.cjs` (Playwright/Chromium 필요).

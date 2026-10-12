@@ -165,6 +165,12 @@ function useModel(name, parent, base, fur) {
   if (!THREE.GLTFLoader) return;
   const put = src => {
     base.forEach(o => (o.visible = false)); const m = src.clone(); m.name = name; parent.add(m);
+    // People keep one draw call. Clone their outfit geometry so one actor's colors cannot tint another.
+    m.traverse(o => {
+      if (!o.isMesh || !o.userData.colorRegions) return;
+      o.geometry = o.geometry.clone(); o.geometry.userData.shared = false;
+    });
+    if (parent.userData.syncOutfit) parent.userData.syncOutfit();   // current saved level may precede the async GLB load
     // legs come as their own pieces (leg_FL, leg_BR…) pivoting at the hip; walkAnim swings them, diagonal pairs together
     const legs = []; m.traverse(o => /^leg_/.test(o.name) && legs.push(o));
     legs.forEach(l => (l.userData.ph = /FL|BR|_L$/.test(l.name) ? 0 : Math.PI)); parent.userData.legs = legs;
@@ -198,6 +204,22 @@ function useModel(name, parent, base, fur) {
   const inl = window.WINTER_MODELS && window.WINTER_MODELS[name];
   if (inl) new THREE.GLTFLoader().parse(Uint8Array.from(atob(inl), c => c.charCodeAt(0)).buffer, '', done, fail);
   else new THREE.GLTFLoader().load(`models/${name}.glb` + (window.WINTER_BUILD ? '?v=' + window.WINTER_BUILD : ''), done, undefined, fail);
+}
+function tintOutfit(parent, name, palette) {
+  const model = parent.getObjectByName(name);
+  let applied = false;
+  if (model) model.traverse(o => {
+    const regions = o.userData.colorRegions;
+    if (!o.isMesh || !regions) return;
+    const color = o.geometry.attributes.color;
+    for (const region of regions) {
+      const value = palette[region.name] === undefined ? palette['material:' + region.material] : palette[region.name];
+      const c = new THREE.Color(value === undefined ? region.color : value);
+      for (let i = region.start; i < region.start + region.count; i++) color.setXYZ(i, c.r, c.g, c.b);
+    }
+    color.needsUpdate = true; applied = true;
+  });
+  return applied;
 }
 // Walking: speed comes from how far the actor moved since last frame. Legs swing in a trot, the body rocks;
 // returns the roll/pitch to add on top of the caller's own body tilt (b.body.userData.waddle / .bounce tune it per animal).
@@ -1840,7 +1862,26 @@ function applyGear() {
     gearM.coat.visible = true; gearM.coat.material.color.setHex(S.lv.saberCoat >= 2 ? 0xf0c080 : 0xe0a050);
     gearM.trim.forEach(m => { m.visible = true; m.material.color.setHex(0x6b3a1a); }); gearM.pads.forEach(m => (m.visible = true));
   }
+  syncHeroOutfit();
 }
+function syncHeroOutfit() {
+  const cv = look('coat'), boots = GEAR.boots[look('boots')], coat = GEAR.coat[cv];
+  const body = S.lv.saberCoat ? (S.lv.saberCoat >= 2 ? 0xf0c080 : 0xe0a050) : coat && coat[0];
+  const trim = S.lv.saberCoat ? 0x6b3a1a : coat && coat[1];
+  const palette = {};
+  if (body) {
+    palette['material:coat'] = body;
+    palette['material:coatDark'] = new THREE.Color(body).multiplyScalar(.8).getHex();
+    for (const name of ['mittenL', 'mittenR', 'thumbL', 'thumbR', 'scarf', 'scarfTail']) palette[name] = body;
+  }
+  if (boots) palette['material:boot'] = boots[0];
+  if (trim) for (const name of ['hem', 'hoodFur', 'pompom', 'cuffL', 'cuffR', 'bootCuff', 'scarfStripe', 'scarfFringe']) palette[name] = trim;
+  if (!tintOutfit(player.body, 'hero_lv1', palette)) return;
+  // The GLB itself is the coat/boots; the old cylinders and boxes would overlap it.
+  gearM.coat.visible = false; gearM.boot.forEach(m => (m.visible = false));
+  gearM.cuff.forEach(m => (m.visible = false)); gearM.trim.forEach(m => (m.visible = false));
+}
+player.body.userData.syncOutfit = syncHeroOutfit;
 const shock = new THREE.Mesh(new THREE.RingGeometry(.85, 1, 48).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ color: 0xffe08a, transparent: true, depthWrite: false }));
 shock.visible = false; scene.add(shock);
 const swoosh = new THREE.Mesh(new THREE.RingGeometry(.7, 1.35, 18, 1, -Math.PI * .8, Math.PI * .6).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0, side: THREE.DoubleSide, depthWrite: false }));
@@ -2030,6 +2071,10 @@ function addHunter() {
   p.g.position.set(h.x, 0, h.z); hunters.push(h); dressStaff(h, true); huntOut(h);
 }
 function huntOut(h) { h.state = 'out'; h.prey = null; h.path = h.z < 6 ? [GATE_IN.clone(), GATE_OUT.clone()] : []; }
+function huntReady(h) {
+  if (h.hp >= hMax() * .8) huntOut(h);
+  else { h.state = 'rest'; h.path = []; h.prey = null; }
+}
 function huntHome(h) {
   h.state = 'home';
   const to = whOn() ? V(P.whIn.x + .8, 0, P.whIn.z - 1.3) : V(P.meatTile.x, 0, P.meatTile.z + 1.3);
@@ -2104,6 +2149,7 @@ function updateHunters(dt) {
     }
     h.cd -= dt;
     if (h.state !== 'hunt' && h.z < 6.6 && h.hp < hMax() && tick('hHeal' + hunters.indexOf(h), .5, dt)) h.hp++;   // heal fast inside the village
+    if (h.state === 'rest') { huntReady(h); continue; }
     if (h.state === 'out') { if (walkPath(h, dt, hunterSpd())) h.state = 'hunt'; continue; }
     if (h.state === 'home') {
       if (!walkPath(h, dt, hunterSpd())) continue;
@@ -2116,14 +2162,14 @@ function updateHunters(dt) {
       const k = useWh ? 0 : Math.min(h.n, T.max.meat - S.meat);
       if (k > 0) { S.meat += k; h.n -= k; fly('meat', V(h.x, 1.3, h.z), V(P.meatTile.x, .5, P.meatTile.z)); }
       if (h.n > 0) { S.coins += Math.round(h.n * T.price.meat * econ('sale')); h.n = 0; }   // nowhere left to put it: sell the surplus
-      if (h.n === 0) { if (h.hides) { h.state = 'hides'; h.path = [V(TAN.in.x - 1.3, 0, TAN.in.z)]; } else if (h.hp >= hMax() * .8) huntOut(h); }   // wait at home until mostly healed
+      if (h.n === 0) { if (h.hides) { h.state = 'hides'; h.path = [V(TAN.in.x - 1.3, 0, TAN.in.z)]; } else huntReady(h); }
       continue;
     }
     if (h.state === 'hides') {
       if (!walkPath(h, dt, hunterSpd())) continue;
       S.stat.hides += h.hides;
       for (; h.hides > 0; h.hides--) { if (S.hide < T.max.hide) S.hide++; else S.coins += T.price.hide; }
-      fly('hide', V(h.x, 1.3, h.z), V(TAN.in.x, .5, TAN.in.z)); huntOut(h);
+      fly('hide', V(h.x, 1.3, h.z), V(TAN.in.x, .5, TAN.in.z)); huntReady(h);
       continue;
     }
     if (h.state === 'collect') {             // picking up meat/hides lying inside the village
@@ -2136,7 +2182,7 @@ function updateHunters(dt) {
       }
       const next = loosePickup(h);
       if (next) h.path = lootPath(h, next);
-      else if (h.n || h.hides) huntHome(h); else huntOut(h);
+      else if (h.n || h.hides || h.hp < hMax() * .8) huntHome(h); else huntOut(h);
       continue;
     }
     const loot = loosePickup(h);
@@ -2220,6 +2266,11 @@ function dressStaff(w, isHunter) {
   }
   if (isHunter) {
     w.body.children[0].material = mat(HUNTER_KIT[tier].coat);
+    w.body.userData.syncOutfit = () => {
+      const color = HUNTER_KIT[stg()].coat;
+      tintOutfit(w.body, 'hunter_lv1', { 'material:coat': color, 'material:coatDark': new THREE.Color(color).multiplyScalar(.8).getHex() });
+    };
+    w.body.userData.syncOutfit();
     w.rankLv = -1;
     if (w.weapon) w.body.remove(w.weapon);
     w.weapon = staffWeapon(tier); w.body.add(w.weapon);
