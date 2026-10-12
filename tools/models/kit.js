@@ -3,10 +3,12 @@ function modelKit(THREE, name) {
   const root = new THREE.Group(); root.name = name;
   const mats = {};
   const M = (n, color) => mats[n] || (mats[n] = Object.assign(new THREE.MeshStandardMaterial({ color, roughness: 1, metalness: 0 }), { name: n }));
+  // parts added while k.limb is set ({ name, pivot: [x, y, z] }) bake into a separate piece that pivots there, so the game can swing it
   const add = (n, geo, m, x = 0, y = 0, z = 0, opt = {}) => {
     const o = new THREE.Mesh(geo, m); o.name = n; o.position.set(x, y, z);
     if (opt.s) o.scale.set(...opt.s);
     if (opt.r) o.rotation.set(...opt.r);
+    if (k.limb) o.userData.limb = k.limb;
     root.add(o); return o;
   };
   const sph = (r, w = 8, h = 6) => new THREE.SphereGeometry(r, w, h);
@@ -19,6 +21,7 @@ function modelKit(THREE, name) {
     }
     add('nose', sph(.032, 5, 3), M('nose', 0xeaa585), 0, y - .03, z + r);
   };
-  return { root, M, add, sph, face };
+  const k = { root, M, add, sph, face, limb: null };
+  return k;
 }
 if (typeof module !== 'undefined') module.exports = modelKit;
