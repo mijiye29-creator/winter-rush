@@ -10,4 +10,4 @@ labels: claude
 수정 범위: 파일 또는 함수
 완료 조건: 모바일 조작, 저장 후 이어하기, 콘솔 오류 없음 등
 
-라벨은 담당 표시용입니다(자동 실행 없음). 작성 후 담당 AI 앱에서 시작하세요: Claude는 Claude Code 세션에 "이슈 #번호 해줘", Codex는 ChatGPT Codex에서 이 저장소를 고르고 "이슈 #번호 해줘". 자세한 방법은 `docs/AI_AUTOMATION.md`.
+`claude` 라벨은 담당 표시용입니다. Claude에게 작업을 요청하면 Claude가 이 저장소의 이슈를 직접 찾을 수 있습니다.
