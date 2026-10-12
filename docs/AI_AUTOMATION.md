@@ -1,18 +1,22 @@
-# Claude ↔ Codex 자동 협업
+# GitHub로 Claude·Codex 협업하기
 
-## 1회 설정
+![이슈에서 Claude, PR에서 Codex로 링크를 넘기는 순서](images/ai-setup-guide.png)
 
-1. 저장소에 [Claude GitHub App](https://github.com/apps/claude)을 설치한다.
-2. 저장소 **Settings → Secrets and variables → Actions**에 `ANTHROPIC_API_KEY`와 `OPENAI_API_KEY`를 각각 Secret으로 등록한다. 키 값은 이슈, 채팅, 코드에 적지 않는다.
-3. 같은 화면의 **Variables**에서 `AI_COLLAB_ENABLED`를 `true`로 등록한다. 이 값이 없거나 `false`이면 두 AI 작업이 실행되지 않아 API 비용이 발생하지 않는다.
-4. 저장소 **Settings → Actions → General → Workflow permissions**에서 **Read and write permissions**를 허용한다. 필요한 범위는 Claude 작업의 코드·이슈·PR 쓰기, PR 생성 후 Codex 검토 워크플로 호출, Codex 검토 댓글 쓰기다.
-5. `claude`와 `needs-review` 라벨을 만든다. 이미 있으면 그대로 쓴다.
+GitHub는 두 AI가 같은 코드와 작업 기록을 읽는 공유 장소다. **이슈·PR 링크를 각 AI 채팅에 직접 전달**하면 된다. GitHub 라벨이나 댓글만으로 Claude·Codex가 자동 실행되지는 않는다. 저장소에서 AI API를 호출하는 Actions는 사용하지 않으므로 새 API 키 등록은 필요 없다.
 
-## 사용법
+## 매번 하는 일
 
-1. 작업 이슈를 먼저 작성하고 목표·수정 범위·완료 조건을 채운다. 작성 **후** `claude` 라벨을 붙인다. 라벨을 붙이는 순간 Claude가 실행된다.
-2. Claude가 코드를 바꾸면 워크플로가 PR을 열고 `needs-review` 라벨을 붙인 뒤 Codex 검토를 호출한다. Codex는 PR 댓글에 검토 결과를 남긴다. 코드 변경이 없으면 PR은 열리지 않는다.
-3. 수정이 필요하면 PR에 `@claude`와 함께 구체적인 요청을 댓글로 남긴다. Claude가 새 커밋을 올리면 Codex가 다시 검토한다.
-4. 사람은 CI와 실제 모바일 플레이를 확인한 뒤 PR을 병합한다. 자동 병합은 하지 않는다.
+1. [Winter Rush 이슈](https://github.com/mijiye29-creator/winter-rush/issues/new/choose)에서 **작업**을 선택하고 목표·수정 범위·완료 조건을 적는다. `claude` 라벨은 담당 표시다.
+2. 이슈 링크를 Claude 채팅에 보내고 아래 문장을 붙여 넣는다. Claude가 브랜치와 PR을 GitHub에 올려야 Codex가 변경 사항을 읽을 수 있다.
+3. PR 링크를 이 Codex 채팅에 보내고 아래 검토 문장을 붙여 넣는다. 수정 내용은 같은 PR 브랜치에 반영한다.
+4. [Actions](https://github.com/mijiye29-creator/winter-rush/actions)에서 **Prototype checks** 통과를 확인하고 휴대폰 크기 화면에서 플레이한다. 준비되면 사람이 PR을 병합한다.
 
-`claude` 라벨을 다시 붙이거나 담당자가 `@claude` 댓글을 쓰면 Claude를 재실행할 수 있다. `needs-review` 라벨은 작업 중 비용을 아끼려면 제거하고, 검토할 준비가 되면 다시 붙인다. API 사용량은 각 서비스의 계정에서 확인한다.
+### Claude에게 보낼 문장
+
+> `mijiye29-creator/winter-rush` 이슈 #번호를 읽고 `AGENTS.md`, `docs/WORKFLOW.md` 규칙에 따라 구현해 줘. `origin/main` 기준 새 브랜치에서 작업하고 `node --check prototype/game.js`, `node --check prototype/balance.js`, `git diff --check`와 모바일 플레이를 확인해 줘. 브랜치를 푸시하고 본문 첫 줄이 `Closes #번호`인 PR을 만들어 줘. 브랜치·커밋·검사 결과를 PR에 기록해 줘.
+
+### Codex에게 보낼 문장
+
+> `mijiye29-creator/winter-rush` PR #번호를 검토해 줘. 버그, 모바일 조작, 저장·이어하기, 게임 밸런스를 확인하고 필요한 수정은 해당 PR 브랜치에 반영해 줘. 검사 결과와 남은 문제를 PR에 기록해 줘.
+
+Claude나 Codex가 다른 컴퓨터에서 작업한다면 **로컬 커밋만으로는 공유되지 않는다**. 브랜치를 GitHub에 푸시해야 한다. 계정 연결은 각 서비스의 GitHub 접근 권한을 사용할 수 있지만, 이 협업 절차에 GitHub Actions용 AI API 키는 필요 없다.
