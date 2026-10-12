@@ -18,3 +18,15 @@ Claude Code와 이 Codex 환경은 같은 `mijiye29-creator/winter-rush` 저장�
 4. [Prototype checks](https://github.com/mijiye29-creator/winter-rush/actions)와 휴대폰 플레이를 확인한 뒤 사용자가 병합한다.
 
 이 방식은 GitHub Actions용 AI API 키 등록이 필요 없다. GitHub 라벨만 붙여도 AI가 저절로 작업을 시작하지는 않는다. `@codex review` GitHub 댓글 기능은 Codex 저장소 환경이 연결되어 있을 때만 동작한다. PR #30에서는 환경을 만들라는 안내 댓글이 달렸으므로, 현재 검토는 이 Codex 대화에서 진행한다.
+
+## 토큰 사용량 보기 (Claude Code)
+
+저장소의 `.claude/settings.json`이 Claude Code 하단 상태줄에 이번 세션의 토큰을 보여 줍니다.
+
+```
+Opus | 입력 152.3k | 출력 8.1k | 합계 160.5k | 컨텍스트 22% | $0.43
+```
+
+- 컴퓨터의 터미널에서 이 저장소를 열고 `claude`를 실행하면 자동으로 켜집니다. `python3`가 필요합니다.
+- 끄기: `WR_TOKEN_MODE=off claude` 로 실행합니다.
+- 즉시 확인: 대화창에 `/cost`(토큰·비용) 또는 `/context`(컨텍스트 사용량)를 입력합니다.
