@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="720" viewBox="0 0 1200 720">
+  <rect width="1200" height="720" fill="#f5f8fc"/>
+  <text x="60" y="80" font-family="Noto Sans CJK KR, sans-serif" font-size="36" font-weight="700" fill="#172b4d">GitHub로 Claude · Codex 협업하기</text>
+  <text x="60" y="120" font-family="Noto Sans CJK KR, sans-serif" font-size="21" fill="#52627a">이슈와 PR 링크를 채팅에 전달하면 됩니다. 새 API 키 등록은 필요 없습니다.</text>
+  <rect x="60" y="175" width="500" height="170" rx="18" fill="#ffffff" stroke="#bccde1" stroke-width="2"/>
+  <circle cx="106" cy="221" r="25" fill="#2563eb"/>
+  <text x="98" y="230" font-family="sans-serif" font-size="25" font-weight="700" fill="#ffffff">1</text>
+  <text x="150" y="230" font-family="Noto Sans CJK KR, sans-serif" font-size="27" font-weight="700" fill="#172b4d">GitHub 이슈 작성</text>
+  <text x="95" y="285" font-family="Noto Sans CJK KR, sans-serif" font-size="20" fill="#52627a">목표 · 수정 범위 · 완료 조건 기록</text>
+  <rect x="640" y="175" width="500" height="170" rx="18" fill="#ffffff" stroke="#bccde1" stroke-width="2"/>
+  <circle cx="686" cy="221" r="25" fill="#2563eb"/>
+  <text x="678" y="230" font-family="sans-serif" font-size="25" font-weight="700" fill="#ffffff">2</text>
+  <text x="730" y="230" font-family="Noto Sans CJK KR, sans-serif" font-size="27" font-weight="700" fill="#172b4d">Claude 채팅에 이슈 링크</text>
+  <text x="675" y="285" font-family="Noto Sans CJK KR, sans-serif" font-size="20" fill="#52627a">Claude가 브랜치 푸시 · PR 생성</text>
+  <text x="588" y="275" font-family="sans-serif" font-size="36" fill="#2563eb">→</text>
+  <rect x="60" y="390" width="500" height="170" rx="18" fill="#ffffff" stroke="#bccde1" stroke-width="2"/>
+  <circle cx="106" cy="436" r="25" fill="#2563eb"/>
+  <text x="98" y="445" font-family="sans-serif" font-size="25" font-weight="700" fill="#ffffff">3</text>
+  <text x="150" y="445" font-family="Noto Sans CJK KR, sans-serif" font-size="27" font-weight="700" fill="#172b4d">Codex 채팅에 PR 링크</text>
+  <text x="95" y="500" font-family="Noto Sans CJK KR, sans-serif" font-size="20" fill="#52627a">코드 · 모바일 플레이 검토 및 수정</text>
+  <rect x="640" y="390" width="500" height="170" rx="18" fill="#ffffff" stroke="#bccde1" stroke-width="2"/>
+  <circle cx="686" cy="436" r="25" fill="#2563eb"/>
+  <text x="678" y="445" font-family="sans-serif" font-size="25" font-weight="700" fill="#ffffff">4</text>
+  <text x="730" y="445" font-family="Noto Sans CJK KR, sans-serif" font-size="27" font-weight="700" fill="#172b4d">사람이 확인 후 병합</text>
+  <text x="675" y="500" font-family="Noto Sans CJK KR, sans-serif" font-size="20" fill="#52627a">Prototype checks · 실기기 플레이</text>
+  <text x="588" y="490" font-family="sans-serif" font-size="36" fill="#2563eb">→</text>
+  <rect x="60" y="610" width="1080" height="65" rx="12" fill="#e6efff"/>
+  <text x="90" y="652" font-family="Noto Sans CJK KR, sans-serif" font-size="20" fill="#172b4d">라벨과 GitHub 댓글은 AI를 자동 실행하지 않습니다. 작업마다 링크를 해당 AI 채팅에 보내세요.</text>
+</svg>
