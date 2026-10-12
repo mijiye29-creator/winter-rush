@@ -4,9 +4,10 @@
 // mesh the animal's own fur material, so fur color per kind (raider bear, pet coat…) and the red hit flash still work;
 // tint parts should be white or grey so the fur color shows through.
 function bakeParts(THREE, parts, name, off) {
-  const pos = [], nor = [], col = [], idx = [], nm = new THREE.Matrix3(), v = new THREE.Vector3();
+  const pos = [], nor = [], col = [], idx = [], regions = [], nm = new THREE.Matrix3(), v = new THREE.Vector3();
   for (const o of parts) {
     const g = o.geometry, p = g.attributes.position, n = g.attributes.normal, c = o.material.color, base = pos.length / 3;
+    if (name === 'hero_lv1' || name === 'hunter_lv1') regions.push({ name: o.name, material: o.material.name, start: base, count: p.count, color: c.getHex() });
     nm.getNormalMatrix(o.matrixWorld);
     for (let i = 0; i < p.count; i++) {
       v.fromBufferAttribute(p, i).applyMatrix4(o.matrixWorld); if (off) v.sub(off); pos.push(v.x, v.y, v.z);
@@ -22,7 +23,9 @@ function bakeParts(THREE, parts, name, off) {
   geo.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
   geo.setIndex(idx);
   const m = new THREE.Mesh(geo, Object.assign(new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 1, metalness: 0 }), { name }));
-  m.name = name; return m;
+  m.name = name;
+  if (regions.length) m.userData.colorRegions = regions;
+  return m;
 }
 // tint parts and the rest; one plain mesh when nothing is tinted (props, people)
 function bakeSplit(THREE, parts, name, off) {
