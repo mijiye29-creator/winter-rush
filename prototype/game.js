@@ -40,7 +40,7 @@ const MAT_ICON = { pelt: '🐯', tusk: '🦣' }, MAT_NAME = { pelt: '손질한 �
 const matsNeed = (k, lv = S.lv[k]) => Object.entries(UP[k].mats || {}).map(([m, a]) => [m, a[lv]]).filter(([, n]) => n);
 const matsOk = k => matsNeed(k).every(([m, n]) => S.mats[m] >= n);   // drives how tough the wild animals get
 const ovenCap = () => T.ovenCap[S.lv.oven];
-const HS = () => ST.hunterStage, stg = () => Math.max(0, Math.min(3, S.stage - 1));   // hunters also grow with the village stage
+const HS = () => ST.hunterStage, hMax = () => ST.hunterStage.hp[stg()] + ST.hunterHp[M('hunter')], stg = () => Math.max(0, Math.min(3, S.stage - 1));   // hunters also grow with the village stage
 const huntCap = () => ST.hunterCarry[M('hunter')] + HS().carry[stg()], hideCap = () => ST.hunterHides[M('hunter')];
 const ST = T.staff;
 // 🧱🛡️ gate defence comes from hearth levels: wall = fewer raiders at the gate, guard = raiders stopped every blizzard
@@ -2026,7 +2026,7 @@ function addHunter() {
   const carry = new THREE.Group(); carry.position.z = -.5; p.g.add(carry);
   for (let i = 0; i < 28; i++) { const m = itemMesh('meat'); m.visible = false; carry.add(m); }
   for (let i = 0; i < 8; i++) { const m = itemMesh('hide'); m.visible = false; m.userData.hide = true; carry.add(m); }
-  const h = { ...p, carry, n: 0, hides: 0, hp: HS().hp[stg()], down: 0, cd: 0, x: P.meatTile.x - hunters.length, z: P.meatTile.z + 1.4, path: [], state: 'out', prey: null };
+  const h = { ...p, carry, n: 0, hides: 0, hp: hMax(), down: 0, cd: 0, x: P.meatTile.x - hunters.length, z: P.meatTile.z + 1.4, path: [], state: 'out', prey: null };
   p.g.position.set(h.x, 0, h.z); hunters.push(h); dressStaff(h, true); huntOut(h);
 }
 function huntOut(h) { h.state = 'out'; h.prey = null; h.path = h.z < 6 ? [GATE_IN.clone(), GATE_OUT.clone()] : []; }
@@ -2036,6 +2036,7 @@ function huntHome(h) {
   h.path = (h.z > 6 ? [GATE_OUT.clone(), GATE_IN.clone()] : []).concat([to]);
 }
 function hurtHunter(h, b) {
+  if (Math.random() < ST.hunterBlock[M('hunter')]) { burst(h.x, 1.2, h.z, 0xdfe8f2, 3, { spd: 2, up: 2, life: .3, size: .5 }); return; }   // mastery armour shrugs the bite off
   h.hp -= b.boss ? 2 : 1;
   burst(h.x, 1.2, h.z, 0xe5484d, 4, { spd: 3, up: 3, life: .4, size: .7 });
   if (h.hp <= 0) { h.down = 3; h.n = 0; h.hides = 0; h.state = 'down'; toast('🏹 사냥꾼이 곰에게 쓰러졌어요'); }
@@ -2098,10 +2099,11 @@ function updateHunters(dt) {
     });
     if (h.down > 0) {
       h.down -= dt; h.body.rotation.z = Math.PI / 2.3;
-      if (h.down <= 0) { h.body.rotation.z = 0; h.hp = HS().hp[stg()]; huntHome(h); }
+      if (h.down <= 0) { h.body.rotation.z = 0; h.hp = hMax(); huntHome(h); }
       continue;
     }
     h.cd -= dt;
+    if (h.state !== 'hunt' && h.z < 6.6 && h.hp < hMax() && tick('hHeal' + hunters.indexOf(h), .5, dt)) h.hp++;   // heal fast inside the village
     if (h.state === 'out') { if (walkPath(h, dt, hunterSpd())) h.state = 'hunt'; continue; }
     if (h.state === 'home') {
       if (!walkPath(h, dt, hunterSpd())) continue;
@@ -2114,7 +2116,7 @@ function updateHunters(dt) {
       const k = useWh ? 0 : Math.min(h.n, T.max.meat - S.meat);
       if (k > 0) { S.meat += k; h.n -= k; fly('meat', V(h.x, 1.3, h.z), V(P.meatTile.x, .5, P.meatTile.z)); }
       if (h.n > 0) { S.coins += Math.round(h.n * T.price.meat * econ('sale')); h.n = 0; }   // nowhere left to put it: sell the surplus
-      if (h.n === 0) { if (h.hides) { h.state = 'hides'; h.path = [V(TAN.in.x - 1.3, 0, TAN.in.z)]; } else huntOut(h); }
+      if (h.n === 0) { if (h.hides) { h.state = 'hides'; h.path = [V(TAN.in.x - 1.3, 0, TAN.in.z)]; } else if (h.hp >= hMax() * .8) huntOut(h); }   // wait at home until mostly healed
       continue;
     }
     if (h.state === 'hides') {
@@ -2140,14 +2142,22 @@ function updateHunters(dt) {
     const loot = loosePickup(h);
     if (loot) { h.state = 'collect'; h.path = lootPath(h, loot); continue; }
     if (h.n >= huntCap() || h.hides >= hideCap()) { huntHome(h); continue; }
-    if (h.hp < HS().hp[stg()] && tick('hReg' + hunters.indexOf(h), 2, dt)) h.hp++;
-    if (!h.prey || !bears.includes(h.prey) || h.prey.raider) {
+    if (h.hp < hMax() && tick('hReg' + hunters.indexOf(h), 2, dt)) h.hp++;
+    if (h.hp <= hMax() * ST.hunterFlee) { huntHome(h); continue; }   // hurt: go home to heal (and drop off what was caught)
+    const beastsOk = M('hunter') >= ST.hunterBeastLv;
+    if (!h.prey || !bears.includes(h.prey) || h.prey.raider || (h.prey.kind && !beastsOk)) {
       h.prey = null; let bd = 1e9;
-      for (const b of bears) if (!b.raider && !b.boss && !b.sea) { const d = Math.hypot(b.x - h.x, b.z - h.z); if (d < bd) { bd = d; h.prey = b; } }
+      for (const b of bears) if (!b.raider && !b.boss && !b.sea && (!b.kind || beastsOk)) { const d = Math.hypot(b.x - h.x, b.z - h.z); if (d < bd) { bd = d; h.prey = b; } }
       if (!h.prey) { h.body.position.y = 0; continue; }
     }
     const b = h.prey, d = Math.hypot(b.x - h.x, b.z - h.z);
-    if (d > 4.5) move(h, b.x, b.z, hunterSpd() * (1 - .3 * S.stormK), dt);
+    let near = null, nd = ST.hunterKite;
+    for (const o of bears) if (!o.sea) { const od = Math.hypot(o.x - h.x, o.z - h.z); if (od < nd) { nd = od; near = o; } }
+    if (near) {   // a bear is too close: back off toward the village while the bow reloads
+      const ax = h.x - near.x, az = h.z - near.z, al = Math.hypot(ax, az) || 1;
+      move(h, h.x + ax / al * 2, h.z + az / al * 2 - 1, hunterSpd() * .9, dt);
+      if (h.cd <= 0) { h.cd = ST.hunterCd[M('hunter')]; shoot(h, near.kind && !beastsOk || near.raider || near.boss ? b : near); }
+    } else if (d > 4.5) move(h, b.x, b.z, hunterSpd() * (1 - .3 * S.stormK), dt);
     else { h.g.rotation.y = Math.atan2(b.x - h.x, b.z - h.z); h.body.position.y = 0; if (h.cd <= 0) { h.cd = ST.hunterCd[M('hunter')]; shoot(h, b); } }
     h.z = Math.max(h.z, 7.5); h.g.position.set(h.x, 0, h.z);
   }
@@ -2213,7 +2223,7 @@ function dressStaff(w, isHunter) {
     w.rankLv = -1;
     if (w.weapon) w.body.remove(w.weapon);
     w.weapon = staffWeapon(tier); w.body.add(w.weapon);
-    w.hp = Math.max(w.hp, HS().hp[tier]);
+    w.hp = Math.max(w.hp, hMax());
   }
 }
 const allStaff = () => [...helpers, ...servers, ...fishers, ...couriers, artisan, farmer, pizzaChefNpc, smithNpc, sushiChefNpc];
@@ -2662,6 +2672,7 @@ function updateBears(dt) {
   for (let i = pendingBears.length - 1; i >= 0; i--) if ((pendingBears[i] -= dt) <= 0) { pendingBears.splice(i, 1); spawnFieldBear(); }
   if ((S.storms >= 1 || S.stat.sold >= T.wolfStartSold) && tick('wolfPack', T.stageWolfSpawn[stg()], dt) && bears.filter(b => b.wolf).length + T.wolfPackSize + T.stagePack[stg()] <= Math.min(T.maxWolves + T.stageWolves[stg()], 3 + T.stageWolves[stg()] + 3 * Math.floor(S.storms / 2))) spawnPack();
   if (S.started && heroLv() >= T.beasts.chief.power && tick('beast', T.beasts.every, dt)) spawnBeast();
+  for (const b of bears) if (b.kind && T.beasts[b.kind].trophy && !beastOk(b.kind) && b.hp >= b.maxHp && Math.hypot(b.x - pl.x, b.z - pl.z) > 9) { scene.remove(b.g); bears.splice(bears.indexOf(b), 1); break; }   // saber/mammoth only roam while the smith can use their trophy
   const pd = b => Math.hypot(pl.x - b.x, pl.z - b.z);
   for (const b of bears) {
     let sp = 1.1, chase = false, chaseH = false;
