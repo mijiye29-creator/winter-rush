@@ -13,7 +13,7 @@
 <script src="hearth_lv1.js"></script>
 <script src="animals.js"></script>
 <script>
-// Each model: shown from the front, side, back and the game camera angle (open with ?m=name), and exported as one baked GLB mesh.
+// Each model: shown from the front, the side and the game camera angle (from behind and in front) (open with ?m=name), and exported as one baked GLB mesh.
 const MODELS = { hero_lv1: buildHeroLv1, woodcutter_lv1: buildWoodcutterLv1, hunter_lv1: buildHunterLv1, hearth_lv1: buildHearthLv1,
   bear: buildBear, wolf: T => buildWolf(T, false), wolf_pup: T => buildWolf(T, true), saber: buildSaber, mammoth: buildMammoth,
   penguin: buildPenguin, seal: buildSeal, walrus: buildWalrus, orca: buildOrca };
@@ -30,7 +30,7 @@ window.preview = name => {
   const tint = m.getObjectByName('tint'); if (tint && TINT[name]) tint.material.color.setHex(TINT[name]);
   const sph = new THREE.Box3().setFromObject(m).getBoundingSphere(new THREE.Sphere()), ctr = sph.center, k = sph.radius / 1.05;
   let tris = 0; m.traverse(o => o.isMesh && (tris += o.geometry.index.count / 3));
-  [[0, .25, 4], [4, .25, 0], [0, .25, -4], [0, 20 / 7, 14 / 7]].forEach(([x, y, z], i) => {   // front, side, back, game camera direction
+  [[0, .25, 4], [4, .25, 0], [1.2, 20 / 7, -14 / 7], [0, 20 / 7, 14 / 7]].forEach(([x, y, z], i) => {   // front, side, game camera from behind, game camera from the front
     const c = new THREE.PerspectiveCamera(30, (W / 4) / H, .1, 50); c.position.set(ctr.x + x * k, ctr.y + y * k, ctr.z + z * k); c.lookAt(ctr);
     r.setViewport(i * W / 4, 0, W / 4, H); r.setScissor(i * W / 4, 0, W / 4, H); r.render(scene, c);
   });

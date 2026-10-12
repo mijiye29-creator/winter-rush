@@ -15,17 +15,19 @@ function animalKit(THREE, name) {
   return k;
 }
 
-// polar bear: chubby round body and belly, puffy cheeks, stubby legs, fluffy ruff and tufts, little claws
+// polar bear: chubby round body, puffy cheeks, stubby legs, fluffy ruff, tufts down the back
 function buildBear(THREE) {
   const { root, M, add, sph, T, T2, eyes, cyl } = animalKit(THREE, 'bear');
-  const cream = M('tintCream', 0xf3ecdc), claw = M('claw', 0x5a5560);
+  const cream = M('tintCream', 0xf3ecdc);
   add('body', sph(1, 11, 7), T, 0, 1.0, 0, { s: [.7, .6, .98] });
-  add('belly', sph(.55, 8, 5), cream, 0, .8, .25, { s: [1, .82, 1.25] });
   for (const s of [-1, 1]) {
     add('haunch', sph(.38, 7, 5), T, s * .36, .86, -.5);
     add('shoulder', sph(.34, 7, 5), T, s * .38, .96, .52);
   }
   // fluffy back: soft bumps down the spine, a ruff of tufts around the neck
+  // the game camera looks down on the back, so the detail lives there: a ridge of tufts and fluffy hips
+  for (let i = 0; i < 6; i++) add('spineTuft', new THREE.ConeGeometry(.08, .22, 4), i % 2 ? cream : T2, 0, 1.62 - Math.abs(i - 2.5) * .035, .62 - i * .26, { r: [-1.0, 0, 0] });
+  for (const s of [-1, 1]) for (let i = 0; i < 2; i++) add('hipTuft', new THREE.ConeGeometry(.07, .2, 4), T2, s * (.36 + i * .1), 1.2 - i * .06, -.6 - i * .1, { r: [-.9, 0, -s * .5] });
   for (let i = 0; i < 4; i++) add('backFluff', sph(.22, 5, 3), i % 2 ? T2 : T, 0, 1.5 - Math.abs(i - 1.5) * .03, .45 - i * .32, { s: [1.15, .7, 1.1] });
   for (let i = 0; i < 8; i++) {
     const a = i / 8 * Math.PI * 2, x = Math.cos(a) * .42, y = 1.3 + Math.sin(a) * .36;
@@ -44,7 +46,6 @@ function buildBear(THREE) {
     for (const f of [-1, 1]) {
       add('leg', new THREE.CylinderGeometry(.22, .25, .5, 8, 1, true), T, s * .38, .32, f * .55);
       add('paw', sph(.24, 6, 4), cream, s * .38, .09, f * .55 + .05, { s: [1, .55, 1.2] });
-      if (f > 0) for (let c = -1; c <= 1; c++) add('claw', sph(.035, 4, 2), claw, s * .38 + c * .08, .06, f * .55 + .31);
     }
   }
   add('nose', sph(.08, 6, 4), M('nose', 0x1f1a24), 0, 1.35, 1.64, { s: [1.3, .9, 1] });
@@ -67,6 +68,8 @@ function buildWolf(THREE, pup) {
   const cream = M('tintCream', 0xf3efe6), H = pup ? 1.18 : 1;
   add('body', sph(1, 10, 6), T, 0, .74, -.02, { s: [pup ? .34 : .3, pup ? .31 : .28, pup ? .55 : .62] });
   add('saddle', sph(1, 7, 4), T3, 0, .88, -.12, { s: [.22, .12, .42] });
+  for (let i = 0; i < 5; i++) add('spineTuft', new THREE.ConeGeometry(.045, .14, 4), T3, 0, (pup ? .97 : .95) - i * .015, .25 - i * .17, { r: [-1.1, 0, 0] });   // seen from above: dark ridge down the back
+  for (const s of [-1, 1]) add('shoulderTuft', new THREE.ConeGeometry(.05, .14, 4), T2, s * .16, .9, .26, { r: [-.8, 0, -s * .6] });
   add('haunch', sph(.2, 6, 4), T, .16, .7, -.36); add('haunch', sph(.2, 6, 4), T, -.16, .7, -.36);
   add('chest', sph(.25, 7, 5), cream, 0, .76, .42, { s: [1, 1.15, .8] });
   tuftRing(k, 'chestTuft', cream, 5, 0, .66, .52, .1, .16, Math.PI * 1.15, Math.PI * 1.85, .4);   // fluffy bib
@@ -106,7 +109,7 @@ function buildSaber(THREE) {
   const k = animalKit(THREE, 'saber'), { root, M, add, sph, T, T2, T3, eyes, cyl } = k; k.THREE = THREE;
   const cream = M('tintCream', 0xf6efe0), fangM = M('fang', 0xfdfaf2);
   add('body', sph(1, 10, 6), T, 0, .98, -.05, { s: [.4, .36, .74] });
-  add('belly', sph(.3, 7, 4), cream, 0, .74, .1, { s: [1.05, .6, 1.9] });
+  for (let i = 0; i < 6; i++) add('spineSpot', sph(.06, 5, 2), T3, 0, 1.335 - Math.abs(i - 2.5) * .012, .62 - i * .26, { s: [1.4, .35, 1] });   // dark spots down the back, seen from above
   for (const s of [-1, 1]) {
     add('shoulder', sph(.26, 7, 5), T, s * .2, 1.06, .42);
     add('haunch', sph(.26, 7, 5), T, s * .2, .96, -.5);
@@ -118,6 +121,7 @@ function buildSaber(THREE) {
   add('muzzle', sph(.16, 7, 4), cream, 0, 1.05, 1.2, { s: [1.25, .8, .9] });
   add('nose', sph(.05, 5, 3), M('nose', 0x5a2a2a), 0, 1.13, 1.33, { s: [1.3, .8, 1] });
   add('tail', cyl(.07, .05, .32, 5), T, 0, 1.12, -.86, { r: [-.9, 0, 0] });
+  add('tailBand', cyl(.075, .072, .05, 5), T3, 0, 1.15, -.9, { r: [-.9, 0, 0] });
   add('tailTip', sph(.07, 5, 3), T3, 0, 1.24, -1.0);
   for (const s of [-1, 1]) {
     add('ear', new THREE.ConeGeometry(.1, .17, 4), T, s * .2, 1.44, .9, { r: [0, 0, s * -.25] });
@@ -138,13 +142,15 @@ function buildSaber(THREE) {
 // mammoth: shaggy layered coat, domed head with a hair tuft, small ears, long curling tusks, leg fur skirts
 function buildMammoth(THREE) {
   const k = animalKit(THREE, 'mammoth'), { root, M, add, sph, T, T2, T3, eyes, cyl } = k; k.THREE = THREE;
-  const ivory = M('ivory', 0xf4efe2), nail = M('nail', 0xe9dcc4);
+  const ivory = M('ivory', 0xf4efe2);
   add('body', sph(1, 10, 6), T, 0, 1.8, 0, { s: [1.0, .88, 1.38] });
   add('hump', sph(.62, 7, 4), T, 0, 2.6, .45, { s: [1, .7, 1] });
   add('head', sph(.68, 9, 6), T, 0, 2.18, 1.55, { s: [1, 1.05, 1] });
   add('dome', sph(.38, 6, 4), T2, 0, 2.78, 1.5);
   tuftRing(k, 'hairTuft', [T3, T2], 5, 0, 2.95, 1.45, .12, .3, Math.PI * .2, Math.PI * .8);
-  tuftRing(k, 'shag', [T3, T2, T], 14, 0, 1.5, -.1, 1.0, .55, Math.PI * 1.08, Math.PI * 1.92, 0);   // long shag hanging off the sides
+  tuftRing(k, 'shag', [T3, T2, T], 10, 0, 1.5, -.1, 1.0, .55, Math.PI * 1.08, Math.PI * 1.92, 0);   // long shag hanging off the sides
+  // seen from above: long hair parted down the spine and falling over the hump and rump
+  for (let i = 0; i < 5; i++) for (const s of [-1, 1]) add('backShag', new THREE.ConeGeometry(.16, .5, 4), (i + (s > 0)) % 2 ? T3 : T2, s * .22, 2.62 - Math.abs(i - 1.5) * .12, .75 - i * .42, { r: [-.5, 0, s * 1.15] });
   for (let i = 0; i < 5; i++) add('shagBack', new THREE.ConeGeometry(.24, .6, 4), i % 2 ? T3 : T2, (i - 2) * .4, 1.2, -.9, { r: [Math.PI, 0, 0] });
   // trunk: five segments curling down and forward, a little finger at the tip
   [[0, 1.85, 2.1, .2, .1], [0, 1.45, 2.3, .17, .25], [0, 1.08, 2.38, .14, .05], [0, .76, 2.3, .12, -.35], [0, .58, 2.12, .1, -.9]]
@@ -157,9 +163,8 @@ function buildMammoth(THREE) {
       .forEach(([y, z, th], i) => add('tusk', cyl(.06 - i * .006, .08 - i * .006, .38, 5), ivory, s * (.36 + i * .04), y, z, { r: [th, 0, 0] }));
     for (const f of [-1, 1]) {
       add('leg', cyl(.32, .35, 1.15, 7), T, s * .6, .6, f * .85);
-      for (let i = 0; i < 4; i++) { const a = i / 4 * Math.PI * 2 + .4; add('legFur', new THREE.ConeGeometry(.16, .4, 4), i % 2 ? T3 : T2, s * .6 + Math.cos(a) * .3, .72, f * .85 + Math.sin(a) * .3, { r: [Math.PI + Math.sin(a) * .3, 0, -Math.cos(a) * .3] }); }
+      for (let i = 0; i < 3; i++) { const a = i / 3 * Math.PI * 2 + .4; add('legFur', new THREE.ConeGeometry(.16, .4, 4), i % 2 ? T3 : T2, s * .6 + Math.cos(a) * .3, .72, f * .85 + Math.sin(a) * .3, { r: [Math.PI + Math.sin(a) * .3, 0, -Math.cos(a) * .3] }); }
       add('foot', cyl(.37, .37, .12, 7), M('toe', 0x4a3424), s * .6, .06, f * .85);
-      for (let t = -1; t <= 1; t++) add('toenail', sph(.07, 4, 2), nail, s * .6 + t * .16, .1, f * .85 + .33, { s: [1, .7, .6] });
     }
   }
   eyes(.34, 2.38, 2.05, .1);
@@ -177,7 +182,10 @@ function buildPenguin(THREE) {
   add('face', sph(.2, 7, 5), white, 0, .95, .13, { s: [1.05, .9, .7] });
   add('beak', new THREE.ConeGeometry(.08, .18, 5), orange, 0, .96, .32, { r: [Math.PI / 2, 0, 0] });
   add('beakLow', new THREE.ConeGeometry(.06, .13, 5), M('orangeDark', 0xe07a20), 0, .9, .3, { r: [Math.PI / 2 + .2, 0, 0] });
-  add('tail', new THREE.ConeGeometry(.12, .2, 4), T, 0, .14, -.32, { r: [-2.2, 0, 0] });
+  for (let i = -1; i <= 1; i++) add('tail', new THREE.ConeGeometry(.06, .2, 4), T, i * .07, .14, -.32, { r: [-2.2, 0, i * .35] });
+  // seen from above: glossy blue-black cape and a pale stripe over each shoulder
+  add('cape', sph(.3, 8, 4), M('cape', 0x3a4a66), 0, .58, -.16, { s: [1.05, 1.4, .7] });
+  for (const s of [-1, 1]) add('shoulderStripe', new THREE.BoxGeometry(.05, .03, .26), white, s * .2, .86, -.04, { r: [.4, 0, s * .5] });
   for (const s of [-1, 1]) {
     add('flipper', sph(.22, 6, 4), T, s * .38, .56, 0, { s: [.22, 1, .5], r: [0, 0, s * .45] });
     add('foot', sph(.1, 5, 3), orange, s * .13, .04, .14, { s: [1.1, .4, 1.6] });
@@ -193,13 +201,15 @@ function buildPenguin(THREE) {
 function buildSeal(THREE) {
   const k = animalKit(THREE, 'seal'), { root, M, add, sph, T, T2, T3, eyes } = k; k.THREE = THREE;
   add('body', sph(.5, 11, 7), T, 0, .36, 0, { s: [1.05, .75, 1.75] });
-  add('belly', sph(.42, 8, 5), T2, 0, .25, .15, { s: [1, .5, 1.6] });
   add('neck', sph(.38, 8, 5), T, 0, .5, .55);
   add('head', sph(.33, 10, 7), T, 0, .6, .82, { s: [1.05, .95, 1] });
   for (const s of [-1, 1]) add('cheek', sph(.12, 6, 4), T2, s * .09, .5, 1.08, { s: [1, .8, .8] });
   add('nose', sph(.045, 5, 3), M('nose', 0x1f1a24), 0, .57, 1.17, { s: [1.3, .8, 1] });
   add('mouth', new THREE.TorusGeometry(.025, .008, 3, 4, Math.PI), M('mouth', 0x3a2a30), 0, .45, 1.15, { r: [0, 0, Math.PI] });
-  [[.3, -.2], [-.25, .1], [.15, .3], [-.35, -.45], [.05, -.6], [-.1, .45]].forEach(([x, z], i) => add('spot', sph(.06 + (i % 2) * .02, 4, 2), T3, x, .62 - Math.abs(z) * .1, z, { s: [1, .3, 1] }));
+  // seen from above: dark harp-shaped saddle and spots sitting on the back's surface
+  const top = (x, z) => .36 + .375 * Math.sqrt(Math.max(0, 1 - (x / .525) ** 2 - (z / .875) ** 2));
+  [[.25, -.1], [-.22, .15], [.12, .3], [-.3, -.4], [.05, -.62], [-.08, .48], [.32, .2], [.2, -.5]].forEach(([x, z], i) => add('spot', sph(.05 + (i % 2) * .02, 4, 2), T3, x, top(x, z), z, { s: [1, .3, 1] }));
+  for (const s of [-1, 1]) add('harp', sph(.3, 6, 3), T3, s * .2, top(.2, -.1) - .03, -.1, { s: [.25, .15, 1.1], r: [0, s * -.35, 0] });
   for (const s of [-1, 1]) {
     add('flipper', sph(.22, 6, 3), T, s * .44, .14, .35, { s: [1, .2, .55], r: [0, s * .4, -s * .3] });
     for (let c = 0; c < 3; c++) add('claw', sph(.02, 3, 2), M('claw', 0x3a3a44), s * (.52 + c * .04), .16, .52 - c * .03);
@@ -216,7 +226,9 @@ function buildWalrus(THREE) {
   const k = animalKit(THREE, 'walrus'), { root, M, add, sph, T, T2, T3, eyes } = k; k.THREE = THREE;
   const gold = M('gold', 0xffc83d), dot = M('bristle', 0x5a3a28);
   add('body', sph(1, 11, 7), T, 0, .9, 0, { s: [1.2, .9, 1.6] });
-  add('belly', sph(.9, 8, 5), T2, 0, .55, .3, { s: [1.1, .6, 1.4] });
+  // seen from above: knobbly skin and a darker ridge along the back
+  add('ridge', sph(.5, 7, 4), T2, 0, 1.66, -.15, { s: [.45, .25, 2.2] });
+  [[.45, .3], [-.5, .1], [.3, -.6], [-.35, -.85], [.6, -.25], [-.2, .55], [.15, -1.05], [-.65, -.4]].forEach(([x, z]) => add('knob', sph(.07, 4, 2), T2, x, .9 + .9 * Math.sqrt(Math.max(0, 1 - (x / 1.2) ** 2 - (z / 1.6) ** 2)) - .01, z, { s: [1, .5, 1] }));
   for (let i = 0; i < 4; i++) add('fold', new THREE.TorusGeometry(.95 - Math.abs(i - 1.5) * .05, .05, 3, 12), T3, 0, .9, .6 - i * .42, { s: [1.18, .88, 1] });
   add('neck', sph(.75, 9, 6), T, 0, 1.05, 1.0);
   add('head', sph(.6, 10, 7), T, 0, 1.25, 1.4);
@@ -242,13 +254,16 @@ function buildOrca(THREE) {
   const white = M('white', 0xf6f8fb);
   add('body', sph(.9, 13, 8), T, 0, .25, 0, { s: [1, .62, 2.6] });
   add('tailStock', sph(.4, 8, 5), T, 0, .25, -1.95, { s: [.7, .7, 1.6] });
-  add('belly', sph(.6, 9, 5), white, 0, .03, .5, { s: [1.05, .42, 2.3] });
+  add('belly', sph(.6, 7, 4), white, 0, .03, .5, { s: [1.05, .42, 2.3] });
+  // seen from above: blowhole, a grey saddle stripe and white patches peeking over the sides
+  add('blowhole', sph(.07, 5, 2), M('saddle', 0x8a909c), 0, .78, .95, { s: [1.4, .3, .8] });
+  add('backStripe', sph(.3, 6, 3), M('saddle', 0x8a909c), 0, .77, .3, { s: [.18, .1, 1.8] });
   add('chin', sph(.35, 7, 4), white, 0, .06, 1.75, { s: [1.2, .5, 1] });
-  add('saddle', sph(.4, 7, 4), T2, 0, .72, -.7, { s: [1.2, .3, 1] });
+  add('saddle', sph(.4, 7, 4), M('saddle', 0x8a909c), 0, .72, -.7, { s: [1.2, .3, 1] });
   add('fin', new THREE.ConeGeometry(.3, 1.3, 5), T, 0, .98, -.35, { s: [.3, 1, 1], r: [-.35, 0, 0] });
   add('mouth', new THREE.BoxGeometry(1.0, .02, .02), M('mouthLine', 0x2a2a30), 0, .12, 1.85, { r: [0, 0, 0] });
   for (const s of [-1, 1]) {
-    add('patch', sph(.2, 7, 4), white, s * .5, .4, 1.25, { s: [.35, .6, 1.5], r: [0, s * .25, 0] });
+    add('patch', sph(.2, 7, 4), white, s * .5, .48, 1.2, { s: [.4, .6, 1.5], r: [0, s * .25, -s * .4] });
     add('flipper', sph(.38, 7, 3), T, s * .85, -.08, .8, { s: [1, .15, .5], r: [0, s * .7, -s * .3] });
     add('fluke', sph(.55, 7, 3), T, s * .5, .25, -2.65, { s: [1, .12, .45], r: [0, s * -.5, 0] });
   }
