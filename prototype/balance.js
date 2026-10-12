@@ -17,7 +17,9 @@ window.WinterRushData = {
       hunterDmg: [0, 2, 3, 5, 7, 10], hunterCd: [0, .7, .55, .42, .34, .26],
       shopSlots: 3, shopIv: .14,   // every shop serves 3 customers at once, one item every .14 s (no clerks)
       hunterCarry: [0, 8, 12, 16, 20, 26], hunterHides: [0, 4, 6, 8, 10, 12],   // meat / hides a hunter carries home by mastery level 1-5
-      hunterStage: { speed: [1, 1.15, 1.3, 1.45], carry: [0, 4, 8, 12], dmg: [0, 1, 3, 5], hp: [8, 11, 14, 18] },   // by village stage 1-4 (hearth Lv6/10/15): new coat + weapon each stage
+      hunterStage: { speed: [1, 1.15, 1.3, 1.45], carry: [0, 4, 8, 12], dmg: [0, 1, 3, 5], hp: [12, 16, 20, 26] },
+      hunterHp: [0, 0, 3, 6, 10, 14], hunterBlock: [0, 0, .15, .25, .35, .45],   // by hunter mastery: extra hp, chance to shrug off a bite
+      hunterFlee: .35, hunterKite: 2.1, hunterBeastLv: 4,   // retreat home below 35% hp, step back from bears closer than 2.1, fight saber/mammoth/chief only from mastery Lv4   // by village stage 1-4 (hearth Lv6/10/15): new coat + weapon each stage
     farmerCarry: [0, 4, 8], farmerSpeed: [0, 3.4, 4.2], pizzaChefCarry: [0, 4, 8], pizzaChefSpeed: [0, 3.6, 4.4],
     fisherCatch: [0, 2.6, 1.9], fisherCarry: [0, 6, 10],
     },
@@ -45,7 +47,7 @@ window.WinterRushData = {
       { open: [], sale: 3, say: ['👜 가죽 제품 입소문: 모든 판매가 +3%'] },
       { wall: 1, open: ['farmer', 'farmerUp', 'pizzaChef', 'pizzaChefUp', 'pizzaOven'], stage: 3, say: ['🥬 텃밭 채소 + 고기 + 생선 + 장작 → 피자', '🧑‍🌾 농부 · 👨‍🍳 피자 쉐프 고용', '🐻 곰이 더 많이 나와요 · 🏹 사냥꾼 4명까지', '🎩 직원 털모자 · 🏹 사냥꾼 석궁: 더 세고 튼튼해요', '🧱 울타리 강화: 돌담 · 습격 곰 1마리 덜 옴'] },
       { guard: 1, open: ['warehouse'], say: ['🏚️ 큰 창고: 재료가 한곳에 모이고 배달원이 날라요', '🛡️ 경비 강화: 눈보라 습격 곰 1마리 더 막기'] },
-      { guard: 1, open: ['smith', 'smithUp', 'saberCoat', 'tuskAxe'], say: ['⚒️ 대장간: 검치호 가죽 · 매머드 뿔로 전설 장비 만들기', '🐯 검치호 · 🦣 매머드가 이제부터 숲 밖에 나타나요', '🛡️ 경비 강화: 눈보라 습격 곰 1마리 더 막기'] },
+      { guard: 1, open: ['smith', 'smithUp', 'saberCoat', 'tuskAxe'], say: ['⚒️ 대장간: 검치호 가죽 · 매머드 뿔로 전설 장비 만들기', '🐯 검치호 · 🦣 매머드는 대장장이를 고용하면 나타나요', '🛡️ 경비 강화: 눈보라 습격 곰 1마리 더 막기'] },
       { wall: 1, open: [], say: ['🧱 울타리 강화: 두꺼운 돌담 · 습격 곰 1마리 덜 옴'] },
       { guard: 1, open: ['statue'], say: ['🗿 명성 동상: 모든 판매가 상승', '🛡️ 경비 강화: 눈보라 습격 곰 1마리 더 막기'] },
       { guard: 1, open: ['boat', 'sushiChef', 'sushiChefUp'], stage: 4, say: ['🚤 어선으로 참치 잡기', '🍣 참치 + 생선 + 채소 + 장작 → 초밥', '🍣 초밥 쉐프 고용', '❄️ 직원 방한 파카 · 🏹 사냥꾼 얼음 활: 가장 빠르고 강해요', '🚣 부두 끝에서 배 타고 바다로: 참치 작살 · 범고래 전투 · 🦭 바다표범 친구', '🛡️ 경비 강화: 눈보라 습격 곰 1마리 더 막기'] },
