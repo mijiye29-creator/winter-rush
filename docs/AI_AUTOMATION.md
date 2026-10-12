@@ -9,6 +9,11 @@ API 키를 등록하지 않는다. 두 AI는 각자 앱에서 이 저장소에 G
 | 검토 요청 | Claude 세션에 "PR #N 검토해줘" | PR 코멘트에 `@codex review` |
 | 결과 | 브랜치 푸시 + PR, 검토는 PR 코멘트 | 브랜치 푸시 + PR, 검토는 PR 코멘트 |
 
+## 1회 설정
+
+- **GPT**: ChatGPT Codex 설정의 [Environments](https://chatgpt.com/codex/cloud/settings/environments)에서 이 저장소(`mijiye29-creator/winter-rush`) 환경을 한 번 만든다. 없으면 `@codex review`에 "create an environment" 안내 댓글만 달린다.
+- **Claude**: claude.ai/code에서 GitHub를 연결하고 이 저장소를 고른다.
+
 ## 순서
 
 1. 형이 이슈를 만든다(템플릿 5줄, 담당 라벨 `claude` 또는 `codex`).
