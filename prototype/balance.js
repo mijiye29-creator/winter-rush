@@ -22,7 +22,7 @@ window.WinterRushData = {
       hunterFeed: .8,   // hunters carry meat straight to the grill / pizza meat tile while it is below 80% full
       hunterFlee: .35, hunterKite: 2.1, hunterBeastLv: 4,   // retreat home below 35% hp, step back from bears closer than 2.1, fight saber/mammoth/chief only from mastery Lv4   // by village stage 1-4 (hearth Lv6/10/15): new coat + weapon each stage
     farmerCarry: [0, 4, 8], farmerSpeed: [0, 3.4, 4.2], pizzaChefCarry: [0, 4, 8], pizzaChefSpeed: [0, 3.6, 4.4],
-    fisherCatch: [0, 2.6, 1.9], fisherCarry: [0, 6, 10],
+    fisherCatch: [0, 1.9, 1.4, 1], fisherCarry: [0, 8, 12, 16],   // seconds per fish / fish per trip by fisher mastery
     },
     // 🦸 hero growth: one pad, 2 levels per village stage. Each level changes looks, speed, weapon, kill and slam effects
     hero: {
@@ -58,7 +58,7 @@ window.WinterRushData = {
     ],
     combat: { autoInterval: .75, manualSwing: .24, comboWindow: 1.6, critChance: .15, slamEvery: 4, tapRange: 2.7 },
     alpha: { every: 3, hp: 12, meat: 4, coins: 80, pupChance: .6 },   // every 3rd wolf pack (from the 2nd blizzard) brings an alpha
-    pet: { tameMeat: 8, tameFish: 6, sealPup: .35,   // 🦭 seal pups (stage 4 floes) are tamed with fish; one wolf + one seal pet at most
+    pet: { tameMeat: 8, tameFish: 6, sealPup: .35, guard: 12,   // guard: pets chase sea thieves (penguins…) within this range of the hero or the dock   // 🦭 seal pups (stage 4 floes) are tamed with fish; one wolf + one seal pet at most
       hits: [0, 15, 40, 80, 140], dmg: [1, 2, 3, 4, 6], cd: [1, .9, .8, .7, .6], scale: [.55, .65, .78, .9, 1.05] },
     calmTime: 70, firstCalm: 80, warnTime: 8, stormTime: 25,
     stormBurn: 3.5, stormSlow: .35,
@@ -108,7 +108,7 @@ window.WinterRushData = {
       sushiRecipe: { tuna: 1, fish: 1, veg: 1, log: 1 },   // logs only feed the hearth, fish oven, pizza oven and sushi
     },
     craftTime: 5,                  // walrus ivory (smith) / walrus hide (artisan) → 🏺 craft goods sold at the leather stall
-    trade: { every: 90, rush: .85, max: [0, 0, 0, 250, 500], keep: 15, price: { log: 2, veg: 3, meat: 3, fish: 4, hide: 6, tuna: 12, blubber: 5 } },   // stage 3 wagon / stage 4 ship buy warehouse surplus above `keep`; a near-full warehouse (rush) calls them early
+    trade: { every: 90, rush: .85, max: [0, 0, 0, 250, 500], keep: 15, keepBy: { meat: 150, fish: 80, veg: 50, log: 80, tuna: 40, hide: 30, blubber: 20 }, price: { log: 2, veg: 3, meat: 3, fish: 4, hide: 6, tuna: 12, blubber: 5 } },   // stage 3 wagon / stage 4 ship buy warehouse surplus above `keep`; a near-full warehouse (rush) calls them early
     feast: { every: 180, dur: 60, need: { meat: 15, veg: 15, fish: 10 }, saleMul: 1.3, staffMul: 1.2 },   // stage 3+ village feast
     staffBurn: .04,                // the main hearth burns 4% faster per staff member
     armor: { boots: [0, .04, .08, .12, .16, .2], coat: [0, .08, .16, .24, .3, .36] },   // chance to block a hit
@@ -125,8 +125,8 @@ window.WinterRushData = {
     serverUp: { name: '서빙 직원', icon: '🧑‍🍳', up: 'server', costs: [300, 600], vals: [1, 2, 3] },
     hunter:  { name: '사냥꾼',    icon: '🏹', hire: 1, costs: [200, 700, 1500, 2600], vals: [0, 1, 2, 3, 4], stage: [1, 2, 3, 3] },   // 4th hunter with the pizza stage
     hunterUp: { name: '사냥꾼',   icon: '🏹', up: 'hunter', costs: [500, 1000, 1800, 3000], vals: [1, 2, 3, 4, 5], stage: [1, 2, 3, 4] },   // mastery Lv4 with the pizza stage, Lv5 with the harbor; each level adds gear
-    fisher:  { name: '낚시꾼',    icon: '🪝', hire: 1, costs: [300, 800], vals: [0, 1, 2] },
-    fisherUp: { name: '낚시꾼',   icon: '🪝', up: 'fisher', costs: [700], vals: [1, 2] },
+    fisher:  { name: '낚시꾼',    icon: '🪝', hire: 1, costs: [300, 800, 1600, 2800], vals: [0, 1, 2, 3, 4], stage: [2, 2, 3, 4] },   // 3rd with the pizza stage, 4th with the harbor
+    fisherUp: { name: '낚시꾼',   icon: '🪝', up: 'fisher', costs: [700, 1800], vals: [1, 2, 3], stage: [2, 3] },
     oven:    { name: '생선 화덕',  icon: '🔥', costs: [300, 700], vals: [0, 1, 2] },
     artisan: { name: '가죽 장인',  icon: '🧵', hire: 1, costs: [200], vals: [0, 1] },
     artisanUp: { name: '가죽 장인', icon: '🧵', up: 'artisan', costs: [500], vals: [1, 2] },
