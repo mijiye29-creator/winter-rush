@@ -917,7 +917,7 @@ function nearestPickup(c, type, skip = []) {
 }
 function addPizzaChef() {
   if (pizzaChefNpc) return;
-  pizzaChefNpc = carrier(0xf4f4f4, 0x2b2f3a, ['veg'], P.chefHome.x, P.chefHome.z); pizzaChefNpc.g.rotation.y = -Math.PI / 2; pizzaChefNpc.state = 'home';
+  pizzaChefNpc = carrier(0xf4f4f4, 0x2b2f3a, ['veg', 'fish', 'log'], P.chefHome.x, P.chefHome.z); pizzaChefNpc.g.rotation.y = -Math.PI / 2; pizzaChefNpc.state = 'home';
   pizzaChefNpc.body.add(mesh(new THREE.CylinderGeometry(.24, .3, .4, 10), mat(0xffffff), 0, 1.85, 0));
 }
 function addSmith() {
@@ -978,14 +978,24 @@ function updateSmith(dt) {
     popText(TAN.anvil.x, 2, TAN.anvil.z, `✨ ${MAT_NAME[raw]}`, '#ffd36b');
   } else if (raw && tick('anvilSpark', .24, dt)) burst(TAN.anvil.x, .8, TAN.anvil.z, 0xffb347, 3, { spd: 2, up: 3, life: .25, size: .5 });
 }
-// 👨‍🍳 the pizza chef fetches vegetables himself: crate → pizza tile, then back to the oven
+// 👨‍🍳 the pizza chef fetches his own ingredients: veg from the garden crate, fish from the pond crate, logs from the hearth pile (leaving the fire enough)
+const CHEF_FETCH = [
+  { item: 'veg', key: 'pzVeg', from: 'vegBox', at: () => P.vegBox, keep: () => 0 },
+  { item: 'fish', key: 'pzFish', from: 'fishCrate', at: () => P.fishCrate, keep: () => 0 },
+  { item: 'log', key: 'pzWood', from: 'wood', at: () => P.woodTile, keep: () => T.pizzaChefWoodKeep },
+];
 function updatePizzaChef(dt) {
   const c = pizzaChefNpc; showCarry(c);
   if (!walkPath(c, dt, 3.6)) return;
-  if (c.state === 'fetch') { const k = Math.min(S.vegBox, T.max.pzVeg - S.pzVeg - c.n, 6); if (k > 0) { S.vegBox -= k; c.n += k; } c.state = 'bring'; c.path = [V(P.pizzaIn.x + 1.2, 0, P.pizzaIn.z + .6)]; return; }
-  if (c.state === 'bring') { const k = Math.min(c.n, T.max.pzVeg - S.pzVeg); if (k > 0) { S.pzVeg += k; fly('veg', V(c.x, 1.3, c.z), V(P.pizzaIn.x, .4, P.pizzaIn.z)); } S.vegBox += c.n - k; c.n = 0; c.state = 'back'; c.path = [P.chefHome.clone()]; return; }
+  const j = c.job;
+  if (!j && (c.state === 'fetch' || c.state === 'bring')) c.state = 'back';
+  if (c.state === 'fetch') { const k = Math.min(S[j.from] - j.keep(), T.max[j.key] - S[j.key] - c.n, 6); if (k > 0) { S[j.from] -= k; c.n += k; } c.state = 'bring'; c.path = [V(P.pizzaIn.x + 1.2, 0, P.pizzaIn.z + .6)]; return; }
+  if (c.state === 'bring') { const k = Math.min(c.n, T.max[j.key] - S[j.key]); if (k > 0) { S[j.key] += k; fly(j.item, V(c.x, 1.3, c.z), V(P.pizzaIn.x, .4, P.pizzaIn.z)); } S[j.from] += c.n - k; c.n = 0; c.state = 'back'; c.path = [P.chefHome.clone()]; return; }
   if (c.state === 'back') { c.state = 'home'; c.g.rotation.y = -Math.PI / 2; }
-  if (c.state === 'home' && S.vegBox > 0 && S.pzVeg <= T.max.pzVeg * .5 && tick('chefLook', .5, dt)) { c.state = 'fetch'; c.path = [V(P.vegBox.x + 1.3, 0, P.vegBox.z)]; }
+  if (c.state === 'home' && tick('chefLook', .5, dt)) {
+    const job = CHEF_FETCH.filter(f => S[f.from] - f.keep() > 0 && S[f.key] <= T.max[f.key] * .5).sort((a, b) => S[a.key] / T.max[a.key] - S[b.key] / T.max[b.key])[0];
+    if (job) { c.job = job; c.item = job.item; c.state = 'fetch'; const a = job.at(); c.path = [V(a.x + 1.3, 0, a.z)]; }
+  }
 }
 function updateFarmer(dt) {
   const f = farmer, lv = M('farmer');
@@ -1257,7 +1267,20 @@ function earn(v, x, z) {
 // ───────────────────────── stage 4 (빙하 항구): pier, boats, tuna, sushi, sea animals, sea fog ─────────────────────────
 const HB = { boardSpot: V(43, 0, -2), boatDock: V(45, 0, -2), shoreX: 36.3, pierZ1: -3, pierZ2: -1 };
 const seaG = new THREE.Group(); seaG.visible = false; scene.add(seaG);
-seaG.add(mesh(new THREE.PlaneGeometry(8, 16).rotateX(-Math.PI / 2), mat(0xd99c86), 30, .013, -2, false));   // harbor ground inside the fence
+// ⚓ a low rope-and-picket fence on the old stage-3 east line: the hunting/kitchen village on the left, the harbor on the right (looks only, wide gap in the middle)
+{
+  const fg = new THREE.Group(); fg.position.x = 26; seaG.add(fg);
+  const postM = mat(0xeef6ff), capM = mat(0x2c6fa8), ropeM = mat(0xc8a46b);
+  for (const [z1, z2] of [[-9.7, -6.6], [2.4, 5.7]]) {
+    const n = Math.round((z2 - z1) / .55);
+    for (let i = 0; i <= n; i++) { const z = z1 + (z2 - z1) * i / n; fg.add(mesh(new THREE.CylinderGeometry(.09, .1, .7, 6), postM, 0, .35, z), mesh(new THREE.ConeGeometry(.12, .16, 6), capM, 0, .78, z)); }
+    for (const y of [.28, .55]) fg.add(mesh(new THREE.BoxGeometry(.06, .06, z2 - z1), ropeM, 0, y, (z1 + z2) / 2));
+  }
+  for (const z of [-6.6, 2.4]) fg.add(mesh(new THREE.CylinderGeometry(.14, .16, 1.7, 8), mat(0x2c6fa8), 0, .85, z), mesh(new THREE.SphereGeometry(.17, 8, 6), mat(0xffd36b), 0, 1.78, z));   // gate posts
+  const sign = sprite(320, 90, 2.9, .82); sign.sp.position.set(26, 2.3, -2.1); seaG.add(sign.sp);
+  sign.draw((c, w, h) => bubble(c, w, h, '⚓ 빙하 항구', '#9fd8ff'));
+}
+seaG.add(mesh(new THREE.PlaneGeometry(8, 16).rotateX(-Math.PI / 2), mat(0xbcd6e8), 30, .013, -2, false));   // harbor ground inside the fence: icy blue, so the harbor reads as its own section
 const seaMat = new THREE.MeshLambertMaterial({ color: 0x2a6f9e });
 seaG.add(mesh(new THREE.PlaneGeometry(90, 140).rotateX(-Math.PI / 2), seaMat, HB.shoreX + 45, .02, 0, false));
 seaG.add(mesh(new THREE.BoxGeometry(.4, .25, 140), mat(0xeef6ff), HB.shoreX, .1, 0, false));   // ice edge
@@ -2075,9 +2098,16 @@ function huntReady(h) {
   if (h.hp >= hMax() * .8) huntOut(h);
   else { h.state = 'rest'; h.path = []; h.prey = null; }
 }
+// hunters feed the meat tiles themselves (grill, then pizza from the pizza stage), lowest first; the warehouse only gets what they don't need
+const MEAT_SINKS = [
+  { at: () => P.meatTile, drop: () => V(P.meatTile.x, 0, P.meatTile.z + 1.3), get: () => S.meat, max: () => T.max.meat, add: k => (S.meat += k), on: () => true },
+  { at: () => P.pizzaIn, drop: () => V(P.pizzaIn.x, 0, P.pizzaIn.z + 1.3), get: () => S.pzMeat, max: () => T.max.pzMeat, add: k => (S.pzMeat += k), on: () => !!pizzaChefNpc },
+];
+const meatSink = () => MEAT_SINKS.filter(m => m.on() && m.get() < m.max() * ST.hunterFeed).sort((a, b) => a.get() / a.max() - b.get() / b.max())[0] || null;
 function huntHome(h) {
   h.state = 'home';
-  const to = whOn() ? V(P.whIn.x + .8, 0, P.whIn.z - 1.3) : V(P.meatTile.x, 0, P.meatTile.z + 1.3);
+  h.sink = h.n > 0 ? meatSink() : null;
+  const to = h.sink ? h.sink.drop() : whOn() ? V(P.whIn.x + .8, 0, P.whIn.z - 1.3) : V(P.meatTile.x, 0, P.meatTile.z + 1.3);
   h.path = (h.z > 6 ? [GATE_OUT.clone(), GATE_IN.clone()] : []).concat([to]);
 }
 function hurtHunter(h, b) {
@@ -2153,6 +2183,12 @@ function updateHunters(dt) {
     if (h.state === 'out') { if (walkPath(h, dt, hunterSpd())) h.state = 'hunt'; continue; }
     if (h.state === 'home') {
       if (!walkPath(h, dt, hunterSpd())) continue;
+      if (h.sink) {   // straight to the grill / pizza meat tile, then the rest to the next tile or the warehouse
+        const k = Math.min(h.n, h.sink.max() - h.sink.get()), at = h.sink.at();
+        if (k > 0) { h.sink.add(k); h.n -= k; fly('meat', V(h.x, 1.3, h.z), V(at.x, .5, at.z)); }
+        h.sink = null;
+        if (h.n > 0) { const next = meatSink(); if (next) { h.sink = next; h.path = [next.drop()]; continue; } if (whOn()) { h.path = [V(P.whIn.x + .8, 0, P.whIn.z - 1.3)]; continue; } }
+      }
       const useWh = whOn() && !h.noWh;
       if (useWh) {
         h.n -= whPut('meat', h.n, V(h.x, 1.3, h.z)); h.hides -= whPut('hide', h.hides);
