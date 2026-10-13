@@ -14,11 +14,12 @@ window.WinterRushData = {
     staff: {                       // one worker per job; levels raise mastery
       helperCarry: [0, 4, 8, 12], helperSpeed: [0, 3.4, 4, 4.8], helperChop: [0, .8, .6, .45],
       serverCarry: [0, 6, 10, 14], serverSpeed: [0, 3.6, 4.4, 5.2], serverIv: [0, .15, .1, .06],
-      hunterDmg: [0, 2, 3, 5, 7, 10], hunterCd: [0, .7, .55, .42, .34, .26],
+      hunterDmg: [0, 1, 2, 4, 7, 10], hunterCd: [0, .9, .7, .45, .34, .26],
       shopSlots: 3, shopIv: .14,   // every shop serves 3 customers at once, one item every .14 s (no clerks)
-      hunterCarry: [0, 8, 12, 16, 20, 26], hunterHides: [0, 4, 6, 8, 10, 12],   // meat / hides a hunter carries home by mastery level 1-5
-      hunterStage: { speed: [1, 1.15, 1.3, 1.45], carry: [0, 4, 8, 12], dmg: [0, 1, 3, 5], hp: [12, 16, 20, 26] },
+      hunterCarry: [0, 6, 8, 16, 20, 26], hunterHides: [0, 4, 6, 8, 10, 12],   // meat / hides a hunter carries home by mastery level 1-5
+      hunterStage: { speed: [1, 1.15, 1.3, 1.45], carry: [0, 2, 8, 12], dmg: [0, 1, 3, 5], hp: [12, 16, 20, 26] },
       hunterHp: [0, 0, 3, 6, 10, 14], hunterBlock: [0, 0, .15, .25, .35, .45],   // by hunter mastery: extra hp, chance to shrug off a bite
+      hunterFeed: .8,   // hunters carry meat straight to the grill / pizza meat tile while it is below 80% full
       hunterFlee: .35, hunterKite: 2.1, hunterBeastLv: 4,   // retreat home below 35% hp, step back from bears closer than 2.1, fight saber/mammoth/chief only from mastery Lv4   // by village stage 1-4 (hearth Lv6/10/15): new coat + weapon each stage
     farmerCarry: [0, 4, 8], farmerSpeed: [0, 3.4, 4.2], pizzaChefCarry: [0, 4, 8], pizzaChefSpeed: [0, 3.6, 4.4],
     fisherCatch: [0, 2.6, 1.9], fisherCarry: [0, 6, 10],
@@ -63,7 +64,7 @@ window.WinterRushData = {
     stormBurn: 3.5, stormSlow: .35,
     bearMeat: [3, 4, 5, 6],   // meat per field bear by village stage 1-4
     campRegen: .8,             // seconds per heart regained inside the village (was 2.5)
-    fieldBears: 7, maxFieldBears: 12, bearRespawn: 4, stageBears: [0, 3, 7, 11], stageRespawn: [4, 3, 2.2, 1.6],   // pizza/sushi eat meat: more bears and faster respawn by village stage 1-4
+    fieldBears: 7, maxFieldBears: 12, bearRespawn: 4, stageBears: [0, 3, 7, 11], stageRespawn: [4, 3.5, 2, 1.6],   // pizza/sushi eat meat: more bears and faster respawn by village stage 1-4
     bearHp: 4, bossEvery: 4,
     wolfPackSize: 3, maxWolves: 10, wolfSpawn: 14, stageWolves: [0, 3, 6, 9], stagePack: [0, 0, 1, 1], stageWolfSpawn: [14, 12, 10, 8],   // later stages: more and bigger packs, more meat
     wolfStartSold: 8, hurtGrace: .8,
@@ -88,6 +89,7 @@ window.WinterRushData = {
     // stage 3 (큰 화로): garden → veg, veg + meat + logs → pizza, smith processes beast trophies
     garden: { grow: 16, harborGrow: 8 },
     pizzaTime: [3.2, 2.4, 1.7],    // seconds per pizza batch by pizza oven level (1 log per batch)
+    pizzaChefWoodKeep: 12,         // the pizza chef only takes logs from the hearth pile above this many
     pizzaRecipe: { veg: 2, meat: 4, fish: 3 }, pizzaRecipeHarbor: { veg: 1, meat: 4, fish: 3 },
     smithTime: [0, 8, 4],          // seconds per trophy processed by smith level
     warehouse: { cap: [0, 800, 1200, 1600, 2000, 2400] },   // slots per warehouse level
