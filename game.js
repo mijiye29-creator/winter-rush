@@ -910,7 +910,7 @@ function nearestPickup(c, type, skip = []) {
   let best = null, bd = 1e9;
   for (const pk of pickups) {
     if (!['meat', 'hide', 'pelt', 'tusk', 'blubber', 'tuna', 'ivory', 'whide'].includes(pk.type) || (type && pk.type !== type) || skip.includes(pk) || claimed(c, pk)) continue;
-    if (pk.x < BOUNDS.x1 || pk.x > BOUNDS.x2 || pk.z > 23) continue;
+    if (pk.x < BOUNDS.x1 || pk.x > (S.stage >= 4 ? 44.5 : BOUNDS.x2) || pk.z > 23) continue;   // the harbor and pier count from stage 4 (walrus loot)
     const d = Math.hypot(pk.x - c.x, pk.z - c.z); if (d < bd) { bd = d; best = pk; }
   }
   return best;
@@ -1525,7 +1525,8 @@ function updateTrade(dt) {
   if (arriving && !S.tradeHi) { S.tradeHi = true; toast(ship ? '🚢 교역선이 들어와요: 창고에 남는 재료를 사갈 거예요' : '🛻 떠돌이 상인이 마차를 끌고 왔어요: 창고에 남는 재료를 사가요'); }
   if (docked && !S.traded) {
     S.traded = true; let coins = 0; const sold = [];
-    const surplus = Object.keys(T.trade.price).map(it => [it, Math.max(0, S.wh[it] - T.trade.keep)]), total = surplus.reduce((n, [, k]) => n + k, 0);
+    const short = it => DELIVER.some(d => d.item === it && (!d.on || d.on()) && d.get() < d.max() * .5);   // a tile is running low on it: keep every one
+    const surplus = Object.keys(T.trade.price).map(it => [it, short(it) ? 0 : Math.max(0, S.wh[it] - (T.trade.keepBy[it] ?? T.trade.keep))]), total = surplus.reduce((n, [, k]) => n + k, 0);
     const share = Math.min(1, T.trade.max[S.stage] / Math.max(1, total));   // buy from every overstocked item in proportion
     for (const [it, k0] of surplus) {
       const k = Math.ceil(k0 * share); if (!k) continue;
@@ -2350,9 +2351,10 @@ function addFisher() {
   const p = makePerson(0x2f6e8a, 0xd9c3a0);
   const rod = mesh(new THREE.CylinderGeometry(.03, .03, 1.6, 5), mat(0x5a3a28), .4, 1.3, .4); rod.rotation.x = .9; p.body.add(rod);
   const carry = new THREE.Group(); carry.position.z = -.5; p.g.add(carry);
-  for (let i = 0; i < 10; i++) { const m = itemMesh('fish'); m.position.y = 1.1 + i * .2; m.visible = false; carry.add(m); }
+  for (let i = 0; i < 16; i++) { const m = itemMesh('fish'); m.position.y = 1.1 + i * .2; m.visible = false; carry.add(m); }
   const hole = P.holes[fishers.length % P.holes.length];
-  const f = { ...p, carry, n: 0, t: 0, hole, x: P.fishCrate.x, z: P.fishCrate.z + 1, path: [V(hole.x + 1, 0, hole.z)], state: 'toHole' };
+  const side = fishers.length >= P.holes.length ? -1 : 1;   // 3rd and 4th fishers sit on the other side of the holes
+  const f = { ...p, carry, n: 0, t: 0, hole, side, x: P.fishCrate.x, z: P.fishCrate.z + 1, path: [V(hole.x + side, 0, hole.z)], state: 'toHole' };
   p.g.position.set(f.x, 0, f.z); fishers.push(f);
 }
 function updateFishers(dt) {
@@ -2361,7 +2363,7 @@ function updateFishers(dt) {
     if (!walkPath(f, dt, 3.2)) return;
     f.body.position.y = 0;
     if (f.state === 'toHole') {
-      f.g.rotation.y = -Math.PI / 2; f.body.rotation.x = Math.sin(performance.now() / 300) * .05;
+      f.g.rotation.y = -Math.PI / 2 * (f.side || 1); f.body.rotation.x = Math.sin(performance.now() / 300) * .05;
       if ((f.t += dt) >= ST.fisherCatch[M('fisher')]) { f.t = 0; f.n++; burst(f.hole.x, .3, f.hole.z, 0xbfe3f5, 5, { spd: 2, up: 4, life: .4 }); }
       if (f.n >= ST.fisherCarry[M('fisher')]) { f.state = 'toShop'; f.path = [V(P.fishCrate.x + 1.2, 0, P.fishCrate.z)]; }   // fishers stay by the pond; couriers haul surplus to the warehouse
     } else {
@@ -2378,7 +2380,7 @@ function updateFishers(dt) {
         if (t && t !== f.dest) { f.dest = t; f.state = 'carry'; f.path = [V(t.at().x + 1.2, 0, t.at().z)]; return; }
         sellSurplus('fish', f.n, f.x, f.z); f.n = 0;
       }
-      if (f.n === 0) { f.state = 'toHole'; f.dest = null; f.path = [V(f.hole.x + 1, 0, f.hole.z)]; }
+      if (f.n === 0) { f.state = 'toHole'; f.dest = null; f.path = [V(f.hole.x + (f.side || 1), 0, f.hole.z)]; }
     }
   });
 }
@@ -2650,9 +2652,9 @@ function applySealLook(w) {   // grows a scarf, then a fish-scale collar, then a
 }
 function spawnSealPup(x, z) {
   const u = sealModel(.6); u.seal = true; u.x = x; u.z = z; u.t = 60; u.fed = 0; u.g.position.set(x, 0, z);
-  const b = sprite(180, 120, 1.8, 1.2); b.sp.position.y = 2.2; u.g.add(b.sp); b.draw((c, w, h) => bubble(c, w, h, `🐟 0/${T.pet.tameFish}`));
+  const b = sprite(180, 120, 1.8, 1.2); b.sp.position.y = 2.2; u.g.add(b.sp); b.draw((c, w, h) => bubble(c, w, h, `🐟🥩 0/${T.pet.tameFish}`));
   u.bub = b; pups.push(u);
-  toast(`🦭 아기 바다표범! 생선 ${T.pet.tameFish}마리를 먹이면 친구가 돼요 (바다에서도 같이 싸워요)`);
+  toast(`🦭 아기 바다표범이 부두로 헤엄쳐 와요! 생선이나 고기 ${T.pet.tameFish}개를 먹이면 친구가 돼요`);
 }
 const petLv = () => T.pet.hits.filter(h => S.petHits >= h).length - 1;
 function addPet(seal = false) {
@@ -2663,11 +2665,15 @@ function removeWolfModel(u) { scene.remove(u.g); disposeActor(u.g, hpBarGeo); u.
 function updatePets(dt) {
   for (let i = pups.length - 1; i >= 0; i--) {
     const u = pups[i]; u.t -= dt; u.g.position.y = Math.abs(Math.sin(performance.now() / 200 + i)) * .06;
-    const food = u.seal ? 'fish' : 'meat', need = u.seal ? T.pet.tameFish : T.pet.tameMeat;
-    if (Math.hypot(u.x - pl.x, u.z - pl.z) < 1.6 && stackHas(food) && !pets.some(w => !!w.seal === !!u.seal) && tick('feedPup', .35, dt)) {
+    if (u.seal) {   // the pup swims up to the pier so the hero can walk over and feed it
+      const sx = 41.5 + (i % 2) * .8, dx = sx - u.x, dz = -2 - u.z, d = Math.hypot(dx, dz);
+      if (d > .1) { const st = Math.min(d, 2.4 * dt); u.x += dx / d * st; u.z += dz / d * st; u.g.rotation.y = Math.atan2(dx, dz); u.g.position.x = u.x; u.g.position.z = u.z; }
+    }
+    const food = u.seal ? (stackHas('fish') ? 'fish' : 'meat') : 'meat', need = u.seal ? T.pet.tameFish : T.pet.tameMeat;   // seal pups eat fish or meat
+    if (Math.hypot(u.x - pl.x, u.z - pl.z) < 2 && stackHas(food) && !pets.some(w => !!w.seal === !!u.seal) && tick('feedPup', .35, dt)) {
       stackTake(food); u.fed++; u.t = 60; play('pop', 60);
       fly(food, backPos(), V(u.x, .6, u.z), .2);
-      u.bub.draw((c, w, h) => bubble(c, w, h, `${u.seal ? '🐟' : '🥩'} ${u.fed}/${need}`));
+      u.bub.draw((c, w, h) => bubble(c, w, h, `${u.seal ? '🐟🥩' : '🥩'} ${u.fed}/${need}`));
       if (u.fed < need) continue;
       removeWolfModel(u); pups.splice(i, 1); addPet(!!u.seal);
       toast(u.seal ? '🦭 바다표범이 친구가 됐어요! 배를 타면 바다까지 따라와 싸워요 (가방 +4)' : '🐺 늑대를 길들였어요! 함께 싸우며 점점 자랍니다 (가방 +4)'); play('up'); buzz([20, 30, 20]);
@@ -2679,6 +2685,17 @@ function updatePets(dt) {
     let tgt = null, bd = 6;
     const home = inCamp();
     for (const b of bears) { const d = Math.hypot(b.x - pl.x, b.z - pl.z); if (d < bd && (!home || b.raider) && (w.seal || !(b.sea && b.x > HB.shoreX - .2 && !onPier(b.x, b.z)))) { bd = d; tgt = b; } }   // wolves never go into the water; the seal swims
+    w.guard = false;
+    if (!tgt && S.stage >= 4) {   // nothing near the hero: chase sea thieves (penguins, anything that climbed ashore) off the dock on their own
+      let gd = 1e9;
+      for (const b of bears) {
+        if (!b.sea || b.kind === 'orca' || (b.x > HB.shoreX - .2 && !onPier(b.x, b.z))) continue;
+        if (b.kind !== 'penguin' && Math.hypot(b.x - P.dockCrate.x, b.z - P.dockCrate.z) > 6) continue;
+        const d = Math.min(Math.hypot(b.x - pl.x, b.z - pl.z), Math.hypot(b.x - P.dockCrate.x, b.z - P.dockCrate.z));
+        if (d < T.pet.guard && d < gd) { gd = d; tgt = b; }
+      }
+      w.guard = !!tgt;
+    }
     let tx, tz;
     if (tgt) { tx = tgt.x; tz = tgt.z; }
     else { const a = pl.rot + Math.PI + (i ? .8 : -.8); tx = pl.x + Math.sin(a) * 1.5; tz = pl.z + Math.cos(a) * 1.5; }
@@ -2699,7 +2716,7 @@ function updatePets(dt) {
       popText(tgt.x, 2.3, tgt.z, `${dmg}`, '#ffd9a0'); burst(tgt.x, 1, tgt.z, 0xffffff, 4, { spd: 3, up: 3, life: .3, size: .6 });
       bearHurt(tgt, dmg, w);
     }
-    if (Math.hypot(pl.x - w.x, pl.z - w.z) > 14 && (!pl.boat || w.seal)) { w.x = pl.x; w.z = pl.z; }
+    if (!w.guard && Math.hypot(pl.x - w.x, pl.z - w.z) > 14 && (!pl.boat || w.seal)) { w.x = pl.x; w.z = pl.z; }
     if (S.stage >= 4 && !w.seal && w.x > HB.shoreX - .4 && !onPier(w.x, w.z)) { w.x = clamp(w.x, 34.4, 43.4); w.z = clamp(w.z, -2.7, -1.3); }
     const sc = w.g.scale.x + (T.pet.scale[w.lv] - w.g.scale.x) * Math.min(1, dt * 3); w.g.scale.setScalar(sc);
     w.g.position.x = w.x; w.g.position.z = w.z;
@@ -3046,6 +3063,11 @@ function updatePlayer(dt) {
     const it = WH_ITEMS.find(t => stackHas(t));
     if (it && whRoom() > 0) { stackTake(it); S.wh[it]++; fly(it, backPos(), V(P.whIn.x, .5, P.whIn.z), .2); }
     else { const m = S.raw.pelt ? 'pelt' : S.raw.tusk ? 'tusk' : null; if (m && whRoom() > 0) { S.raw[m]--; S.wh[m]++; fly(m, V(pl.x, 1.4, pl.z), V(P.whIn.x, .5, P.whIn.z), .2); } }
+  }
+  if (S.stage >= 4 && whOn() && near(P.dockCrate, 1.35) && tick('dockDrop', .07, dt)) {   // 🏗️ harbor drop-off: sea loot (walrus meat, blubber, ivory…) goes on the loading tile and couriers haul it to the warehouse
+    const it = WH_ITEMS.find(t => stackHas(t) && t !== 'log');
+    if (it === 'fish' || it === 'tuna') { if (S.dockFish + S.dockTuna < dockCap()) { stackTake(it); S[it === 'fish' ? 'dockFish' : 'dockTuna']++; fly(it, backPos(), V(P.dockCrate.x, .5, P.dockCrate.z), .2); } }
+    else if (it && whRoom() > 0) { stackTake(it); S.wh[it]++; fly(it, backPos(), V(P.dockCrate.x, .5, P.dockCrate.z), .2); }
   }
   if (near(P.woodTile, 1.35) && S.blubber < T.max.blubber && stackHas('blubber') && tick('dropBlubber', .1, dt)) { stackTake('blubber'); S.blubber++; fly('blubber', backPos(), V(P.woodTile.x, .5, P.woodTile.z), .2); }
   if (S.stage >= 4) {
