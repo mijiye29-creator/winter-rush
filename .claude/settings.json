@@ -1,4 +1,9 @@
 {
+  "statusLine": {
+    "type": "command",
+    "command": "python3 \"$CLAUDE_PROJECT_DIR/.claude/statusline.py\"",
+    "padding": 0
+  },
   "hooks": {
     "SessionStart": [
       {
