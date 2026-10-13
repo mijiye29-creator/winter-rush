@@ -165,6 +165,12 @@ function useModel(name, parent, base, fur) {
   if (!THREE.GLTFLoader) return;
   const put = src => {
     base.forEach(o => (o.visible = false)); const m = src.clone(); m.name = name; parent.add(m);
+    // People keep one draw call. Clone their outfit geometry so one actor's colors cannot tint another.
+    m.traverse(o => {
+      if (!o.isMesh || !o.userData.colorRegions) return;
+      o.geometry = o.geometry.clone(); o.geometry.userData.shared = false;
+    });
+    if (parent.userData.syncOutfit) parent.userData.syncOutfit();   // current saved level may precede the async GLB load
     // legs come as their own pieces (leg_FL, leg_BR…) pivoting at the hip; walkAnim swings them, diagonal pairs together
     const legs = []; m.traverse(o => /^leg_/.test(o.name) && legs.push(o));
     legs.forEach(l => (l.userData.ph = /FL|BR|_L$/.test(l.name) ? 0 : Math.PI)); parent.userData.legs = legs;
@@ -198,6 +204,22 @@ function useModel(name, parent, base, fur) {
   const inl = window.WINTER_MODELS && window.WINTER_MODELS[name];
   if (inl) new THREE.GLTFLoader().parse(Uint8Array.from(atob(inl), c => c.charCodeAt(0)).buffer, '', done, fail);
   else new THREE.GLTFLoader().load(`models/${name}.glb` + (window.WINTER_BUILD ? '?v=' + window.WINTER_BUILD : ''), done, undefined, fail);
+}
+function tintOutfit(parent, name, palette) {
+  const model = parent.getObjectByName(name);
+  let applied = false;
+  if (model) model.traverse(o => {
+    const regions = o.userData.colorRegions;
+    if (!o.isMesh || !regions) return;
+    const color = o.geometry.attributes.color;
+    for (const region of regions) {
+      const value = palette[region.name] === undefined ? palette['material:' + region.material] : palette[region.name];
+      const c = new THREE.Color(value === undefined ? region.color : value);
+      for (let i = region.start; i < region.start + region.count; i++) color.setXYZ(i, c.r, c.g, c.b);
+    }
+    color.needsUpdate = true; applied = true;
+  });
+  return applied;
 }
 // Walking: speed comes from how far the actor moved since last frame. Legs swing in a trot, the body rocks;
 // returns the roll/pitch to add on top of the caller's own body tilt (b.body.userData.waddle / .bounce tune it per animal).
@@ -895,7 +917,7 @@ function nearestPickup(c, type, skip = []) {
 }
 function addPizzaChef() {
   if (pizzaChefNpc) return;
-  pizzaChefNpc = carrier(0xf4f4f4, 0x2b2f3a, ['veg'], P.chefHome.x, P.chefHome.z); pizzaChefNpc.g.rotation.y = -Math.PI / 2; pizzaChefNpc.state = 'home';
+  pizzaChefNpc = carrier(0xf4f4f4, 0x2b2f3a, ['veg', 'fish', 'log'], P.chefHome.x, P.chefHome.z); pizzaChefNpc.g.rotation.y = -Math.PI / 2; pizzaChefNpc.state = 'home';
   pizzaChefNpc.body.add(mesh(new THREE.CylinderGeometry(.24, .3, .4, 10), mat(0xffffff), 0, 1.85, 0));
 }
 function addSmith() {
@@ -956,14 +978,24 @@ function updateSmith(dt) {
     popText(TAN.anvil.x, 2, TAN.anvil.z, `✨ ${MAT_NAME[raw]}`, '#ffd36b');
   } else if (raw && tick('anvilSpark', .24, dt)) burst(TAN.anvil.x, .8, TAN.anvil.z, 0xffb347, 3, { spd: 2, up: 3, life: .25, size: .5 });
 }
-// 👨‍🍳 the pizza chef fetches vegetables himself: crate → pizza tile, then back to the oven
+// 👨‍🍳 the pizza chef fetches his own ingredients: veg from the garden crate, fish from the pond crate, logs from the hearth pile (leaving the fire enough)
+const CHEF_FETCH = [
+  { item: 'veg', key: 'pzVeg', from: 'vegBox', at: () => P.vegBox, keep: () => 0 },
+  { item: 'fish', key: 'pzFish', from: 'fishCrate', at: () => P.fishCrate, keep: () => 0 },
+  { item: 'log', key: 'pzWood', from: 'wood', at: () => P.woodTile, keep: () => T.pizzaChefWoodKeep },
+];
 function updatePizzaChef(dt) {
   const c = pizzaChefNpc; showCarry(c);
   if (!walkPath(c, dt, 3.6)) return;
-  if (c.state === 'fetch') { const k = Math.min(S.vegBox, T.max.pzVeg - S.pzVeg - c.n, 6); if (k > 0) { S.vegBox -= k; c.n += k; } c.state = 'bring'; c.path = [V(P.pizzaIn.x + 1.2, 0, P.pizzaIn.z + .6)]; return; }
-  if (c.state === 'bring') { const k = Math.min(c.n, T.max.pzVeg - S.pzVeg); if (k > 0) { S.pzVeg += k; fly('veg', V(c.x, 1.3, c.z), V(P.pizzaIn.x, .4, P.pizzaIn.z)); } S.vegBox += c.n - k; c.n = 0; c.state = 'back'; c.path = [P.chefHome.clone()]; return; }
+  const j = c.job;
+  if (!j && (c.state === 'fetch' || c.state === 'bring')) c.state = 'back';
+  if (c.state === 'fetch') { const k = Math.min(S[j.from] - j.keep(), T.max[j.key] - S[j.key] - c.n, 6); if (k > 0) { S[j.from] -= k; c.n += k; } c.state = 'bring'; c.path = [V(P.pizzaIn.x + 1.2, 0, P.pizzaIn.z + .6)]; return; }
+  if (c.state === 'bring') { const k = Math.min(c.n, T.max[j.key] - S[j.key]); if (k > 0) { S[j.key] += k; fly(j.item, V(c.x, 1.3, c.z), V(P.pizzaIn.x, .4, P.pizzaIn.z)); } S[j.from] += c.n - k; c.n = 0; c.state = 'back'; c.path = [P.chefHome.clone()]; return; }
   if (c.state === 'back') { c.state = 'home'; c.g.rotation.y = -Math.PI / 2; }
-  if (c.state === 'home' && S.vegBox > 0 && S.pzVeg <= T.max.pzVeg * .5 && tick('chefLook', .5, dt)) { c.state = 'fetch'; c.path = [V(P.vegBox.x + 1.3, 0, P.vegBox.z)]; }
+  if (c.state === 'home' && tick('chefLook', .5, dt)) {
+    const job = CHEF_FETCH.filter(f => S[f.from] - f.keep() > 0 && S[f.key] <= T.max[f.key] * .5).sort((a, b) => S[a.key] / T.max[a.key] - S[b.key] / T.max[b.key])[0];
+    if (job) { c.job = job; c.item = job.item; c.state = 'fetch'; const a = job.at(); c.path = [V(a.x + 1.3, 0, a.z)]; }
+  }
 }
 function updateFarmer(dt) {
   const f = farmer, lv = M('farmer');
@@ -1235,7 +1267,20 @@ function earn(v, x, z) {
 // ───────────────────────── stage 4 (빙하 항구): pier, boats, tuna, sushi, sea animals, sea fog ─────────────────────────
 const HB = { boardSpot: V(43, 0, -2), boatDock: V(45, 0, -2), shoreX: 36.3, pierZ1: -3, pierZ2: -1 };
 const seaG = new THREE.Group(); seaG.visible = false; scene.add(seaG);
-seaG.add(mesh(new THREE.PlaneGeometry(8, 16).rotateX(-Math.PI / 2), mat(0xd99c86), 30, .013, -2, false));   // harbor ground inside the fence
+// ⚓ a low rope-and-picket fence on the old stage-3 east line: the hunting/kitchen village on the left, the harbor on the right (looks only, wide gap in the middle)
+{
+  const fg = new THREE.Group(); fg.position.x = 26; seaG.add(fg);
+  const postM = mat(0xeef6ff), capM = mat(0x2c6fa8), ropeM = mat(0xc8a46b);
+  for (const [z1, z2] of [[-9.7, -6.6], [2.4, 5.7]]) {
+    const n = Math.round((z2 - z1) / .55);
+    for (let i = 0; i <= n; i++) { const z = z1 + (z2 - z1) * i / n; fg.add(mesh(new THREE.CylinderGeometry(.09, .1, .7, 6), postM, 0, .35, z), mesh(new THREE.ConeGeometry(.12, .16, 6), capM, 0, .78, z)); }
+    for (const y of [.28, .55]) fg.add(mesh(new THREE.BoxGeometry(.06, .06, z2 - z1), ropeM, 0, y, (z1 + z2) / 2));
+  }
+  for (const z of [-6.6, 2.4]) fg.add(mesh(new THREE.CylinderGeometry(.14, .16, 1.7, 8), mat(0x2c6fa8), 0, .85, z), mesh(new THREE.SphereGeometry(.17, 8, 6), mat(0xffd36b), 0, 1.78, z));   // gate posts
+  const sign = sprite(320, 90, 2.9, .82); sign.sp.position.set(26, 2.3, -2.1); seaG.add(sign.sp);
+  sign.draw((c, w, h) => bubble(c, w, h, '⚓ 빙하 항구', '#9fd8ff'));
+}
+seaG.add(mesh(new THREE.PlaneGeometry(8, 16).rotateX(-Math.PI / 2), mat(0xbcd6e8), 30, .013, -2, false));   // harbor ground inside the fence: icy blue, so the harbor reads as its own section
 const seaMat = new THREE.MeshLambertMaterial({ color: 0x2a6f9e });
 seaG.add(mesh(new THREE.PlaneGeometry(90, 140).rotateX(-Math.PI / 2), seaMat, HB.shoreX + 45, .02, 0, false));
 seaG.add(mesh(new THREE.BoxGeometry(.4, .25, 140), mat(0xeef6ff), HB.shoreX, .1, 0, false));   // ice edge
@@ -1840,7 +1885,26 @@ function applyGear() {
     gearM.coat.visible = true; gearM.coat.material.color.setHex(S.lv.saberCoat >= 2 ? 0xf0c080 : 0xe0a050);
     gearM.trim.forEach(m => { m.visible = true; m.material.color.setHex(0x6b3a1a); }); gearM.pads.forEach(m => (m.visible = true));
   }
+  syncHeroOutfit();
 }
+function syncHeroOutfit() {
+  const cv = look('coat'), boots = GEAR.boots[look('boots')], coat = GEAR.coat[cv];
+  const body = S.lv.saberCoat ? (S.lv.saberCoat >= 2 ? 0xf0c080 : 0xe0a050) : coat && coat[0];
+  const trim = S.lv.saberCoat ? 0x6b3a1a : coat && coat[1];
+  const palette = {};
+  if (body) {
+    palette['material:coat'] = body;
+    palette['material:coatDark'] = new THREE.Color(body).multiplyScalar(.8).getHex();
+    for (const name of ['mittenL', 'mittenR', 'thumbL', 'thumbR', 'scarf', 'scarfTail']) palette[name] = body;
+  }
+  if (boots) palette['material:boot'] = boots[0];
+  if (trim) for (const name of ['hem', 'hoodFur', 'pompom', 'cuffL', 'cuffR', 'bootCuff', 'scarfStripe', 'scarfFringe']) palette[name] = trim;
+  if (!tintOutfit(player.body, 'hero_lv1', palette)) return;
+  // The GLB itself is the coat/boots; the old cylinders and boxes would overlap it.
+  gearM.coat.visible = false; gearM.boot.forEach(m => (m.visible = false));
+  gearM.cuff.forEach(m => (m.visible = false)); gearM.trim.forEach(m => (m.visible = false));
+}
+player.body.userData.syncOutfit = syncHeroOutfit;
 const shock = new THREE.Mesh(new THREE.RingGeometry(.85, 1, 48).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ color: 0xffe08a, transparent: true, depthWrite: false }));
 shock.visible = false; scene.add(shock);
 const swoosh = new THREE.Mesh(new THREE.RingGeometry(.7, 1.35, 18, 1, -Math.PI * .8, Math.PI * .6).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0, side: THREE.DoubleSide, depthWrite: false }));
@@ -2030,9 +2094,20 @@ function addHunter() {
   p.g.position.set(h.x, 0, h.z); hunters.push(h); dressStaff(h, true); huntOut(h);
 }
 function huntOut(h) { h.state = 'out'; h.prey = null; h.path = h.z < 6 ? [GATE_IN.clone(), GATE_OUT.clone()] : []; }
+function huntReady(h) {
+  if (h.hp >= hMax() * .8) huntOut(h);
+  else { h.state = 'rest'; h.path = []; h.prey = null; }
+}
+// hunters feed the meat tiles themselves (grill, then pizza from the pizza stage), lowest first; the warehouse only gets what they don't need
+const MEAT_SINKS = [
+  { at: () => P.meatTile, drop: () => V(P.meatTile.x, 0, P.meatTile.z + 1.3), get: () => S.meat, max: () => T.max.meat, add: k => (S.meat += k), on: () => true },
+  { at: () => P.pizzaIn, drop: () => V(P.pizzaIn.x, 0, P.pizzaIn.z + 1.3), get: () => S.pzMeat, max: () => T.max.pzMeat, add: k => (S.pzMeat += k), on: () => !!pizzaChefNpc },
+];
+const meatSink = () => MEAT_SINKS.filter(m => m.on() && m.get() < m.max() * ST.hunterFeed).sort((a, b) => a.get() / a.max() - b.get() / b.max())[0] || null;
 function huntHome(h) {
   h.state = 'home';
-  const to = whOn() ? V(P.whIn.x + .8, 0, P.whIn.z - 1.3) : V(P.meatTile.x, 0, P.meatTile.z + 1.3);
+  h.sink = h.n > 0 ? meatSink() : null;
+  const to = h.sink ? h.sink.drop() : whOn() ? V(P.whIn.x + .8, 0, P.whIn.z - 1.3) : V(P.meatTile.x, 0, P.meatTile.z + 1.3);
   h.path = (h.z > 6 ? [GATE_OUT.clone(), GATE_IN.clone()] : []).concat([to]);
 }
 function hurtHunter(h, b) {
@@ -2104,9 +2179,16 @@ function updateHunters(dt) {
     }
     h.cd -= dt;
     if (h.state !== 'hunt' && h.z < 6.6 && h.hp < hMax() && tick('hHeal' + hunters.indexOf(h), .5, dt)) h.hp++;   // heal fast inside the village
+    if (h.state === 'rest') { huntReady(h); continue; }
     if (h.state === 'out') { if (walkPath(h, dt, hunterSpd())) h.state = 'hunt'; continue; }
     if (h.state === 'home') {
       if (!walkPath(h, dt, hunterSpd())) continue;
+      if (h.sink) {   // straight to the grill / pizza meat tile, then the rest to the next tile or the warehouse
+        const k = Math.min(h.n, h.sink.max() - h.sink.get()), at = h.sink.at();
+        if (k > 0) { h.sink.add(k); h.n -= k; fly('meat', V(h.x, 1.3, h.z), V(at.x, .5, at.z)); }
+        h.sink = null;
+        if (h.n > 0) { const next = meatSink(); if (next) { h.sink = next; h.path = [next.drop()]; continue; } if (whOn()) { h.path = [V(P.whIn.x + .8, 0, P.whIn.z - 1.3)]; continue; } }
+      }
       const useWh = whOn() && !h.noWh;
       if (useWh) {
         h.n -= whPut('meat', h.n, V(h.x, 1.3, h.z)); h.hides -= whPut('hide', h.hides);
@@ -2116,14 +2198,14 @@ function updateHunters(dt) {
       const k = useWh ? 0 : Math.min(h.n, T.max.meat - S.meat);
       if (k > 0) { S.meat += k; h.n -= k; fly('meat', V(h.x, 1.3, h.z), V(P.meatTile.x, .5, P.meatTile.z)); }
       if (h.n > 0) { S.coins += Math.round(h.n * T.price.meat * econ('sale')); h.n = 0; }   // nowhere left to put it: sell the surplus
-      if (h.n === 0) { if (h.hides) { h.state = 'hides'; h.path = [V(TAN.in.x - 1.3, 0, TAN.in.z)]; } else if (h.hp >= hMax() * .8) huntOut(h); }   // wait at home until mostly healed
+      if (h.n === 0) { if (h.hides) { h.state = 'hides'; h.path = [V(TAN.in.x - 1.3, 0, TAN.in.z)]; } else huntReady(h); }
       continue;
     }
     if (h.state === 'hides') {
       if (!walkPath(h, dt, hunterSpd())) continue;
       S.stat.hides += h.hides;
       for (; h.hides > 0; h.hides--) { if (S.hide < T.max.hide) S.hide++; else S.coins += T.price.hide; }
-      fly('hide', V(h.x, 1.3, h.z), V(TAN.in.x, .5, TAN.in.z)); huntOut(h);
+      fly('hide', V(h.x, 1.3, h.z), V(TAN.in.x, .5, TAN.in.z)); huntReady(h);
       continue;
     }
     if (h.state === 'collect') {             // picking up meat/hides lying inside the village
@@ -2136,7 +2218,7 @@ function updateHunters(dt) {
       }
       const next = loosePickup(h);
       if (next) h.path = lootPath(h, next);
-      else if (h.n || h.hides) huntHome(h); else huntOut(h);
+      else if (h.n || h.hides || h.hp < hMax() * .8) huntHome(h); else huntOut(h);
       continue;
     }
     const loot = loosePickup(h);
@@ -2220,6 +2302,11 @@ function dressStaff(w, isHunter) {
   }
   if (isHunter) {
     w.body.children[0].material = mat(HUNTER_KIT[tier].coat);
+    w.body.userData.syncOutfit = () => {
+      const color = HUNTER_KIT[stg()].coat;
+      tintOutfit(w.body, 'hunter_lv1', { 'material:coat': color, 'material:coatDark': new THREE.Color(color).multiplyScalar(.8).getHex() });
+    };
+    w.body.userData.syncOutfit();
     w.rankLv = -1;
     if (w.weapon) w.body.remove(w.weapon);
     w.weapon = staffWeapon(tier); w.body.add(w.weapon);
