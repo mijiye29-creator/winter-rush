@@ -20,6 +20,7 @@ window.WinterRushData = {
       hunterStage: { speed: [1, 1.15, 1.3, 1.45], carry: [0, 2, 8, 12], dmg: [0, 1, 3, 5], hp: [12, 16, 20, 26] },
       hunterHp: [0, 0, 3, 6, 10, 14], hunterBlock: [0, 0, .15, .25, .35, .45],   // by hunter mastery: extra hp, chance to shrug off a bite
       hunterFeed: .8,   // hunters carry meat straight to the grill / pizza meat tile while it is below 80% full
+      hunterSplash: [0, 0, 0, 1.8, 2.3, 2.9], hunterSplashDmg: .6,   // from mastery Lv3 an arrow bursts: animals within this radius take 60% of the hit
       hunterFlee: .35, hunterKite: 2.1, hunterBeastLv: 4,   // retreat home below 35% hp, step back from bears closer than 2.1, fight saber/mammoth/chief only from mastery Lv4   // by village stage 1-4 (hearth Lv6/10/15): new coat + weapon each stage
     farmerCarry: [0, 4, 8], farmerSpeed: [0, 3.4, 4.2], pizzaChefCarry: [0, 4, 8], pizzaChefSpeed: [0, 3.6, 4.4],
     fisherCatch: [0, 1.9, 1.4, 1], fisherCarry: [0, 8, 12, 16],   // seconds per fish / fish per trip by fisher mastery
@@ -64,7 +65,7 @@ window.WinterRushData = {
     stormBurn: 3.5, stormSlow: .35,
     bearMeat: [3, 4, 5, 6],   // meat per field bear by village stage 1-4
     campRegen: .8,             // seconds per heart regained inside the village (was 2.5)
-    fieldBears: 7, maxFieldBears: 12, bearRespawn: 4, stageBears: [0, 3, 7, 11], stageRespawn: [4, 3.5, 2, 1.6],   // pizza/sushi eat meat: more bears and faster respawn by village stage 1-4
+    fieldBears: 9, maxFieldBears: 16, bearRespawn: 4, stageBears: [0, 4, 9, 14], stageRespawn: [3.5, 3, 1.8, 1.4],   // pizza/sushi eat meat: more bears and faster respawn by village stage 1-4
     bearHp: 4, bossEvery: 4,
     wolfPackSize: 3, maxWolves: 10, wolfSpawn: 14, stageWolves: [0, 3, 6, 9], stagePack: [0, 0, 1, 1], stageWolfSpawn: [14, 12, 10, 8],   // later stages: more and bigger packs, more meat
     wolfStartSold: 8, hurtGrace: .8,
