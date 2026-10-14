@@ -68,7 +68,7 @@ const DESC = {
   server: () => `서빙 직원 고용: 그릴의 스테이크를 진열대로`,
   serverUp: (a, b) => `서빙 숙련 Lv${b}: 한 번에 ${ST.serverCarry[a]} → ${ST.serverCarry[b]}개, 더 빠르게`,
   hunter: (a, b) => `사냥꾼 ${a} → ${b}명: 곰을 잡아 고기·가죽을 가져와요`,
-  hunterUp: (a, b) => `사냥꾼 전원 숙련 Lv${b}: 공격력 ${ST.hunterDmg[a]} → ${ST.hunterDmg[b]}, 고기 ${ST.hunterCarry[a]} → ${ST.hunterCarry[b]}개씩 · ${['', '', '🏹 화살통', '🧥 털 망토', '⛑️ 투구 + 어깨갑옷', '👑 황금 망토 + 오라'][b]}`,
+  hunterUp: (a, b) => `사냥꾼 전원 숙련 Lv${b}: 공격력 ${ST.hunterDmg[a]} → ${ST.hunterDmg[b]}, 고기 ${ST.hunterCarry[a]} → ${ST.hunterCarry[b]}개씩 · ${['', '', '🏹 화살통', '🧥 털 망토', '⛑️ 투구 + 어깨갑옷', '👑 황금 망토 + 오라'][b]}${ST.hunterSplash[b] ? ` · 💥 광역 화살 ${ST.hunterSplash[b]}칸` : ''}`,
   fisher: (a, b) => `낚시꾼 ${a} → ${b}명: 생선 상자를 자동으로 채워요`,
   fisherUp: (a, b) => `낚시꾼 전원 숙련 Lv${b}: 더 빨리, ${ST.fisherCarry[a]} → ${ST.fisherCarry[b]}마리씩`,
   oven: (a, b) => `생선 화덕 Lv${b + 1}: 생선 ${T.ovenTime[a]}초 → ${T.ovenTime[b]}초, 위에 ${T.ovenCap[a]} → ${T.ovenCap[b]}마리`,
@@ -94,7 +94,7 @@ const EFFECT = {
   hero: (a, b) => `${HERO.title[b]} · 공격 ${HERO.dmg[b]} · 🎒${HERO.bag[b]}`,
   helper: () => '장작 자동 운반', helperUp: (a, b) => `장작 ${ST.helperCarry[b]}개씩 · 빠르게`,
   server: () => '스테이크 진열', serverUp: (a, b) => `${ST.serverCarry[b]}개씩 · 빠르게`,
-  hunter: () => '곰 자동 사냥', hunterUp: (a, b) => `공격 ${ST.hunterDmg[b]} · 고기 ${ST.hunterCarry[b]}`,
+  hunter: () => '곰 자동 사냥', hunterUp: (a, b) => `공격 ${ST.hunterDmg[b]} · 고기 ${ST.hunterCarry[b]}${ST.hunterSplash[b] ? ' · 💥광역' : ''}`,
   fisher: () => '생선 자동 공급', fisherUp: (a, b) => `${ST.fisherCarry[b]}마리씩 · 빠르게`,
   oven: (a, b) => `굽기 ${T.ovenTime[b]}초`,
   artisan: () => '가죽 → 가죽 제품', artisanUp: (a, b) => `제작 ${T.tanTime[b]}초`,
@@ -2163,7 +2163,13 @@ function updateShots(dt) {
     burst(s.b.x, 1.3, s.b.z, 0xffffff, 4, { spd: 3, up: 3, life: .35, size: .7 });
     const dmg = s.dmg || ST.hunterDmg[M('hunter')] + HS().dmg[stg()];
     popText(s.b.x, 2.5, s.b.z, `${dmg}`, s.dmg ? '#ffd36b' : '#c9f29b');
-    if (bearHurt(s.b, dmg, s.h)) burst(s.b.x, 1, s.b.z, 0xffffff, 10, { spd: 5, up: 6, life: .6 });
+    const splash = !s.dmg && ST.hunterSplash[M('hunter')], bx = s.b.x, bz = s.b.z;
+    if (bearHurt(s.b, dmg, s.h)) burst(bx, 1, bz, 0xffffff, 10, { spd: 5, up: 6, life: .6 });
+    if (splash) {   // 💥 skilled hunters' arrows burst and hit every animal around the target
+      const sd = Math.max(1, Math.round(dmg * ST.hunterSplashDmg));
+      burst(bx, .4, bz, 0xffb347, 12, { spd: splash * 3, up: 1.5, life: .35, size: .7 });
+      for (const o of bears.slice()) if (o !== s.b && !o.sea && Math.hypot(o.x - bx, o.z - bz) < splash) { popText(o.x, 2.3, o.z, `${sd}`, '#ffb347'); bearHurt(o, sd, s.h); }
+    }
   }
 }
 function updateHunters(dt) {
