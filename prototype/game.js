@@ -2477,7 +2477,7 @@ const outlineMat = new THREE.MeshBasicMaterial({ color: 0x2b3440, side: THREE.Ba
 function makeBear(raider, boss = false) {
   const g = new THREE.Group(); scene.add(g);
   const body = new THREE.Group(); g.add(body);
-  const fur = new THREE.MeshLambertMaterial({ color: boss ? 0xdcd3f0 : raider ? 0xc3cad8 : 0xfffaf0 });
+  const fur = new THREE.MeshLambertMaterial({ color: boss ? 0xdcd3f0 : raider ? 0xc3cad8 : 0xffffff });
   const m = (geo, x, y, z, material = fur) => {
     const o = mesh(geo, material, x, y, z); body.add(o);
     if (material === fur) { const ol = new THREE.Mesh(geo, outlineMat); ol.position.copy(o.position); ol.scale.setScalar(1.09); body.add(ol); }
@@ -2791,7 +2791,7 @@ function updateBears(dt) {
     else if (b.raider) {
       if (S.phase !== 'storm') {
         b.tx = 0; b.tz = 15; sp = 3;
-        if (b.z > 9) { b.raider = false; b.fur.color.setHex(b.boss ? 0xdcd3f0 : 0xfffaf0); }
+        if (b.z > 9) { b.raider = false; b.fur.color.setHex(b.boss ? 0xdcd3f0 : 0xffffff); }
       } else if (dist < 5 && pl.stunFree) { chase = true; }
       else if (b.z > 5.2) { b.tx = 0; b.tz = 4.5; sp = 2.6; }
       else {

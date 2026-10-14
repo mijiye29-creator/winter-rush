@@ -15,34 +15,25 @@ function animalKit(THREE, name) {
   return k;
 }
 
-// polar bear: chubby round body, puffy cheeks, stubby legs, fluffy ruff, tufts down the back
+// polar bear: chubby round body, puffy cheeks, stubby legs — smooth snow-white fur with no spikes (화니 2026-10-14: whiter, no bumps on the back)
 function buildBear(THREE) {
-  const k = animalKit(THREE, 'bear'), { root, M, add, sph, T, T2, eyes, cyl } = k;
-  const cream = M('tintCream', 0xf3ecdc);
-  add('body', sph(1, 11, 7), T, 0, 1.0, 0, { s: [.7, .6, .98] });
+  const k = animalKit(THREE, 'bear'), { root, M, add, sph, T, eyes } = k;
+  const cream = M('tintCream', 0xfbf8f1);   // muzzle and paws: barely warmer than the white fur
+  add('body', sph(1, 12, 8), T, 0, 1.0, 0, { s: [.7, .6, .98] });
   for (const s of [-1, 1]) {
     add('haunch', sph(.38, 7, 5), T, s * .36, .86, -.5);
     add('shoulder', sph(.34, 7, 5), T, s * .38, .96, .52);
   }
-  // fluffy back: soft bumps down the spine, a ruff of tufts around the neck
-  // the game camera looks down on the back, so the detail lives there: a ridge of tufts and fluffy hips
-  for (let i = 0; i < 6; i++) add('spineTuft', new THREE.ConeGeometry(.08, .22, 4), i % 2 ? cream : T2, 0, 1.62 - Math.abs(i - 2.5) * .035, .62 - i * .26, { r: [-1.0, 0, 0] });
-  for (const s of [-1, 1]) for (let i = 0; i < 2; i++) add('hipTuft', new THREE.ConeGeometry(.07, .2, 4), T2, s * (.36 + i * .1), 1.2 - i * .06, -.6 - i * .1, { r: [-.9, 0, -s * .5] });
-  for (let i = 0; i < 4; i++) add('backFluff', sph(.22, 5, 3), i % 2 ? T2 : T, 0, 1.5 - Math.abs(i - 1.5) * .03, .45 - i * .32, { s: [1.15, .7, 1.1] });
-  for (let i = 0; i < 8; i++) {
-    const a = i / 8 * Math.PI * 2, x = Math.cos(a) * .42, y = 1.3 + Math.sin(a) * .36;
-    add('ruff', new THREE.ConeGeometry(.09, .22, 4), i % 2 ? cream : T, x, y, .72, { r: [0, 0, a - Math.PI / 2] });
-  }
+  // the game camera looks down on the back: keep it one soft rounded line (a gentle shoulder hump, no tufts)
+  add('hump', sph(.36, 8, 5), T, 0, 1.36, .45, { s: [1.25, .55, 1.3] });
+  add('neck', sph(.4, 8, 5), T, 0, 1.3, .74, { s: [1.05, 1, .8] });   // soft fluffy neck instead of a spiky ruff
   add('head', sph(.44, 10, 7), T, 0, 1.43, 1.02, { s: [1.05, .95, .95] });
-  for (let i = -1; i <= 1; i++) add('headTuft', new THREE.ConeGeometry(.06, .17, 4), T, i * .09, 1.86, .98 - Math.abs(i) * .04, { r: [-.3, 0, -i * .4] });
   add('muzzle', sph(.21, 8, 5), cream, 0, 1.28, 1.4, { s: [1.1, .8, 1.1] });
   add('tail', sph(.15, 6, 4), T, 0, 1.12, -.95);
-  for (let i = 0; i < 3; i++) add('tailTuft', new THREE.ConeGeometry(.06, .14, 4), T, (i - 1) * .07, 1.2, -1.06, { r: [-1.2, 0, (i - 1) * .5] });
   for (const s of [-1, 1]) {
     add('cheek', sph(.18, 6, 4), T, s * .25, 1.3, 1.2, { s: [1, .85, .8] });
-    add('blush', sph(.06, 5, 3), M('blush', 0xf4a9a9), s * .27, 1.32, 1.34, { s: [1, .7, .4] });
     add('ear', sph(.13, 6, 4), T, s * .29, 1.78, .98, { s: [1, 1, .6] });
-    add('earIn', sph(.07, 5, 3), M('pink', 0xf2a7a7), s * .29, 1.78, 1.04, { s: [1, 1, .4] });
+    add('earIn', sph(.07, 5, 3), M('earIn', 0xd9d4cc), s * .29, 1.78, 1.04, { s: [1, 1, .4] });
     for (const f of [-1, 1]) {
       k.limb = legLimb(s, f, .38, .62, .55);
       add('leg', new THREE.CylinderGeometry(.22, .25, .5, 8, 1, true), T, s * .38, .32, f * .55);
@@ -52,7 +43,7 @@ function buildBear(THREE) {
   }
   add('nose', sph(.08, 6, 4), M('nose', 0x1f1a24), 0, 1.35, 1.64, { s: [1.3, .9, 1] });
   add('mouth', new THREE.TorusGeometry(.04, .012, 3, 5, Math.PI), M('mouth', 0x3a2a30), 0, 1.22, 1.6, { r: [0, 0, Math.PI] });
-  eyes(.16, 1.51, 1.39, .06);   // ~1,500 triangles in all
+  eyes(.16, 1.51, 1.39, .06);
   return root;
 }
 
